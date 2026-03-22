@@ -4,6 +4,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.*;
+
+
 @RestController
 public class TestContent {
 
@@ -14,8 +17,13 @@ public class TestContent {
     }
 
     @GetMapping("/api/testAPI")
-    public String spuneSalut() {
-        String time = jdbcTemplate.queryForObject("SELECT NOW()", String.class);
-        return "Salut! Timpul din baza de date este: " + time;
+    public List<String> getTables() {
+        String sql = """
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            ORDER BY table_name
+        """;
+        return jdbcTemplate.queryForList(sql, String.class);
     }
 }
