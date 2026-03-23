@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/adaptive_tutor  # va fi suprascris de DynamicPropertySource
+    username: user
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
