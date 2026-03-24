@@ -12,8 +12,10 @@ import java.util.UUID;
 @Setter
 @Getter
 
+//Keeps track of lesson title and order index in a single variable
+//Used in the PATCH "/api/lessons/{id}/content" entrypoint
 public class LessonDTOMetadata {
     private String title = null;
-    private Integer chapterIndex = null;
+    private Integer orderIndex = null;
 
 }
