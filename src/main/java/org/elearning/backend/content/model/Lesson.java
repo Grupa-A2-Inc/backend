@@ -27,8 +27,9 @@ public class Lesson {
 
     //The commented lines can be uncommented once the Chapter classes are done
     //@ManyToOne
-    @JoinColumn(name = "chapter_id", nullable = false)
+    //@JoinColumn(name = "chapter_id", nullable = false)
     //private Chapter chapterID;
+    @Column(name="chapter_id", nullable = false)
     private UUID chapterID;
 
     @NotNull

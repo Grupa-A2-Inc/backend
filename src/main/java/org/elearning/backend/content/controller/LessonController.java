@@ -20,6 +20,11 @@ public class LessonController {
         this.lessonService = lessonService;
     }
 
+    @GetMapping("/api/lesson-test")
+    public String testMe() {
+        return "LessonController functioneaza!";
+    }
+
     @PostMapping("/api/chapters/{chapterID}/lessons")
     public ResponseEntity<Lesson> createNewLesson(
             @RequestBody Lesson newLesson,

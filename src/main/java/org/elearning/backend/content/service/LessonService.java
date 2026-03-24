@@ -1,5 +1,6 @@
 package org.elearning.backend.content.service;
 
+import jakarta.transaction.Transactional;
 import org.elearning.backend.content.dto.LessonDTOMetadata;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.LessonRepository;
@@ -40,6 +41,7 @@ public class LessonService {
         return newLesson;
     }
 
+    @Transactional
     public Lesson updateLessonMarkdownContent(UUID lessonID, String markdownContent){
         if(!lessonRepository.existsById(lessonID)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
@@ -48,6 +50,7 @@ public class LessonService {
         return lessonRepository.findById(lessonID).orElse(new Lesson());
     }
 
+    @Transactional
     public void updateLessonTitle(UUID lessonID, String newTitle){
         if(!lessonRepository.existsById(lessonID)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
@@ -56,6 +59,7 @@ public class LessonService {
 
     }
 
+    @Transactional
     public void updateLessonOrder(UUID lessonID, int newOrderIndex){
         if(!lessonRepository.existsById(lessonID)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
@@ -75,6 +79,7 @@ public class LessonService {
 
     }
 
+    @Transactional
     public Lesson updateLessonMetadata(UUID lessonID, LessonDTOMetadata lessonDTOMetadata){
         if(lessonDTOMetadata.getChapterIndex()!=null){
             updateLessonOrder(lessonID, lessonDTOMetadata.getChapterIndex());
@@ -85,6 +90,7 @@ public class LessonService {
         return lessonRepository.findById(lessonID).orElse(new Lesson());
     }
 
+    @Transactional
     public void deleteLesson(UUID lessonID){
         if(!lessonRepository.existsById(lessonID)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
