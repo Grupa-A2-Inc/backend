@@ -7,6 +7,10 @@ spring:
     password: password
   flyway:
     enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
 
 server:
   port: 8067
