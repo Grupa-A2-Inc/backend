@@ -32,9 +32,6 @@ public class Lesson {
     //The code seems to work fine in its current state as well, but the second option might be preferred
     //Foreign Key to the "chapter" table, cannot be null
 
-    //@ManyToOne
-    //@JoinColumn(name = "chapter_id", nullable = false)
-    //private Chapter chapterID;
 
     @Column(name="chapter_id", nullable = false)
     private UUID chapterID;

@@ -49,7 +49,7 @@ public class LessonController {
     // Returns 204 if deletion took place
 
     @DeleteMapping("/api/lessons/{id}")
-    public ResponseEntity<?> deleteLesson(@PathVariable UUID id){
+    public ResponseEntity<Void> deleteLesson(@PathVariable UUID id){
         lessonService.deleteLesson(id);
         return ResponseEntity.noContent().build();
     }
