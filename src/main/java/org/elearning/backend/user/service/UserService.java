@@ -11,6 +11,7 @@ import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -33,7 +34,7 @@ public class UserService {
 
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setPasswordHash(request.getPassword());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setRole(role);
@@ -86,4 +87,6 @@ public class UserService {
                 user.getStatus()
         );
     }
+
+    private final PasswordEncoder passwordEncoder;
 }

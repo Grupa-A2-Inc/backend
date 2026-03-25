@@ -14,8 +14,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import java.util.List;
 
 import java.util.Optional;
@@ -32,6 +35,9 @@ public class UserServiceTest {
 
     @Mock
     private RoleRepository roleRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
@@ -220,5 +226,95 @@ public class UserServiceTest {
 
         assertThrows(ResourceNotFoundException.class,
                 () -> userService.createUser(request));
+    }
+
+    @Test
+    void createUser_hashesPassword_andSavesUser() {
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("ana@example.com")
+                .password("parola123")
+                .firstName("Ana")
+                .lastName("Pop")
+                .roleName(RoleName.STUDENT)
+                .build();
+
+        Role role = new Role();
+        role.setName(RoleName.STUDENT);
+
+        when(userRepository.existsByEmail("ana@example.com")).thenReturn(false);
+        when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(role));
+        when(passwordEncoder.encode("parola123")).thenReturn("HASHED_PASSWORD");
+
+        User savedUser = new User();
+        savedUser.setId(UUID.randomUUID());
+        savedUser.setEmail("ana@example.com");
+        savedUser.setPasswordHash("HASHED_PASSWORD");
+        savedUser.setFirstName("Ana");
+        savedUser.setLastName("Pop");
+        savedUser.setRole(role);
+        savedUser.setStatus(UserStatus.ACTIVE);
+
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        UserResponse response = userService.createUser(request);
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+
+        User persistedUser = captor.getValue();
+
+        assertEquals("HASHED_PASSWORD", persistedUser.getPasswordHash());
+        assertNotEquals("parola123", persistedUser.getPasswordHash());
+        verify(passwordEncoder).encode("parola123");
+
+        assertEquals("ana@example.com", response.getEmail());
+        assertEquals("Ana", response.getFirstName());
+        assertEquals("Pop", response.getLastName());
+        assertEquals(UserStatus.ACTIVE, response.getStatus());
+    }
+
+    @Test
+    void createUser_throwsDuplicateResourceException_whenEmailAlreadyExists() {
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("ana@example.com")
+                .password("parola123")
+                .firstName("Ana")
+                .lastName("Pop")
+                .roleName(RoleName.STUDENT)
+                .build();
+
+        when(userRepository.existsByEmail("ana@example.com")).thenReturn(true);
+
+        assertThrows(DuplicateResourceException.class, () -> userService.createUser(request));
+
+        verify(userRepository, never()).save(any(User.class));
+        verify(passwordEncoder, never()).encode(anyString());
+    }
+
+    @Test
+    void createUser_throwsResourceNotFoundException_whenRoleDoesNotExist() {
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("ana@example.com")
+                .password("parola123")
+                .firstName("Ana")
+                .lastName("Pop")
+                .roleName(RoleName.STUDENT)
+                .build();
+
+        when(userRepository.existsByEmail("ana@example.com")).thenReturn(false);
+        when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> userService.createUser(request));
+
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void getUserById_throwsResourceNotFoundException_whenMissing() {
+        UUID id = UUID.randomUUID();
+
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> userService.getUserById(id));
     }
 }
