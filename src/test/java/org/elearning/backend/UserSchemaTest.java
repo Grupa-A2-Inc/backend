@@ -60,7 +60,7 @@ class UserSchemaTest {
                 "SELECT name FROM roles",
                 String.class
         );
-        assertThat(roles).contains("ADMIN", "ORGANIZATION_ADMINaa", "TEACHER", "STUDENT", "PARENT");
+        assertThat(roles).contains("ADMIN", "ORGANIZATION_ADMIN", "TEACHER", "STUDENT", "PARENT");
     }
 
     @Test
