@@ -40,7 +40,7 @@ public class LessonController {
     public ResponseEntity<Lesson> createNewLesson(
             @RequestBody Lesson newLesson,
             @PathVariable UUID chapterID){
-        return ResponseEntity.status(HttpStatus.CREATED).body(lessonService.createNewLesson(newLesson, chapterID));
+            return ResponseEntity.status(HttpStatus.CREATED).body(lessonService.createNewLesson(newLesson, chapterID));
     }
 
     // DELETE /api/lessons/{id}  Entrypoint

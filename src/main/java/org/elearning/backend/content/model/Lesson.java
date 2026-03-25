@@ -61,6 +61,7 @@ public class Lesson {
     @Column(name="updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+
     //Makes sure to update the time of the last update with each modification
     @PreUpdate
     public void preUpdate(){
