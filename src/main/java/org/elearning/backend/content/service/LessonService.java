@@ -36,7 +36,8 @@ public class LessonService {
         if(!lessonRepository.existsById(lessonID)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
         }
-        return lessonRepository.findContentMarkdown(lessonID);
+        return lessonRepository.findContentMarkdown(lessonID)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
     }
 
     //Creates a new Lesson, with a mandatory associated chapter.
@@ -107,6 +108,9 @@ public class LessonService {
         }
 
         lessonRepository.updateLessonOrderIndex(lessonID, newOrderIndex, chapterID);
+        if(previousOrderIndex==newOrderIndex){
+            return;
+        }
         if(previousOrderIndex>newOrderIndex) {
             lessonRepository.repairLessonOrderIndexAfterOrderChangeBigger(previousOrderIndex, newOrderIndex, chapterID, lessonID);
         }
@@ -124,6 +128,11 @@ public class LessonService {
 
     @Transactional
     public Lesson updateLessonMetadata(UUID lessonID, LessonDTOMetadata lessonDTOMetadata){
+
+        if(!lessonRepository.existsById(lessonID)){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
+        }
+
         if(lessonDTOMetadata.getOrderIndex()!=null){
             updateLessonOrder(lessonID, lessonDTOMetadata.getOrderIndex());
         }
@@ -143,16 +152,15 @@ public class LessonService {
 
     @Transactional
     public void deleteLesson(UUID lessonID){
+        if(!lessonRepository.existsById(lessonID)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
+        }
 
         UUID chapterID = lessonRepository.findChapterIdFromID(lessonID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chapter not found"));
 
         Integer orderIndex = lessonRepository.findOrderIndexFromID(lessonID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order Index not found"));
-
-        if(!lessonRepository.existsById(lessonID)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
-        }
 
         lessonRepository.repairLessonOrderIndexAfterDeletion(orderIndex, chapterID);
         lessonRepository.deleteLesson(lessonID);
