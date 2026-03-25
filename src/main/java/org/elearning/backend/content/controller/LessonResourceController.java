@@ -1,5 +1,8 @@
 package org.elearning.backend.content.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.elearning.backend.content.model.LessonResource;
 import org.elearning.backend.content.service.LessonResourceService;
 import org.springframework.http.HttpStatus;
@@ -29,8 +32,14 @@ public class LessonResourceController {
      * Returns HTTP 201 if successfully created, along with the created LessonResource object in the response body.
      * If no lesson with the given ID exists, returns HTTP 404 Not Found.
      */
+    @Operation(summary = "Create a new lesson resource",
+            description = "Creates a new lesson resource associated with a specific lesson ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Lesson resource created successfully"),
+            @ApiResponse(responseCode = "404", description = "Lesson not found")
+    })
     @PostMapping("/api/lessons/{lessonId}/resources")
-    public ResponseEntity<Object> createNewLessonResource(
+    public ResponseEntity<LessonResource> createNewLessonResource(
             @RequestBody LessonResource newLessonResource,
             @PathVariable UUID lessonId
             ) {
@@ -52,6 +61,12 @@ public class LessonResourceController {
      * Returns HTTP 200 along with the list of LessonResource objects in the response body.
      * If no lesson with the given ID exists, returns HTTP 404 Not Found.
      */
+    @Operation(summary = "Get lesson resources by lesson ID",
+            description = "Retrieves a list of lesson resources associated with a specific lesson ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lesson resources retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Lesson not found")
+    })
     @GetMapping("/api/lessons/{lessonId}/resources")
     public ResponseEntity<List<LessonResource>> getResourcesByLessonId(@PathVariable UUID lessonId) {
         List<LessonResource> resources;
@@ -71,6 +86,12 @@ public class LessonResourceController {
      * Returns HTTP 204 No Content if the deletion was successful.
      * If no resource with the given ID exists or if the resource does not belong to the specified lesson, returns HTTP 404 Not Found.
      */
+    @Operation(summary = "Delete a lesson resource",
+            description = "Deletes a specific lesson resource associated with a specific lesson ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Lesson resource deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Lesson resource not found or does not belong to the specified lesson")
+    })
     @DeleteMapping("/api/lessons/{lessonId}/resources/{resourceId}")
     public ResponseEntity<Void> deleteLessonResource(@PathVariable UUID resourceId, @PathVariable UUID lessonId) {
         try {

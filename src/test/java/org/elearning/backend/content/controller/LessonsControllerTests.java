@@ -57,6 +57,43 @@ class LessonsControllerTests {
     }
 
     @Test
+    void shouldReturnNotFoundWhenRequestingLessonsForInvalidChapter() {
+        String body = """
+                {
+                    "title": "Lectia 1",
+                    "contentMarkdown": "# Hello",
+                    "orderIndex": 1
+                }
+                """;
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/chapters/" + UUID.randomUUID() + "/lessons",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenCreatingLessonWithInvalidChapterId() {
+        String body = """
+                {
+                    "title": "Lectia 1",
+                    "contentMarkdown": "# Hello",
+                    "orderIndex": 1
+                }
+                """;
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/chapters/" + UUID.randomUUID() + "/lessons",
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
     void shouldCreateLesson() {
         String body = """
                 {
