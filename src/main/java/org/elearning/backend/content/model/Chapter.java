@@ -1,5 +1,6 @@
 package org.elearning.backend.content.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -8,6 +9,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Setter
@@ -23,8 +26,13 @@ public class Chapter {
     @GeneratedValue
     private UUID id;
 
-    @Column(name = "course_id", nullable = false)
-    private UUID courseId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id", nullable = false)
+    @JsonIgnore
+    private Course course;
+
+//    @Column(name = "course_id", nullable = false)
+//    private UUID courseId;
 
     @NotNull
     @Column(name = "title")
@@ -41,6 +49,9 @@ public class Chapter {
     @NotNull
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+//    @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<Lesson> lessons = new ArrayList<>();
 
     @PreUpdate
     public void preUpdate() {
