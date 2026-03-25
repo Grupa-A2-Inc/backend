@@ -111,8 +111,7 @@ class LessonsAPITests {
         );
         String body = """
                 {
-                    "title": "Titlu Nou",
-                    "orderIndex": 2
+                    "title": "Titlu Nou"
                 }
                 """;
         ResponseEntity<String> response = restTemplate.exchange(
