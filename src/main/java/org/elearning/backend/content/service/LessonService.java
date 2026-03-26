@@ -2,7 +2,9 @@ package org.elearning.backend.content.service;
 
 import jakarta.transaction.Transactional;
 import org.elearning.backend.content.dto.LessonDTOMetadata;
+import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Lesson;
+import org.elearning.backend.content.repository.ChapterRepository;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,14 +20,21 @@ public class LessonService {
     //JPA makes sure to create the repository automatically
 
     private final LessonRepository lessonRepository;
+    private final ChapterRepository chapterRepository;
 
-    public LessonService(LessonRepository lessonRepository) {
+    public LessonService(LessonRepository lessonRepository, ChapterRepository chapterRepository) {
+
         this.lessonRepository = lessonRepository;
+        this.chapterRepository = chapterRepository;
+
     }
 
 
     //Returns every lesson from a given chapter
     public List<Lesson> getAllLessonsFromChapter(UUID chapterID){
+        if(!chapterRepository.existsById(chapterID)){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Chapter not found");
+        }
         return lessonRepository.findLessonOrderByIndex(chapterID);
     }
 
@@ -45,7 +54,9 @@ public class LessonService {
     //We return the saved Lesson for the ResponseEntity class inside LessonController
     //It makes sure to send the HTTP status and the update information
     public Lesson createNewLesson(Lesson newLesson, UUID chapterID){
-        newLesson.setChapterID(chapterID);
+        Chapter chapter = chapterRepository.findById(chapterID)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chapter not found"));
+        newLesson.setChapter(chapter);
         int lastOrderIndex = lessonRepository.findLastOrderIndex(chapterID).orElse(0) + 1;
         newLesson.setOrderIndex(lastOrderIndex);
         lessonRepository.save(newLesson);
@@ -64,17 +75,15 @@ public class LessonService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
         }
         lessonRepository.updateLessonContentMarkdown(lessonID, markdownContent);
-        return lessonRepository.findById(lessonID).orElse(new Lesson());
+        return lessonRepository.findById(lessonID)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
     }
 
     //Every single update and deletion has a "@Transactional" Tag
     //Updates the title of a lesson, if it exists. Otherwise, it throws an exception
 
-    @Transactional
-    public void updateLessonTitle(UUID lessonID, String newTitle){
-        if(!lessonRepository.existsById(lessonID)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
-        }
+
+    private void updateLessonTitle(UUID lessonID, String newTitle){
         lessonRepository.updateLessonTitle(lessonID, newTitle);
 
     }
@@ -90,14 +99,15 @@ public class LessonService {
     // 2. The previous index is small than the newer. In that case, we decrement the order index of each element between them
 
 
-    @Transactional
-    public void updateLessonOrder(UUID lessonID, int newOrderIndex){
-        if(!lessonRepository.existsById(lessonID)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found");
-        }
+
+    private void updateLessonOrder(UUID lessonID, int newOrderIndex){
 
         UUID chapterID = lessonRepository.findChapterIdFromID(lessonID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chapter not found"));
+
+        if(!chapterRepository.existsById(chapterID)){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Chapter not found");
+        }
 
         int lastOrderIndex = lessonRepository.findLastOrderIndex(chapterID).orElse(1);
         int previousOrderIndex = lessonRepository.findOrderIndexFromID(lessonID)
@@ -139,7 +149,8 @@ public class LessonService {
         if(lessonDTOMetadata.getTitle()!=null){
             updateLessonTitle(lessonID, lessonDTOMetadata.getTitle());
         }
-        return lessonRepository.findById(lessonID).orElse(new Lesson());
+        return lessonRepository.findById(lessonID)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
     }
 
     // Every single update and deletion has a "@Transactional" Tag.
