@@ -3,8 +3,6 @@ package org.elearning.backend.content.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import org.elearning.backend.content.dto.LessonDTOMetadata;
-import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.model.LessonResource;
 import org.elearning.backend.content.service.LessonResourceService;
 import org.springframework.http.HttpStatus;
