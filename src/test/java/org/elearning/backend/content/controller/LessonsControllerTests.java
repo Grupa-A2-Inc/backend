@@ -58,14 +58,6 @@ class LessonsControllerTests {
 
     @Test
     void shouldReturnNotFoundWhenRequestingLessonsForInvalidChapter() {
-        String body = """
-                {
-                    "title": "Lectia 1",
-                    "contentMarkdown": "# Hello",
-                    "orderIndex": 1
-                }
-                """;
-
         ResponseEntity<String> response = restTemplate.getForEntity(
                 "/api/chapters/" + UUID.randomUUID() + "/lessons",
                 String.class
