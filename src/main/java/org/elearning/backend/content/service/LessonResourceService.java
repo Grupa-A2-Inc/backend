@@ -12,7 +12,7 @@ import java.util.UUID;
 
 /**
  * Service class for managing lesson resources.
- * This class provides methods to create, delete, and retrieve lesson resources associated with specific lessons.
+ * This class provides methods to create, update, delete, and retrieve lesson resources associated with specific lessons.
  */
 @Service
 public class LessonResourceService {
@@ -73,5 +73,37 @@ public class LessonResourceService {
         }
 
         return lessonResourceRepository.findByLessonId(lessonId);
+    }
+
+    /**
+     * Updates the details of a lesson resource based on its ID and the associated lesson ID.
+     *
+     * @param lessonId        The ID of the lesson to which the resource is associated.
+     * @param resourceId      The ID of the lesson resource to be updated.
+     * @param updatedResource A LessonResource object containing the updated details of the resource.
+     * @return The updated LessonResource object after saving it to the database.
+     * @throws IllegalArgumentException if no lesson with the given ID exists, if no resource with the given ID exists, or if the resource does not belong to the specified lesson.
+     */
+    @Transactional
+    public LessonResource updateLessonResource(UUID lessonId, UUID resourceId, LessonResource updatedResource) {
+        if(!lessonRepository.existsById(lessonId)){
+            throw new IllegalArgumentException("Lesson not found with ID: " + lessonId);
+        }
+
+        LessonResource existingResource = lessonResourceRepository.findById(resourceId)
+                .orElseThrow(() -> new IllegalArgumentException("Resource not found with ID: " + resourceId));
+
+        if(!existingResource.getLesson().getId().equals(lessonId)) {
+            throw new IllegalArgumentException("Resource does not belong to the specified lesson!");
+        }
+
+        if(updatedResource.getTitle() != null) {
+            existingResource.setTitle(updatedResource.getTitle());
+        }
+        if(updatedResource.getUrl() != null) {
+            existingResource.setUrl(updatedResource.getUrl());
+        }
+
+        return lessonResourceRepository.save(existingResource);
     }
 }

@@ -3,6 +3,8 @@ package org.elearning.backend.content.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.elearning.backend.content.dto.LessonDTOMetadata;
+import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.model.LessonResource;
 import org.elearning.backend.content.service.LessonResourceService;
 import org.springframework.http.HttpStatus;
@@ -102,5 +104,34 @@ public class LessonResourceController {
         }
 
         return ResponseEntity.noContent().build();
+    }
+
+    /** PATCH /api/lessons/{lessonId}/resources/{resourceId} Entrypoint
+     * @PathVariable - extracts dynamic value directly from the URI
+     * @RequestBody - a JSON file with multiple fields for each lesson resource content
+     * Updates the title and/or URL of a specific lesson resource associated with a specific lesson ID.
+     * Returns HTTP 200 along with the updated LessonResource object in the response body if the update was successful.
+     * If no resource with the given ID exists, if the resource does not belong to the specified lesson, or if no lesson with the given ID exists, returns HTTP 404 Not Found.
+     */
+    @Operation(summary = "Update a lesson resource",
+            description = "Updates the title and/or URL of a specific lesson resource associated with a specific) lesson ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lesson resource updated successfully"),
+            @ApiResponse(responseCode = "404", description = "Lesson resource not found, does not belong to the specified lesson, or lesson not found")
+    })
+    @PatchMapping("/api/lessons/{lessonId}/resources/{resourceId}")
+    public ResponseEntity<LessonResource> updateLessonMetadata(
+            @PathVariable UUID lessonId,
+            @PathVariable UUID resourceId,
+            @RequestBody LessonResource lessonResource){
+        LessonResource updatedResource;
+        try {
+            updatedResource = lessonResourceService.updateLessonResource(lessonId, resourceId, lessonResource);
+        }
+        catch (IllegalArgumentException exception) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(updatedResource);
     }
 }
