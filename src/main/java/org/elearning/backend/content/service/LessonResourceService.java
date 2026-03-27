@@ -1,11 +1,18 @@
 package org.elearning.backend.content.service;
 
+import org.elearning.backend.content.dto.LessonResourceDTOGet;
+import org.elearning.backend.content.dto.LessonResourceDTOPatch;
+import org.elearning.backend.content.dto.LessonResourceDTOPost;
+import org.elearning.backend.content.mapper.LessonResourceMapper;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.LessonRepository;
+import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.elearning.backend.content.model.LessonResource;
 import org.elearning.backend.content.repository.LessonResourceRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,27 +25,35 @@ import java.util.UUID;
 public class LessonResourceService {
     private final LessonResourceRepository lessonResourceRepository;
     private final LessonRepository lessonRepository;
+    private final LessonResourceMapper lessonResourceMapper;
 
-    public LessonResourceService(LessonResourceRepository lessonResourceRepository, LessonRepository lessonRepository) {
+    public LessonResourceService(LessonResourceRepository lessonResourceRepository, LessonRepository lessonRepository, LessonResourceMapper lessonResourceMapper) {
         this.lessonResourceRepository = lessonResourceRepository;
         this.lessonRepository = lessonRepository;
+        this.lessonResourceMapper = lessonResourceMapper;
     }
 
     /**
      * Creates a new lesson resource and associates it with a specific lesson ID.
      *
-     * @param lessonResource The LessonResource object containing the details of the resource to be created.
+     * @param lessonResourceDTOPost The LessonResource object containing the details of the resource to be created.
      * @param lessonId       The ID of the lesson to which the resource will be associated.
      * @return The created LessonResource object with its generated ID and associated lesson ID.
-     * @throws IllegalArgumentException if no lesson with the given ID exists.
+     * @throws ResponseStatusException NOT_FOUND if no lesson with the given ID exists
+     * @throws ResponseStatusException BAD_REQUEST if the title or URL of the resource is null.
      */
-    public LessonResource createNewLessonResource(LessonResource lessonResource, UUID lessonId) {
+    public LessonResourceDTOGet createNewLessonResource(LessonResourceDTOPost lessonResourceDTOPost, UUID lessonId) {
         Lesson lesson = lessonRepository.findById(lessonId)
-                .orElseThrow(() -> new IllegalArgumentException("Lesson not found with ID: " + lessonId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found with ID: " + lessonId));
 
+        if(lessonResourceDTOPost.getTitle() == null || lessonResourceDTOPost.getUrl() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title or URL cannot be null!");
+        }
+
+        LessonResource lessonResource = lessonResourceMapper.toLessonResource(lessonResourceDTOPost);
         lessonResource.setLesson(lesson);
 
-        return lessonResourceRepository.save(lessonResource);
+        return lessonResourceMapper.toLessonResourceDTOGet(lessonResourceRepository.save(lessonResource));
     }
 
     /**
@@ -46,15 +61,15 @@ public class LessonResourceService {
      *
      * @param resourceId The ID of the lesson resource to be deleted.
      * @param lessonId   The ID of the lesson to which the resource is associated.
-     * @throws IllegalArgumentException if no resource with the given ID exists or if the resource does not belong to the specified lesson.
+     * @throws ResponseStatusException NOT_FOUND if no resource with the given ID exists or if the resource does not belong to the specified lesson.
      */
     @Transactional
     public void deleteLessonResource(UUID resourceId, UUID lessonId) {
         LessonResource resource = lessonResourceRepository.findById(resourceId)
-                .orElseThrow(() -> new IllegalArgumentException("Resource not found with ID: " + resourceId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found with ID: " + resourceId));
 
         if (!resource.getLesson().getId().equals(lessonId)) {
-            throw new IllegalArgumentException("Resource does not belong to the specified lesson!");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource with ID: " + resourceId + " does not belong to lesson with ID: " + lessonId);
         }
 
         lessonResourceRepository.delete(resource);
@@ -65,14 +80,16 @@ public class LessonResourceService {
      *
      * @param lessonId The ID of the lesson for which to retrieve the associated resources.
      * @return A list of LessonResource objects associated with the specified lesson ID.
-     * @throws IllegalArgumentException if no lesson with the given ID exists.
+     * @throws ResponseStatusException NOT_FOUND if no lesson with the given ID exists.
      */
-    public List<LessonResource> getResourcesByLessonId(UUID lessonId) {
+    public List<LessonResourceDTOGet> getResourcesByLessonId(UUID lessonId) {
         if(!lessonRepository.existsById(lessonId)){
-            throw new IllegalArgumentException("Lesson not found with ID: " + lessonId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found with ID: " + lessonId);
         }
 
-        return lessonResourceRepository.findByLessonId(lessonId);
+        List<LessonResource> resources = lessonResourceRepository.findByLessonId(lessonId);
+
+        return lessonResourceMapper.toLessonResourcesDTOGetList(resources);
     }
 
     /**
@@ -80,30 +97,25 @@ public class LessonResourceService {
      *
      * @param lessonId        The ID of the lesson to which the resource is associated.
      * @param resourceId      The ID of the lesson resource to be updated.
-     * @param updatedResource A LessonResource object containing the updated details of the resource.
+     * @param updatedResourceDTOPatch A LessonResourceDTOPatch object containing the updated details for the lesson resource. Only non-null fields will be updated.
      * @return The updated LessonResource object after saving it to the database.
-     * @throws IllegalArgumentException if no lesson with the given ID exists, if no resource with the given ID exists, or if the resource does not belong to the specified lesson.
+     * @throws ResponseStatusException NOT_FOUND if no lesson with the given ID exists, if no resource with the given ID exists, or if the resource does not belong to the specified lesson.
      */
     @Transactional
-    public LessonResource updateLessonResource(UUID lessonId, UUID resourceId, LessonResource updatedResource) {
+    public LessonResourceDTOGet updateLessonResource(UUID lessonId, UUID resourceId, LessonResourceDTOPatch updatedResourceDTOPatch) {
         if(!lessonRepository.existsById(lessonId)){
-            throw new IllegalArgumentException("Lesson not found with ID: " + lessonId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found with ID: " + lessonId);
         }
 
         LessonResource existingResource = lessonResourceRepository.findById(resourceId)
-                .orElseThrow(() -> new IllegalArgumentException("Resource not found with ID: " + resourceId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found with ID: " + resourceId));
 
         if(!existingResource.getLesson().getId().equals(lessonId)) {
-            throw new IllegalArgumentException("Resource does not belong to the specified lesson!");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource with ID: " + resourceId + " does not belong to lesson with ID: " + lessonId);
         }
 
-        if(updatedResource.getTitle() != null) {
-            existingResource.setTitle(updatedResource.getTitle());
-        }
-        if(updatedResource.getUrl() != null) {
-            existingResource.setUrl(updatedResource.getUrl());
-        }
+        lessonResourceMapper.updateLessonResourceFromDto(updatedResourceDTOPatch, existingResource);
 
-        return lessonResourceRepository.save(existingResource);
+        return lessonResourceMapper.toLessonResourceDTOGet(lessonResourceRepository.save(existingResource));
     }
 }
