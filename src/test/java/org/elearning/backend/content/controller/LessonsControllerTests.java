@@ -120,6 +120,22 @@ class LessonsControllerTests {
         assertThat(createdOrderIndex).isEqualTo(1);
     }
 
+    @Test
+    void shouldNotCreateLessonWithNullParameters() {
+        String body = """
+                {
+
+                }
+                """;
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/chapters/" + chapterID + "/lessons",
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+
     /**
      * POST /api/chapters/{chapterID}/lessons
      * Tests that creating a second lesson in the same chapter automatically assigns it an order index that is one greater than the existing lesson.

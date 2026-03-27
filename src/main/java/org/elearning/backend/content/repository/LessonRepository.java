@@ -90,5 +90,13 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     @Query("DELETE FROM Lesson l WHERE l.id = :lessonID")
     void deleteLesson(@Param("lessonID") UUID lessonID);
 
+    /**
+     * Retrieves all lessons associated with a specific course ID and eagerly fetches their associated lesson resources ordered by orderIndex.
+     * @param courseId the unique identifier of the course
+     * @return a list of Lesson entities, fully populated with their respective lesson resources
+     */
+    @Query("SELECT l FROM Lesson l LEFT JOIN FETCH l.lessonResources WHERE l.chapter.course.id = :courseId ORDER BY l.orderIndex ASC")
+    List<Lesson> findLessonsWithResourcesByCourseId(@Param("courseId") UUID courseId);
+
 
 }

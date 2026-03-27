@@ -1,6 +1,8 @@
 package org.elearning.backend.content.controller;
 
 
+import jakarta.validation.Valid;
+import org.elearning.backend.content.dto.LessonDTOEntity;
 import org.elearning.backend.content.dto.LessonDTOMetadata;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.service.LessonService;
@@ -37,8 +39,8 @@ public class LessonController {
     // Returns 201 if successfully created
 
     @PostMapping("/api/chapters/{chapterID}/lessons")
-    public ResponseEntity<Lesson> createNewLesson(
-            @RequestBody Lesson newLesson,
+    public ResponseEntity<LessonDTOEntity> createNewLesson(
+            @RequestBody @Valid Lesson newLesson,
             @PathVariable UUID chapterID){
             return ResponseEntity.status(HttpStatus.CREATED).body(lessonService.createNewLesson(newLesson, chapterID));
     }
@@ -61,7 +63,7 @@ public class LessonController {
     // Returns HTTP Status = 200 if everything went fine
 
     @GetMapping("/api/chapters/{chapterID}/lessons")
-    public ResponseEntity<List<Lesson>> getAllLessonsFromChapterID(@PathVariable UUID chapterID){
+    public ResponseEntity<List<LessonDTOEntity>> getAllLessonsFromChapterID(@PathVariable UUID chapterID){
         return ResponseEntity.ok(lessonService.getAllLessonsFromChapter(chapterID));
     }
 
@@ -83,7 +85,7 @@ public class LessonController {
     // Returns HTTP Status = 200 if everything went fine
 
     @PatchMapping("/api/lessons/{id}/metadata")
-    public ResponseEntity<Lesson> updateLessonMetadata(
+    public ResponseEntity<LessonDTOEntity> updateLessonMetadata(
             @PathVariable UUID id,
             @RequestBody LessonDTOMetadata lessonDTOMetadata){
         return ResponseEntity.ok(lessonService.updateLessonMetadata(id, lessonDTOMetadata));
@@ -96,7 +98,7 @@ public class LessonController {
     // Returns HTTP Status = 200 if everything went fine
 
     @PatchMapping("/api/lessons/{id}/content")
-    public ResponseEntity<Lesson> updateLessonContent(
+    public ResponseEntity<LessonDTOEntity> updateLessonContent(
             @PathVariable UUID id,
             @RequestBody String markdownContent){
         return ResponseEntity.ok(lessonService.updateLessonMarkdownContent(id, markdownContent));
