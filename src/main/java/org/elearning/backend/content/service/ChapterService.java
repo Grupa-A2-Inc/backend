@@ -2,10 +2,9 @@ package org.elearning.backend.content.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import org.elearning.backend.content.dto.ChapterDTOMetadata;
+import org.elearning.backend.content.dto.ChapterDTOPost;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Course;
-import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.ChapterRepository;
 import org.elearning.backend.content.repository.CourseRepository;
 import org.springframework.http.HttpStatus;
@@ -31,20 +30,25 @@ public class ChapterService {
      * @return a list of chapters
      */
     public List<Chapter> getAllChaptersFromCourse(UUID courseId) {
+        if (!courseRepository.existsById(courseId)) {
+            throw new IllegalArgumentException("Course not found with ID: " + courseId);
+        }
         return chapterRepository.findChapterOrderByIndex(courseId);
     }
 
     /**
-     * Creates a new Chapter, with a mandatory associated course, with the last order index in that course
-     * @param newChapter
-     * @param courseId the mandatory course's id
-     * @return the saved Chapter
+     * Creates a new chapter inside a course. If the course doesn't exist, it will throw an exception instead.
+     *
+     * @param courseId        the specified course's id
+     * @param newChapterTitle the new chapter's title
      */
-    public Chapter createNewChapter(Chapter newChapter, UUID courseId) {
-        Course course = courseRepository.findById(courseId).orElseThrow(() -> new EntityNotFoundException("Course with ID " + courseId + " not found"));
+    public Chapter createNewChapter(UUID courseId, String newChapterTitle) {
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new IllegalArgumentException("Course not found with ID: " + courseId));
+        Chapter newChapter = new Chapter();
         newChapter.setCourse(course);
         int lastOrderIndex = chapterRepository.findLastOrderIndex(courseId).orElse(0) + 1;
         newChapter.setOrderIndex(lastOrderIndex);
+        newChapter.setTitle(newChapterTitle);
         chapterRepository.save(newChapter);
         return newChapter;
     }
@@ -105,31 +109,38 @@ public class ChapterService {
     @Transactional
     public void deleteChapter(UUID chapterId){
         if(!chapterRepository.existsById(chapterId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Chapter not found");
+            throw new IllegalArgumentException("Chapter not found with ID: " + chapterId);
         }
 
         UUID courseId = chapterRepository.findCourseIdFromId(chapterId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Course not found for chapter with ID: " + chapterId));
 
         Integer orderIndex = chapterRepository.findOrderIndexFromId(chapterId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order Index not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Order index not found for chapter ID: " + chapterId));
 
         chapterRepository.repairChapterOrderIndexAfterDeletion(orderIndex, courseId);
         chapterRepository.deleteById(chapterId);
 
     }
 
+    /**
+     * Updates the chapter's metadata (title and order index) based on the provided ChapterDTOPost object.
+     * If the chapter doesn't exist, it will throw an exception instead.
+     * @param chapterId the chapter's id
+     * @param chapterDTOPost a ChapterDTOPost object containing the updated metadata for the chapter
+     * @return
+     */
     @Transactional
-    public Chapter updateChapterMetadata(UUID chapterId, ChapterDTOMetadata chapterDTOMetadata) {
+    public Chapter updateChapterMetadata(UUID chapterId, ChapterDTOPost chapterDTOPost) {
         if(!chapterRepository.existsById(chapterId)){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Chapter not found");
+            throw new IllegalArgumentException("Chapter not found with ID: " + chapterId);
         }
 
-        if(chapterDTOMetadata.getOrderIndex()!=null){
-            updateChapterOrder(chapterId, chapterDTOMetadata.getOrderIndex());
+        if(chapterDTOPost.getOrderIndex()!=null){
+            updateChapterOrder(chapterId, chapterDTOPost.getOrderIndex());
         }
-        if(chapterDTOMetadata.getTitle()!=null){
-            updateChapterTitle(chapterId, chapterDTOMetadata.getTitle());
+        if(chapterDTOPost.getTitle()!=null){
+            updateChapterTitle(chapterId, chapterDTOPost.getTitle());
         }
         return chapterRepository.findById(chapterId).orElse(new Chapter());
     }

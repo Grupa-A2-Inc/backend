@@ -121,4 +121,12 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
                                  @Param("new_order_index") int newOrderIndex,
                                  @Param("course_id") UUID courseId);
 
+    /**
+     * Retrieves a list of Chapter entities along with their associated lessons based on the provided course ID ordered by orderIndex.
+     * @param courseId The UUID of the course to retrieve chapters and lessons for.
+     * @return A list of Chapter entities, each containing its associated lessons, if found; otherwise, an empty list.
+     */
+    @Query("SELECT c FROM Chapter c LEFT JOIN FETCH c.lessons WHERE c.course.id = :courseId ORDER BY c.orderIndex ASC")
+    List<Chapter> findChaptersWithLessonsByCourseId(@Param("courseId") UUID courseId);
+
 }
