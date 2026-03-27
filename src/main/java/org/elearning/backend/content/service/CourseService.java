@@ -1,9 +1,16 @@
 package org.elearning.backend.content.service;
 
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.model.*;
+import org.elearning.backend.content.dto.*;
 import org.elearning.backend.content.repository.CourseRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.stream.Collectors;
+import java.util.UUID;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +35,7 @@ public class CourseService {
         }
         return courses.stream()
                 .map(this::convertToDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private CourseDto convertToDto(Course course) {

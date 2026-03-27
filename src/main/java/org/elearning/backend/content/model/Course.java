@@ -47,6 +47,6 @@ public class Course {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "courseId", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Chapter> chapters = new ArrayList<>();
 }
