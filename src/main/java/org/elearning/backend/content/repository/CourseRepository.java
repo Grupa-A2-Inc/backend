@@ -6,4 +6,6 @@ import java.util.UUID;
 
 // JpaRepository da automat metodele: save(), findAll(), deleteById(), etc.
 public interface CourseRepository extends JpaRepository<Course, UUID> {
+    List<Course> findByStatus(CourseStatus status);
+    List<Course> findByCreatedBy(UUID createdBy);
 }

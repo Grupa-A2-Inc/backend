@@ -36,6 +36,7 @@ public class Course {
     @Column(name = "visibility")
     private CourseVisibility visibility = CourseVisibility.PRIVATE;
 
+    @Column(name="created_by")
     private UUID createdBy;
 
     @org.hibernate.annotations.CreationTimestamp
@@ -46,6 +47,6 @@ public class Course {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "courseId", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Chapter> chapters = new ArrayList<>();
 }
