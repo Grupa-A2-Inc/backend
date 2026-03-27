@@ -161,7 +161,7 @@ class ChapterControllerTests {
                 "SELECT COUNT(*) FROM chapters WHERE id = '" + chapterId + "'",
                 Integer.class
         );
-        assertThat(count).isEqualTo(0);
+        assertThat(count).isZero();
     }
 
     /**
@@ -325,7 +325,6 @@ class ChapterControllerTests {
     @Test
     void shouldReturnBadRequestWhenOrderIndexTooLarge() {
         UUID chapter1 = insertChapter("Chapter 1", 1);
-        UUID chapter2 = insertChapter("Chapter 2", 2);
 
         String body = """
                 {

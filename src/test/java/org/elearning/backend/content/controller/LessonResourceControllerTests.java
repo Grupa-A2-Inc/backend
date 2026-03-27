@@ -1,9 +1,11 @@
 package org.elearning.backend.content.controller;
 
-import org.elearning.backend.content.model.LessonResource;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -75,13 +77,27 @@ class LessonResourceControllerTests {
     }
 
     @Test
-    void shouldNotCreateLessonResourceWithNullDescription() {
-        String body = """
-                {
-                    "title": "Documentatie"
-                }
-                """;
-
+    @ParameterizedTest(name = "Test invalid payload #{index}: {0}")
+    @ValueSource(strings = {
+            // Lipsesc url și description
+            """
+            {
+                "title": "Documentatie"
+            }
+            """,
+            // Lipsesc title și description
+            """
+            {
+                "url": "https://link.com/doc.pdf"
+            }
+            """,
+            // Payload gol (lipsesc toate)
+            """
+            {
+            }
+            """
+    })
+    void shouldReturnBadRequestWhenCreatingLessonResourceWithInvalidFields(String body) {
         ResponseEntity<String> response = restTemplate.postForEntity(
                 "/api/lessons/" + lessonId + "/resources",
                 new HttpEntity<>(body, jsonHeaders()),
@@ -90,41 +106,6 @@ class LessonResourceControllerTests {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
-
-    @Test
-    void shouldNotCreateLessonResourceWithNullTitle() {
-        String body = """
-                {
-                    "url": "https://link.com/doc.pdf"
-                }
-                """;
-
-        ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/lessons/" + lessonId + "/resources",
-                new HttpEntity<>(body, jsonHeaders()),
-                String.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    @Test
-    void shouldNotCreateLessonResourceWithNullBody() {
-        String body = """
-                {
-
-                }
-                """;
-
-        ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/lessons/" + lessonId + "/resources",
-                new HttpEntity<>(body, jsonHeaders()),
-                String.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
 
     @Test
     void shouldReturnNotFoundWhenCreatingResourceForInvalidLesson() {
