@@ -36,6 +36,7 @@ public class Course {
     @Column(name = "visibility")
     private CourseVisibility visibility = CourseVisibility.PRIVATE;
 
+    @Column(name="created_by")
     private UUID createdBy;
 
     @org.hibernate.annotations.CreationTimestamp
