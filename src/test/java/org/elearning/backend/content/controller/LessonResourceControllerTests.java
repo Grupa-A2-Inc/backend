@@ -76,7 +76,6 @@ class LessonResourceControllerTests {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }
 
-    @Test
     @ParameterizedTest(name = "Test invalid payload #{index}: {0}")
     @ValueSource(strings = {
             // Lipsesc url și description
