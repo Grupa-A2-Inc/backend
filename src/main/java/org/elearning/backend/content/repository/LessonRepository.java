@@ -15,11 +15,11 @@ import java.util.UUID;
 public interface LessonRepository extends JpaRepository<Lesson, UUID> {
 
     // Returns the last order index inside a specific chapter
-    @Query("SELECT MAX(l.orderIndex) FROM Lesson l WHERE l.chapterID= :chapter_id")
+    @Query("SELECT MAX(l.orderIndex) FROM Lesson l WHERE l.chapter.id = :chapter_id")
     Optional<Integer> findLastOrderIndex(@Param("chapter_id") UUID chapterID);
 
     // Returns every single chapter from the lesson table as long as they are from the same chapter, order by their order index
-    @Query("SELECT l FROM Lesson l WHERE l.chapterID = :chapter_id ORDER BY l.orderIndex ASC ")
+    @Query("SELECT l FROM Lesson l WHERE l.chapter.id  = :chapter_id ORDER BY l.orderIndex ASC ")
     List<Lesson> findLessonOrderByIndex(@Param("chapter_id") UUID chapterID);
 
     // Repairs the order index of elements inside a specific chapter, after changing the order index of any lesson
@@ -29,7 +29,7 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
             "SET l.orderIndex = l.orderIndex + 1 " +
             "WHERE ( l.orderIndex >= :newOrderIndex " +
             "AND l.orderIndex <= :previousOrderIndex) " +
-            "AND l.chapterID = :chapter_id " +
+            "AND l.chapter.id = :chapter_id " +
             "AND l.id != :lesson_id")
     void repairLessonOrderIndexAfterOrderChangeBigger(@Param("previousOrderIndex") int previousOrderIndex,
                                 @Param("newOrderIndex") int newOrderIndex,
@@ -41,7 +41,7 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
             "SET l.orderIndex = l.orderIndex - 1 " +
             "WHERE ( l.orderIndex <= :newOrderIndex " +
             "AND l.orderIndex >= :previousOrderIndex) " +
-            "AND l.chapterID = :chapter_id " +
+            "AND l.chapter.id = :chapter_id " +
             "AND l.id != :lesson_id")
     void repairLessonOrderIndexAfterOrderChangeSmaller(@Param("previousOrderIndex") int previousOrderIndex,
                                                       @Param("newOrderIndex") int newOrderIndex,
@@ -51,13 +51,13 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     // Every element after the deleted one will have its order index decremented
     @Modifying
     @Query("UPDATE Lesson l SET l.orderIndex = l.orderIndex - 1 " +
-            "WHERE l.orderIndex > :referenceOrderIndex AND l.chapterID = :chapter_id")
+            "WHERE l.orderIndex > :referenceOrderIndex AND l.chapter.id = :chapter_id")
     void repairLessonOrderIndexAfterDeletion(@Param("referenceOrderIndex") int referenceOrderIndex,
                                                 @Param("chapter_id") UUID chapterID);
 
 
     //Returns the chapter of a given lesson
-    @Query("SELECT l.chapterID FROM Lesson l WHERE l.id = :givenID")
+    @Query("SELECT l.chapter.id FROM Lesson l WHERE l.id = :givenID")
     Optional<UUID> findChapterIdFromID(@Param("givenID") UUID lessonID);
 
     //Returns the order index of a lesson
@@ -75,7 +75,7 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
 
     //Changes the order index of a lesson from a specific chapter
     @Modifying
-    @Query("UPDATE Lesson l SET l.orderIndex = :order_index WHERE l.id = :lessonID AND l.chapterID = :chapter_id")
+    @Query("UPDATE Lesson l SET l.orderIndex = :order_index WHERE l.id = :lessonID AND l.chapter.id = :chapter_id")
     void updateLessonOrderIndex(@Param("lessonID") UUID lessonID,
                                 @Param("order_index") int newOrderIndex,
                                 @Param("chapter_id") UUID chapterID);

@@ -1,5 +1,6 @@
 package org.elearning.backend.content.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -9,6 +10,7 @@ import lombok.Setter;
 
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Setter
@@ -33,8 +35,10 @@ public class Lesson {
     //Foreign Key to the "chapter" table, cannot be null
 
 
-    @Column(name="chapter_id", nullable = false)
-    private UUID chapterID;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chapter_id", nullable = false)
+    @JsonIgnore
+    private Chapter chapter;
 
     //Lesson Title. Cannot be null
 
@@ -60,6 +64,9 @@ public class Lesson {
     @NotNull
     @Column(name="updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @OneToMany(mappedBy = "lesson")
+    private List<LessonResource> lessonResources;
 
 
     //Makes sure to update the time of the last update with each modification

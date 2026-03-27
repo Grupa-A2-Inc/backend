@@ -50,8 +50,8 @@ public class Chapter {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 
-//    @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)
-//    private List<Lesson> lessons = new ArrayList<>();
+    @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Lesson> lessons = new ArrayList<>();
 
     @PreUpdate
     public void preUpdate() {

@@ -23,7 +23,7 @@ public class LessonController {
         this.lessonService = lessonService;
     }
 
-    // Some test Teo wanted, idk its purpose
+    // Generic entrypoint purely for testing
 
     @GetMapping("/api/lesson-test")
     public String testMe() {
