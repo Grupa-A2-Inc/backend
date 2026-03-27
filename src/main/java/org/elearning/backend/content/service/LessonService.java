@@ -3,6 +3,7 @@ package org.elearning.backend.content.service;
 import jakarta.transaction.Transactional;
 import org.elearning.backend.content.dto.LessonDTOEntity;
 import org.elearning.backend.content.dto.LessonDTOMetadata;
+import org.elearning.backend.content.dto.LessonDTOPost;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.ChapterRepository;
@@ -36,6 +37,7 @@ public class LessonService {
 
 
     //Returns every lesson from a given chapter
+
     public List<LessonDTOEntity> getAllLessonsFromChapter(UUID chapterID){
         if(!chapterRepository.existsById(chapterID)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND);
@@ -55,6 +57,7 @@ public class LessonService {
 
     //Returns the content markdown of a lesson
     //Throws exception if the lesson does not exist.
+
     public String getLessonContent(UUID lessonID){
         if(!lessonRepository.existsById(lessonID)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND);
@@ -67,9 +70,18 @@ public class LessonService {
     //The order will be the biggest inside the lesson table
     //We return the saved Lesson for the ResponseEntity class inside LessonController
     //It makes sure to send the HTTP status and the update information
-    public LessonDTOEntity createNewLesson(Lesson newLesson, UUID chapterID){
+
+    public LessonDTOEntity createNewLesson(LessonDTOPost modifiableLessonData, UUID chapterID){
         Chapter chapter = chapterRepository.findById(chapterID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND));
+        Lesson newLesson = new Lesson();
+
+        if(modifiableLessonData.getTitle()==null){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title cannot be null");
+        }
+
+        newLesson.setTitle(modifiableLessonData.getTitle());
+        newLesson.setContentMarkdown(modifiableLessonData.getContentMarkdown());
         newLesson.setChapter(chapter);
         int lastOrderIndex = lessonRepository.findLastOrderIndex(chapterID).orElse(0) + 1;
         newLesson.setOrderIndex(lastOrderIndex);
@@ -119,9 +131,6 @@ public class LessonService {
         UUID chapterID = lessonRepository.findChapterIdFromID(lessonID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND));
 
-        if(!chapterRepository.existsById(chapterID)){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND);
-        }
 
         int lastOrderIndex = lessonRepository.findLastOrderIndex(chapterID).orElse(1);
         int previousOrderIndex = lessonRepository.findOrderIndexFromID(lessonID)
