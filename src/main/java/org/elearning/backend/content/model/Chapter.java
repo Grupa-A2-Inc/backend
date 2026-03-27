@@ -21,6 +21,10 @@ import java.util.UUID;
 @Entity
 @Table(name = "chapters")
 public class Chapter {
+    /**
+     * Id of the recourse
+     * Generated automatically
+     */
     @Id
     @Column(name = "id")
     @GeneratedValue
@@ -30,9 +34,6 @@ public class Chapter {
     @JoinColumn(name = "course_id", nullable = false)
     @JsonIgnore
     private Course course;
-
-//    @Column(name = "course_id", nullable = false)
-//    private UUID courseId;
 
     @NotNull
     @Column(name = "title")
