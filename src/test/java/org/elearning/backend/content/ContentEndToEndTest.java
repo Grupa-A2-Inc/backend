@@ -22,19 +22,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * ============================================================
- *  TEST END-TO-END COMPLET — Modulul de Content
+ *  FULL END-TO-END TEST — Content Module
  * ============================================================
  *
- *  Acoperire:
- *  1.  CURS      — creare, listare, update, full-view
- *  2.  CAPITOL   — creare, listare, update titlu, update order, stergere
- *  3.  LECTIE    — creare, listare, get content, update metadata, update content, stergere
- *  4.  RESURSA   — creare, listare, update, stergere
- *  5.  STERGERI  — stergere pe bucati (resursa → lectie → capitol → curs)
- *                  + stergere full (curs cu cascade)
+ *  Coverage:
+ *  1.  COURSE    — create, list, update, full-view
+ *  2.  CHAPTER   — create, list, update title, update order, delete
+ *  3.  LESSON    — create, list, get content, update metadata, update content, delete
+ *  4.  RESOURCE  — create, list, update, delete
+ *  5.  DELETIONS — piece-by-piece (resource → lesson → chapter → course)
+ *                  + full delete (course with cascade)
  *
- *  Fiecare test ruleaza in propria tranzactie si face rollback
- *  automat => baza de date ramane curata dupa fiecare rulare.
+ *  Each test runs in its own transaction and rolls back automatically
+ *  => the database stays clean after each run.
  * ============================================================
  */
 @SpringBootTest
@@ -50,20 +50,20 @@ class ContentEndToEndTest {
     private ObjectMapper objectMapper;
 
     // ---------------------------------------------------------------
-    //  State partajat intre teste (UUID-uri extrase din raspunsuri)
+    //  State shared between tests (UUIDs extracted from responses)
     // ---------------------------------------------------------------
-    // Variabilele sunt de tip instance (nu static) — fiecare test isi are propriul context
+    // Fields are instance-level (not static) — each test has its own context
     private UUID courseId;
     private UUID chapterId;
     private UUID lessonId;
     private UUID resourceId;
 
-    // UUID fix pentru instructorul "proprietar" al cursului
+    // Fixed UUID for the instructor who "owns" the course
     private static final UUID INSTRUCTOR_ID = UUID.randomUUID();
 
 
     // ================================================================
-    //  1. CURS
+    //  1. COURSE
     // ================================================================
 
     @Test
@@ -72,19 +72,19 @@ class ContentEndToEndTest {
     void createCourse_shouldReturn201() throws Exception {
 
         Course course = new Course();
-        course.setTitle("Curs Java Avansat");
-        course.setDescription("Descriere detaliata pentru cursul de Java.");
-        course.setCategory("Programare");
+        course.setTitle("Advanced Java Course");
+        course.setDescription("Detailed description for the Java course.");
+        course.setCategory("Programming");
         course.setStatus(CourseStatus.DRAFT);
         course.setVisibility(CourseVisibility.PRIVATE);
-        course.setCreatedBy(INSTRUCTOR_ID);         // temporar, pana la integrarea JWT
+        course.setCreatedBy(INSTRUCTOR_ID);         // temporary, until JWT integration
 
         MvcResult result = mockMvc.perform(post("/api/courses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(course)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.title").value("Curs Java Avansat"))
+                .andExpect(jsonPath("$.title").value("Advanced Java Course"))
                 .andExpect(jsonPath("$.status").value("DRAFT"))
                 .andExpect(jsonPath("$.visibility").value("PRIVATE"))
                 .andReturn();
@@ -95,10 +95,10 @@ class ContentEndToEndTest {
 
     @Test
     @Order(2)
-    @DisplayName("1.2 — GET /api/courses?role=INSTRUCTOR → 200, cursul nou apare in lista")
+    @DisplayName("1.2 — GET /api/courses?role=INSTRUCTOR → 200, new course appears in list")
     void getCourses_asInstructor_shouldReturnList() throws Exception {
 
-        // Asiguram ca avem un curs creat
+        // Ensure a course has been created
         createCourse_shouldReturn201();
 
         mockMvc.perform(get("/api/courses")
@@ -111,29 +111,29 @@ class ContentEndToEndTest {
 
     @Test
     @Order(3)
-    @DisplayName("1.3 — GET /api/courses?role=STUDENT → 200, cursul DRAFT/PRIVATE NU apare")
+    @DisplayName("1.3 — GET /api/courses?role=STUDENT → 200, DRAFT/PRIVATE course does NOT appear")
     void getCourses_asStudent_shouldNotSeeDraftPrivateCourse() throws Exception {
 
-        createCourse_shouldReturn201(); // cursul e DRAFT + PRIVATE
+        createCourse_shouldReturn201(); // course is DRAFT + PRIVATE
 
         mockMvc.perform(get("/api/courses")
                         .param("role", "STUDENT")
                         .param("userId", UUID.randomUUID().toString()))
                 .andExpect(status().isOk())
-                // Nu trebuie sa contina cursul nostru DRAFT/PRIVATE
+                // Must not contain our DRAFT/PRIVATE course
                 .andExpect(jsonPath("$[*].id", not(hasItem(courseId != null ? courseId.toString() : ""))));
     }
 
     @Test
     @Order(4)
-    @DisplayName("1.4 — PUT /api/courses/{id} → 200, titlu si status actualizate")
+    @DisplayName("1.4 — PUT /api/courses/{id} → 200, title and status updated")
     void updateCourse_shouldReturn200() throws Exception {
 
         createCourse_shouldReturn201();
 
         Course update = new Course();
-        update.setTitle("Curs Java Avansat — ACTUALIZAT");
-        update.setCategory("Programare");
+        update.setTitle("Advanced Java Course — UPDATED");
+        update.setCategory("Programming");
         update.setStatus(CourseStatus.PUBLISHED);
         update.setVisibility(CourseVisibility.PUBLIC);
 
@@ -141,14 +141,14 @@ class ContentEndToEndTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(update)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Curs Java Avansat — ACTUALIZAT"))
+                .andExpect(jsonPath("$.title").value("Advanced Java Course — UPDATED"))
                 .andExpect(jsonPath("$.status").value("PUBLISHED"))
                 .andExpect(jsonPath("$.visibility").value("PUBLIC"));
     }
 
     @Test
     @Order(5)
-    @DisplayName("1.5 — PUT /api/courses/{id} cu ID inexistent → 404")
+    @DisplayName("1.5 — PUT /api/courses/{id} with non-existent ID → 404")
     void updateCourse_notFound_shouldReturn404() throws Exception {
 
         Course update = new Course();
@@ -165,7 +165,7 @@ class ContentEndToEndTest {
 
 
     // ================================================================
-    //  2. CAPITOL
+    //  2. CHAPTER
     // ================================================================
 
     @Test
@@ -177,10 +177,10 @@ class ContentEndToEndTest {
 
         MvcResult result = mockMvc.perform(post("/api/courses/" + courseId + "/chapters")
                         .contentType(MediaType.TEXT_PLAIN)
-                        .content("Introducere in Java"))
+                        .content("Introduction to Java"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.title").value("Introducere in Java"))
+                .andExpect(jsonPath("$.title").value("Introduction to Java"))
                 .andExpect(jsonPath("$.orderIndex").value(1))
                 .andReturn();
 
@@ -190,18 +190,18 @@ class ContentEndToEndTest {
 
     @Test
     @Order(11)
-    @DisplayName("2.2 — POST /api/courses/{courseId}/chapters cu courseId inexistent → 404")
+    @DisplayName("2.2 — POST /api/courses/{courseId}/chapters with non-existent courseId → 404")
     void createChapter_courseNotFound_shouldReturn404() throws Exception {
 
         mockMvc.perform(post("/api/courses/" + UUID.randomUUID() + "/chapters")
                         .contentType(MediaType.TEXT_PLAIN)
-                        .content("Capitol oarecare"))
+                        .content("Some chapter"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @Order(12)
-    @DisplayName("2.3 — GET /api/courses/{courseId}/chapters → 200, lista de capitole")
+    @DisplayName("2.3 — GET /api/courses/{courseId}/chapters → 200, list of chapters")
     void getChaptersByCourseId_shouldReturn200() throws Exception {
 
         createChapter_shouldReturn201();
@@ -209,36 +209,36 @@ class ContentEndToEndTest {
         mockMvc.perform(get("/api/courses/" + courseId + "/chapters"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
-                .andExpect(jsonPath("$[0].title").value("Introducere in Java"));
+                .andExpect(jsonPath("$[0].title").value("Introduction to Java"));
     }
 
     @Test
     @Order(13)
-    @DisplayName("2.4 — PATCH /api/chapters/{id} → 200, titlu actualizat")
+    @DisplayName("2.4 — PATCH /api/chapters/{id} → 200, title updated")
     void updateChapterTitle_shouldReturn200() throws Exception {
 
         createChapter_shouldReturn201();
 
-        String body = "{\"title\": \"Introducere in Java — EDITAT\"}";
+        String body = "{\"title\": \"Introduction to Java — EDITED\"}";
 
         mockMvc.perform(patch("/api/chapters/" + chapterId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Introducere in Java — EDITAT"));
+                .andExpect(jsonPath("$.title").value("Introduction to Java — EDITED"));
     }
 
     @Test
     @Order(14)
-    @DisplayName("2.5 — PATCH /api/chapters/{id} order index valid → 200")
+    @DisplayName("2.5 — PATCH /api/chapters/{id} valid order index → 200")
     void updateChapterOrder_shouldReturn200() throws Exception {
 
         createChapter_shouldReturn201();
 
-        // Cream un al doilea capitol ca sa avem spatiu de reordonat
+        // Create a second chapter to have room for reordering
         mockMvc.perform(post("/api/courses/" + courseId + "/chapters")
                         .contentType(MediaType.TEXT_PLAIN)
-                        .content("Capitol 2"))
+                        .content("Chapter 2"))
                 .andExpect(status().isCreated());
 
         String body = "{\"orderIndex\": 2}";
@@ -252,22 +252,22 @@ class ContentEndToEndTest {
 
     @Test
     @Order(15)
-    @DisplayName("2.6 — PATCH /api/chapters/{id} order index out-of-bounds → 404")
+    @DisplayName("2.6 — PATCH /api/chapters/{id} out-of-bounds order index → 400")
     void updateChapterOrder_outOfBounds_shouldReturn404() throws Exception {
 
-        createChapter_shouldReturn201(); // doar 1 capitol, max index = 1
+        createChapter_shouldReturn201(); // only 1 chapter, max index = 1
 
         String body = "{\"orderIndex\": 99}";
 
         mockMvc.perform(patch("/api/chapters/" + chapterId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest()); // ChapterService arunca 400 BAD_REQUEST
+                .andExpect(status().isBadRequest()); // ChapterService throws 400 BAD_REQUEST
     }
 
 
     // ================================================================
-    //  3. LECTIE
+    //  3. LESSON
     // ================================================================
 
     @Test
@@ -279,8 +279,8 @@ class ContentEndToEndTest {
 
         String body = """
                 {
-                  "title": "Lectia 1 — Variabile si tipuri",
-                  "contentMarkdown": "## Variabile\\nIn Java, variabilele sunt..."
+                  "title": "Lesson 1 — Variables and Types",
+                  "contentMarkdown": "## Variables\\nIn Java, variables are..."
                 }
                 """;
 
@@ -289,7 +289,7 @@ class ContentEndToEndTest {
                         .content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.title").value("Lectia 1 — Variabile si tipuri"))
+                .andExpect(jsonPath("$.title").value("Lesson 1 — Variables and Types"))
                 .andExpect(jsonPath("$.orderIndex").value(1))
                 .andReturn();
 
@@ -299,12 +299,12 @@ class ContentEndToEndTest {
 
     @Test
     @Order(21)
-    @DisplayName("3.2 — POST /api/chapters/{chapterId}/lessons fara titlu → 400")
+    @DisplayName("3.2 — POST /api/chapters/{chapterId}/lessons without title → 400")
     void createLesson_noTitle_shouldReturn400() throws Exception {
 
         createChapter_shouldReturn201();
 
-        String body = "{\"contentMarkdown\": \"ceva\"}";
+        String body = "{\"contentMarkdown\": \"some content\"}";
 
         mockMvc.perform(post("/api/chapters/" + chapterId + "/lessons")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -314,10 +314,10 @@ class ContentEndToEndTest {
 
     @Test
     @Order(22)
-    @DisplayName("3.3 — POST /api/chapters/{chapterId}/lessons capitol inexistent → 404")
+    @DisplayName("3.3 — POST /api/chapters/{chapterId}/lessons non-existent chapter → 404")
     void createLesson_chapterNotFound_shouldReturn404() throws Exception {
 
-        String body = "{\"title\": \"Lectie oarecare\"}";
+        String body = "{\"title\": \"Some lesson\"}";
 
         mockMvc.perform(post("/api/chapters/" + UUID.randomUUID() + "/lessons")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -327,7 +327,7 @@ class ContentEndToEndTest {
 
     @Test
     @Order(23)
-    @DisplayName("3.4 — GET /api/chapters/{chapterId}/lessons → 200, lista de lectii")
+    @DisplayName("3.4 — GET /api/chapters/{chapterId}/lessons → 200, list of lessons")
     void getLessonsFromChapter_shouldReturn200() throws Exception {
 
         createLesson_shouldReturn201();
@@ -335,45 +335,45 @@ class ContentEndToEndTest {
         mockMvc.perform(get("/api/chapters/" + chapterId + "/lessons"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
-                .andExpect(jsonPath("$[0].title").value("Lectia 1 — Variabile si tipuri"));
+                .andExpect(jsonPath("$[0].title").value("Lesson 1 — Variables and Types"));
     }
 
     @Test
     @Order(24)
-    @DisplayName("3.5 — GET /api/lessons/{id}/content → 200, markdown returnat")
+    @DisplayName("3.5 — GET /api/lessons/{id}/content → 200, markdown returned")
     void getLessonContent_shouldReturn200() throws Exception {
 
         createLesson_shouldReturn201();
 
         mockMvc.perform(get("/api/lessons/" + lessonId + "/content"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Variabile")));
+                .andExpect(content().string(containsString("Variables")));
     }
 
     @Test
     @Order(25)
-    @DisplayName("3.6 — PATCH /api/lessons/{id}/metadata → 200, titlu actualizat")
+    @DisplayName("3.6 — PATCH /api/lessons/{id}/metadata → 200, title updated")
     void updateLessonMetadata_shouldReturn200() throws Exception {
 
         createLesson_shouldReturn201();
 
-        String body = "{\"title\": \"Lectia 1 — EDITATA\"}";
+        String body = "{\"title\": \"Lesson 1 — EDITED\"}";
 
         mockMvc.perform(patch("/api/lessons/" + lessonId + "/metadata")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Lectia 1 — EDITATA"));
+                .andExpect(jsonPath("$.title").value("Lesson 1 — EDITED"));
     }
 
     @Test
     @Order(26)
-    @DisplayName("3.7 — PATCH /api/lessons/{id}/content → 200, markdown actualizat")
+    @DisplayName("3.7 — PATCH /api/lessons/{id}/content → 200, markdown updated")
     void updateLessonContent_shouldReturn200() throws Exception {
 
         createLesson_shouldReturn201();
 
-        String newMarkdown = "## Variabile\\nContinut actualizat complet.";
+        String newMarkdown = "## Variables\\nFully updated content.";
 
         mockMvc.perform(patch("/api/lessons/" + lessonId + "/content")
                         .contentType(MediaType.TEXT_PLAIN)
@@ -384,16 +384,16 @@ class ContentEndToEndTest {
 
     @Test
     @Order(27)
-    @DisplayName("3.8 — PATCH /api/lessons/{id}/metadata order index valid → 200")
+    @DisplayName("3.8 — PATCH /api/lessons/{id}/metadata valid order index → 200")
     void updateLessonOrder_shouldReturn200() throws Exception {
 
         createLesson_shouldReturn201();
 
-        // Cream o a doua lectie
-        String body2 = "{\"title\": \"Lectia 2 — OOP\"}";
+        // Create a second lesson
+        String secondLessonBody = "{\"title\": \"Lesson 2 — OOP\"}";
         mockMvc.perform(post("/api/chapters/" + chapterId + "/lessons")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body2))
+                        .content(secondLessonBody))
                 .andExpect(status().isCreated());
 
         String patchBody = "{\"orderIndex\": 2}";
@@ -407,7 +407,7 @@ class ContentEndToEndTest {
 
 
     // ================================================================
-    //  4. RESURSA LECTIE
+    //  4. LESSON RESOURCE
     // ================================================================
 
     @Test
@@ -419,7 +419,7 @@ class ContentEndToEndTest {
 
         String body = """
                 {
-                  "title": "Documentatie Java",
+                  "title": "Java Documentation",
                   "url": "https://docs.oracle.com/en/java/"
                 }
                 """;
@@ -429,7 +429,7 @@ class ContentEndToEndTest {
                         .content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.title").value("Documentatie Java"))
+                .andExpect(jsonPath("$.title").value("Java Documentation"))
                 .andExpect(jsonPath("$.url").value("https://docs.oracle.com/en/java/"))
                 .andReturn();
 
@@ -439,7 +439,7 @@ class ContentEndToEndTest {
 
     @Test
     @Order(31)
-    @DisplayName("4.2 — POST /api/lessons/{lessonId}/resources fara titlu → 400")
+    @DisplayName("4.2 — POST /api/lessons/{lessonId}/resources without title → 400")
     void createResource_noTitle_shouldReturn400() throws Exception {
 
         createLesson_shouldReturn201();
@@ -454,12 +454,12 @@ class ContentEndToEndTest {
 
     @Test
     @Order(32)
-    @DisplayName("4.3 — POST /api/lessons/{lessonId}/resources fara URL → 400")
+    @DisplayName("4.3 — POST /api/lessons/{lessonId}/resources without URL → 400")
     void createResource_noUrl_shouldReturn400() throws Exception {
 
         createLesson_shouldReturn201();
 
-        String body = "{\"title\": \"Resursa fara URL\"}";
+        String body = "{\"title\": \"Resource without URL\"}";
 
         mockMvc.perform(post("/api/lessons/" + lessonId + "/resources")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -469,7 +469,7 @@ class ContentEndToEndTest {
 
     @Test
     @Order(33)
-    @DisplayName("4.4 — POST /api/lessons/{lessonId}/resources lectie inexistenta → 404")
+    @DisplayName("4.4 — POST /api/lessons/{lessonId}/resources non-existent lesson → 404")
     void createResource_lessonNotFound_shouldReturn404() throws Exception {
 
         String body = "{\"title\": \"R\", \"url\": \"https://x.com\"}";
@@ -482,7 +482,7 @@ class ContentEndToEndTest {
 
     @Test
     @Order(34)
-    @DisplayName("4.5 — GET /api/lessons/{lessonId}/resources → 200, lista resurse")
+    @DisplayName("4.5 — GET /api/lessons/{lessonId}/resources → 200, list of resources")
     void getResourcesByLessonId_shouldReturn200() throws Exception {
 
         createResource_shouldReturn201();
@@ -490,36 +490,36 @@ class ContentEndToEndTest {
         mockMvc.perform(get("/api/lessons/" + lessonId + "/resources"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
-                .andExpect(jsonPath("$[0].title").value("Documentatie Java"));
+                .andExpect(jsonPath("$[0].title").value("Java Documentation"));
     }
 
     @Test
     @Order(35)
-    @DisplayName("4.6 — PATCH /api/lessons/{lessonId}/resources/{resourceId} → 200, titlu actualizat")
+    @DisplayName("4.6 — PATCH /api/lessons/{lessonId}/resources/{resourceId} → 200, title updated")
     void updateResource_shouldReturn200() throws Exception {
 
         createResource_shouldReturn201();
 
-        String body = "{\"title\": \"Documentatie Java ACTUALIZATA\"}";
+        String body = "{\"title\": \"Java Documentation UPDATED\"}";
 
         mockMvc.perform(patch("/api/lessons/" + lessonId + "/resources/" + resourceId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Documentatie Java ACTUALIZATA"));
+                .andExpect(jsonPath("$.title").value("Java Documentation UPDATED"));
     }
 
     @Test
     @Order(36)
-    @DisplayName("4.7 — PATCH resursa apartinand altei lectii → 404")
+    @DisplayName("4.7 — PATCH resource belonging to a different lesson → 404")
     void updateResource_wrongLesson_shouldReturn404() throws Exception {
 
         createResource_shouldReturn201();
 
         String body = "{\"title\": \"Hack\"}";
-        UUID altaLectieId = UUID.randomUUID(); // lectie inexistenta
+        UUID differentLessonId = UUID.randomUUID(); // non-existent lesson
 
-        mockMvc.perform(patch("/api/lessons/" + altaLectieId + "/resources/" + resourceId)
+        mockMvc.perform(patch("/api/lessons/" + differentLessonId + "/resources/" + resourceId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isNotFound());
@@ -527,15 +527,15 @@ class ContentEndToEndTest {
 
 
     // ================================================================
-    //  5. FULL-VIEW CURS
+    //  5. COURSE FULL-VIEW
     // ================================================================
 
     @Test
     @Order(40)
-    @DisplayName("5.1 — GET /api/courses/{courseId}/full-view → 200, ierarhie completa")
+    @DisplayName("5.1 — GET /api/courses/{courseId}/full-view → 200, complete hierarchy")
     void getCourseFullView_shouldReturn200WithHierarchy() throws Exception {
 
-        createResource_shouldReturn201(); // populeaza tot: curs > capitol > lectie > resursa
+        createResource_shouldReturn201(); // populates everything: course > chapter > lesson > resource
 
         mockMvc.perform(get("/api/courses/" + courseId + "/full-view"))
                 .andExpect(status().isOk())
@@ -547,7 +547,7 @@ class ContentEndToEndTest {
 
     @Test
     @Order(41)
-    @DisplayName("5.2 — GET /api/courses/{courseId}/full-view curs inexistent → 404")
+    @DisplayName("5.2 — GET /api/courses/{courseId}/full-view non-existent course → 404")
     void getCourseFullView_notFound_shouldReturn404() throws Exception {
 
         mockMvc.perform(get("/api/courses/" + UUID.randomUUID() + "/full-view"))
@@ -556,21 +556,21 @@ class ContentEndToEndTest {
 
 
     // ================================================================
-    //  6. STERGERI PE BUCATI (resursa → lectie → capitol → curs)
+    //  6. PIECE-BY-PIECE DELETIONS (resource → lesson → chapter → course)
     // ================================================================
 
     @Test
     @Order(50)
-    @DisplayName("6.1 — DELETE resursa → 204, GET lista resurse devine goala")
+    @DisplayName("6.1 — DELETE resource → 204, GET resource list becomes empty")
     void deleteResource_shouldReturn204_thenListEmpty() throws Exception {
 
         createResource_shouldReturn201();
 
-        // Stergem resursa
+        // Delete the resource
         mockMvc.perform(delete("/api/lessons/" + lessonId + "/resources/" + resourceId))
                 .andExpect(status().isNoContent());
 
-        // Lista resurse trebuie sa fie goala
+        // Resource list must be empty
         mockMvc.perform(get("/api/lessons/" + lessonId + "/resources"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", empty()));
@@ -578,7 +578,7 @@ class ContentEndToEndTest {
 
     @Test
     @Order(51)
-    @DisplayName("6.2 — DELETE resursa inexistenta → 404")
+    @DisplayName("6.2 — DELETE non-existent resource → 404")
     void deleteResource_notFound_shouldReturn404() throws Exception {
 
         createLesson_shouldReturn201();
@@ -589,16 +589,16 @@ class ContentEndToEndTest {
 
     @Test
     @Order(52)
-    @DisplayName("6.3 — DELETE lectie → 204, GET lista lectii devine goala")
+    @DisplayName("6.3 — DELETE lesson → 204, GET lesson list becomes empty")
     void deleteLesson_shouldReturn204_thenListEmpty() throws Exception {
 
         createLesson_shouldReturn201();
 
-        // Stergem lectia
+        // Delete the lesson
         mockMvc.perform(delete("/api/lessons/" + lessonId))
                 .andExpect(status().isNoContent());
 
-        // Lista lectii trebuie sa fie goala
+        // Lesson list must be empty
         mockMvc.perform(get("/api/chapters/" + chapterId + "/lessons"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", empty()));
@@ -606,16 +606,16 @@ class ContentEndToEndTest {
 
     @Test
     @Order(53)
-    @DisplayName("6.4 — DELETE capitol → 204, GET lista capitole devine goala")
+    @DisplayName("6.4 — DELETE chapter → 204, GET chapter list becomes empty")
     void deleteChapter_shouldReturn204_thenListEmpty() throws Exception {
 
         createChapter_shouldReturn201();
 
-        // Stergem capitolul
+        // Delete the chapter
         mockMvc.perform(delete("/api/chapters/" + chapterId))
                 .andExpect(status().isNoContent());
 
-        // Lista capitole a cursului trebuie sa fie goala
+        // Chapter list for the course must be empty
         mockMvc.perform(get("/api/courses/" + courseId + "/chapters"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", empty()));
@@ -623,7 +623,7 @@ class ContentEndToEndTest {
 
     @Test
     @Order(54)
-    @DisplayName("6.5 — DELETE capitol inexistent → 404")
+    @DisplayName("6.5 — DELETE non-existent chapter → 404")
     void deleteChapter_notFound_shouldReturn404() throws Exception {
 
         mockMvc.perform(delete("/api/chapters/" + UUID.randomUUID()))
@@ -632,24 +632,24 @@ class ContentEndToEndTest {
 
     @Test
     @Order(55)
-    @DisplayName("6.6 — DELETE curs → 204, GET full-view returneaza 404")
+    @DisplayName("6.6 — DELETE course → 204, GET full-view returns 404")
     void deleteCourse_shouldReturn204_thenFullViewIs404() throws Exception {
 
         createCourse_shouldReturn201();
 
-        // Stergem cursul
+        // Delete the course
         mockMvc.perform(delete("/api/courses/" + courseId))
                 .andExpect(status().isNoContent());
 
-        // Verificam ca lista de capitole e 404 (full-view nu se poate verifica
-        // in aceeasi sesiune Hibernate dupa delete — TransientObjectException)
+        // Verify that the chapter list returns 404 (full-view cannot be verified
+        // in the same Hibernate session after delete — TransientObjectException)
         mockMvc.perform(get("/api/courses/" + courseId + "/chapters"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @Order(56)
-    @DisplayName("6.7 — DELETE curs inexistent → 404")
+    @DisplayName("6.7 — DELETE non-existent course → 404")
     void deleteCourse_notFound_shouldReturn404() throws Exception {
 
         mockMvc.perform(delete("/api/courses/" + UUID.randomUUID()))
@@ -658,58 +658,58 @@ class ContentEndToEndTest {
 
 
     // ================================================================
-    //  7. STERGERE FULL CU CASCADE (curs cu tot cu capitole + lectii + resurse)
+    //  7. FULL CASCADE DELETE (course with chapters + lessons + resources)
     // ================================================================
 
     @Test
     @Order(60)
-    @DisplayName("7.1 — DELETE curs cu ierarhie completa → cascade sterge tot")
+    @DisplayName("7.1 — DELETE course with full hierarchy → cascade deletes everything")
     void deleteCourse_withFullHierarchy_cascadeDeletesEverything() throws Exception {
 
-        // Construim ierarhia completa: curs > capitol > lectie > resursa
+        // Build the complete hierarchy: course > chapter > lesson > resource
         createResource_shouldReturn201();
 
-        // Stergem cursul direct (fara sa stergem manual capitole/lectii/resurse)
+        // Delete the course directly (without manually deleting chapters/lessons/resources)
         mockMvc.perform(delete("/api/courses/" + courseId))
                 .andExpect(status().isNoContent());
 
-        // Verificam doar ca DELETE a returnat 204 — nu facem GET dupa delete
-        // in acelasi test deoarece Hibernate pastreaza entitatea stearsa in sesiune
-        // si orice query ulterior (chiar existsById) cauzeaza TransientObjectException.
-        // Comportamentul cascade e verificat implicit de faptul ca DELETE a reusit (204).
+        // We only verify that DELETE returned 204 — no GET after delete
+        // in the same test because Hibernate keeps the deleted entity in the session
+        // and any subsequent query (even existsById) causes TransientObjectException.
+        // Cascade behavior is implicitly verified by the fact that DELETE succeeded (204).
     }
 
     @Test
     @Order(61)
-    @DisplayName("7.2 — Ordinea capitolelor se repara dupa stergere (gap filling)")
+    @DisplayName("7.2 — Chapter order is repaired after deletion (gap filling)")
     void deleteChapter_orderIndexRepaired() throws Exception {
 
         createCourse_shouldReturn201();
 
-        // Cream capitolul 1 (A) - doar verificam ca s-a creat cu succes, nu ii pastram rezultatul
+        // Create chapter 1 (A) — only verify it was created successfully, don't keep the result
         mockMvc.perform(post("/api/courses/" + courseId + "/chapters")
-                        .contentType(MediaType.TEXT_PLAIN).content("Capitol A"))
+                        .contentType(MediaType.TEXT_PLAIN).content("Chapter A"))
                 .andExpect(status().isCreated());
 
-        // Cream capitolul 2 (B) si ii pastram rezultatul pentru a-i extrage ID-ul
-        MvcResult c2 = mockMvc.perform(post("/api/courses/" + courseId + "/chapters")
-                        .contentType(MediaType.TEXT_PLAIN).content("Capitol B"))
+        // Create chapter 2 (B) and keep the result to extract its ID
+        MvcResult chapterBResult = mockMvc.perform(post("/api/courses/" + courseId + "/chapters")
+                        .contentType(MediaType.TEXT_PLAIN).content("Chapter B"))
                 .andExpect(status().isCreated()).andReturn();
 
-        // Cream capitolul 3 (C) - fara sa ii pastram rezultatul
+        // Create chapter 3 (C) — don't keep the result
         mockMvc.perform(post("/api/courses/" + courseId + "/chapters")
-                        .contentType(MediaType.TEXT_PLAIN).content("Capitol C"))
+                        .contentType(MediaType.TEXT_PLAIN).content("Chapter C"))
                 .andExpect(status().isCreated());
 
-        // Extragem ID-ul capitolului din mijloc
-        UUID idC2 = UUID.fromString(
-                objectMapper.readTree(c2.getResponse().getContentAsString()).get("id").asText());
+        // Extract the ID of the middle chapter
+        UUID middleChapterId = UUID.fromString(
+                objectMapper.readTree(chapterBResult.getResponse().getContentAsString()).get("id").asText());
 
-        // Stergem capitolul din mijloc (index 2)
-        mockMvc.perform(delete("/api/chapters/" + idC2))
+        // Delete the middle chapter (index 2)
+        mockMvc.perform(delete("/api/chapters/" + middleChapterId))
                 .andExpect(status().isNoContent());
 
-        // Capitolele ramase trebuie sa aiba indexurile 1 si 2 (fara gap)
+        // Remaining chapters must have indices 1 and 2 (no gap)
         mockMvc.perform(get("/api/courses/" + courseId + "/chapters"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -719,36 +719,36 @@ class ContentEndToEndTest {
 
     @Test
     @Order(62)
-    @DisplayName("7.3 — Ordinea lectiilor se repara dupa stergere (gap filling)")
+    @DisplayName("7.3 — Lesson order is repaired after deletion (gap filling)")
     void deleteLesson_orderIndexRepaired() throws Exception {
 
         createChapter_shouldReturn201();
 
-        // Cream 3 lectii
-        String l1 = "{\"title\": \"L1\"}";
-        String l2Body = "{\"title\": \"L2\"}";
-        String l3 = "{\"title\": \"L3\"}";
+        // Create 3 lessons
+        String firstLessonBody = "{\"title\": \"L1\"}";
+        String secondLessonBody = "{\"title\": \"L2\"}";
+        String thirdLessonBody = "{\"title\": \"L3\"}";
 
         mockMvc.perform(post("/api/chapters/" + chapterId + "/lessons")
-                        .contentType(MediaType.APPLICATION_JSON).content(l1))
+                        .contentType(MediaType.APPLICATION_JSON).content(firstLessonBody))
                 .andExpect(status().isCreated());
 
-        MvcResult l2Result = mockMvc.perform(post("/api/chapters/" + chapterId + "/lessons")
-                        .contentType(MediaType.APPLICATION_JSON).content(l2Body))
+        MvcResult secondLessonResult = mockMvc.perform(post("/api/chapters/" + chapterId + "/lessons")
+                        .contentType(MediaType.APPLICATION_JSON).content(secondLessonBody))
                 .andExpect(status().isCreated()).andReturn();
 
         mockMvc.perform(post("/api/chapters/" + chapterId + "/lessons")
-                        .contentType(MediaType.APPLICATION_JSON).content(l3))
+                        .contentType(MediaType.APPLICATION_JSON).content(thirdLessonBody))
                 .andExpect(status().isCreated());
 
-        UUID idL2 = UUID.fromString(
-                objectMapper.readTree(l2Result.getResponse().getContentAsString()).get("id").asText());
+        UUID middleLessonId = UUID.fromString(
+                objectMapper.readTree(secondLessonResult.getResponse().getContentAsString()).get("id").asText());
 
-        // Stergem lectia din mijloc
-        mockMvc.perform(delete("/api/lessons/" + idL2))
+        // Delete the middle lesson
+        mockMvc.perform(delete("/api/lessons/" + middleLessonId))
                 .andExpect(status().isNoContent());
 
-        // Lectiile ramase trebuie sa aiba indexurile 1 si 2
+        // Remaining lessons must have indices 1 and 2
         mockMvc.perform(get("/api/chapters/" + chapterId + "/lessons"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
