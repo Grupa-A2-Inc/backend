@@ -12,6 +12,7 @@ import lombok.Setter;
 
 //Keeps track of lesson title and order index in a single variable
 //Used in the PATCH "/api/lessons/{id}/content" entrypoint
+
 public class LessonDTOMetadata {
     private String title = null;
     private Integer orderIndex = null;

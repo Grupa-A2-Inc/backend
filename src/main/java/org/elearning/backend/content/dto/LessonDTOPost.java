@@ -11,6 +11,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 
+//Keeps track of lesson title and content in a single variable
+//Used in the POST "/api/lessons/{id}/content" entrypoint
+
 public class LessonDTOPost {
     private String title;
     private String contentMarkdown;
