@@ -9,6 +9,8 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.UUID;
 
@@ -16,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class ChapterControllerTests {
+class ChapterControllerTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -322,63 +324,17 @@ class ChapterControllerTests {
      * PATCH /api/chapters/{id}
      * Tests that updating a chapter with an invalid order index (too large) returns a 400 Bad Request status.
      */
-    @Test
-    void shouldReturnBadRequestWhenOrderIndexTooLarge() {
+    @ParameterizedTest
+    @ValueSource(ints = {10, 0, -1})
+    void shouldReturnBadRequestWhenOrderIndexIsInvalid(int invalidOrderIndex) {
         UUID chapter1 = insertChapter("Chapter 1", 1);
 
-        String body = """
+        // Using String.format to inject the parameterized invalidOrderIndex into the JSON body
+        String body = String.format("""
                 {
-                    "orderIndex": 10
+                    "orderIndex": %d
                 }
-                """;
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                "/api/chapters/" + chapter1,
-                HttpMethod.PATCH,
-                new HttpEntity<>(body, jsonHeaders()),
-                String.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * PATCH /api/chapters/{id}
-     * Tests that updating a chapter with an invalid order index (too small or zero) returns a 400 Bad Request status.
-     */
-    @Test
-    void shouldReturnBadRequestWhenOrderIndexTooSmall() {
-        UUID chapter1 = insertChapter("Chapter 1", 1);
-
-        String body = """
-                {
-                    "orderIndex": 0
-                }
-                """;
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                "/api/chapters/" + chapter1,
-                HttpMethod.PATCH,
-                new HttpEntity<>(body, jsonHeaders()),
-                String.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * PATCH /api/chapters/{id}
-     * Tests that updating a chapter with a negative order index returns a 400 Bad Request status.
-     */
-    @Test
-    void shouldReturnBadRequestWhenOrderIndexNegative() {
-        UUID chapter1 = insertChapter("Chapter 1", 1);
-
-        String body = """
-                {
-                    "orderIndex": -1
-                }
-                """;
+                """, invalidOrderIndex);
 
         ResponseEntity<String> response = restTemplate.exchange(
                 "/api/chapters/" + chapter1,

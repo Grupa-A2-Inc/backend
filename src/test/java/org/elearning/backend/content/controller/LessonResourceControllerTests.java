@@ -12,7 +12,9 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import java.util.stream.Stream;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -243,85 +245,64 @@ class LessonResourceControllerTests {
         assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
-    @Test
-    void shouldReturnOKWhenPatchingWithAllData(){
+
+    @ParameterizedTest(name = "Test {index}: Patching with expected Title = ''{1}'', expected URL = ''{2}''")
+    @MethodSource("providePatchArguments")
+    void shouldReturnOKWhenPatchingResource(String requestBody, String expectedTitle, String expectedUrl) {
+        // Arrange
         UUID resourceId = insertLessonResource("Resource to update", "https://update.com");
 
-        String body = """
-                {
-                    "title": "Updated Resource",
-                    "url" : "https://updated.com"
-                }
-                """;
+        // Act
         ResponseEntity<String> updateResponse = restTemplate.exchange(
                 "/api/lessons/" + lessonId + "/resources/" + resourceId,
                 HttpMethod.PATCH,
-                new HttpEntity<>(body, jsonHeaders()),
+                new HttpEntity<>(requestBody, jsonHeaders()),
                 String.class
         );
+
+        // Assert
         assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(updateResponse.getBody()).contains("Updated Resource");
-        assertThat(updateResponse.getBody()).contains("https://updated.com");
+        assertThat(updateResponse.getBody()).contains(expectedTitle);
+        assertThat(updateResponse.getBody()).contains(expectedUrl);
     }
 
-    @Test
-    void shouldReturnOKWhenPatchingTitle(){
-        UUID resourceId = insertLessonResource("Resource to update", "https://update.com");
+    private static Stream<Arguments> providePatchArguments() {
+        return Stream.of(
+                // Case 1: Patch both fields
+                Arguments.of("""
+                    {
+                        "title": "Updated Resource",
+                        "url" : "https://updated.com"
+                    }
+                    """,
+                        "Updated Resource",
+                        "https://updated.com"),
 
-        String body = """
-                {
-                    "title": "Updated Resource"
-                }
-                """;
-        ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + resourceId,
-                HttpMethod.PATCH,
-                new HttpEntity<>(body, jsonHeaders()),
-                String.class
+                // Case 2: Patch title only (url remains the original)
+                Arguments.of("""
+                    {
+                        "title": "Updated Resource"
+                    }
+                    """,
+                        "Updated Resource",
+                        "https://update.com"),
+
+                // Case 3: Patch URL only (title remains the original)
+                Arguments.of("""
+                    {
+                       "url" : "https://updated.com"
+                    }
+                    """,
+                        "Resource to update",
+                        "https://updated.com"),
+
+                // Case 4: Patch with empty body (both fields remain original)
+                Arguments.of("""
+                    {}
+                    """,
+                        "Resource to update",
+                        "https://update.com")
         );
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(updateResponse.getBody()).contains("Updated Resource");
-        assertThat(updateResponse.getBody()).contains("https://update.com");
-    }
-
-    @Test
-    void shouldReturnOKWhenPatchingURL(){
-        UUID resourceId = insertLessonResource("Resource to update", "https://update.com");
-
-        String body = """
-                {
-                   "url" : "https://updated.com"
-                }
-                """;
-        ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + resourceId,
-                HttpMethod.PATCH,
-                new HttpEntity<>(body, jsonHeaders()),
-                String.class
-        );
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(updateResponse.getBody()).contains("https://updated.com");
-        assertThat(updateResponse.getBody()).contains("Resource to update");
-    }
-
-    @Test
-    void shouldReturnOKWhenPatchingWithEmptyBody(){
-        UUID resourceId = insertLessonResource("Resource to update", "https://update.com");
-
-        String body = """
-                {
-                
-                }
-                """;
-        ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + resourceId,
-                HttpMethod.PATCH,
-                new HttpEntity<>(body, jsonHeaders()),
-                String.class
-        );
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(updateResponse.getBody()).contains("https://update.com");
-        assertThat(updateResponse.getBody()).contains("Resource to update");
     }
 
     @Test

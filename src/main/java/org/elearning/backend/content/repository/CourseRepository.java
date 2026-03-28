@@ -8,6 +8,6 @@ import java.util.List;
 
 // JpaRepository da automat metodele: save(), findAll(), deleteById(), etc.
 public interface CourseRepository extends JpaRepository<Course, UUID> {
-    List<Course> findByStatus(CourseStatus status);
     List<Course> findByCreatedBy(UUID createdBy);
+    List<Course> findByStatusAndVisibility(CourseStatus status, CourseVisibility visibility);
 }
