@@ -132,16 +132,18 @@ public class ChapterService {
      */
     @Transactional
     public Chapter updateChapterMetadata(UUID chapterId, ChapterDTOPost chapterDTOPost) {
-        if(!chapterRepository.existsById(chapterId)){
+        if (!chapterRepository.existsById(chapterId)) {
             throw new IllegalArgumentException("Chapter not found with ID: " + chapterId);
         }
-
-        if(chapterDTOPost.getOrderIndex()!=null){
+        if (chapterDTOPost.getOrderIndex() != null) {
             updateChapterOrder(chapterId, chapterDTOPost.getOrderIndex());
         }
-        if(chapterDTOPost.getTitle()!=null){
+        if (chapterDTOPost.getTitle() != null) {
             updateChapterTitle(chapterId, chapterDTOPost.getTitle());
         }
+
+        // Forteaza refresh din DB, nu din cache
+        chapterRepository.flush();
         return chapterRepository.findById(chapterId).orElse(new Chapter());
     }
 }

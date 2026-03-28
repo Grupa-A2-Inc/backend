@@ -38,7 +38,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
      * @param courseId           the specified course's id
      * @param chapterId          the changed chapter's id
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Chapter c " +
             "SET c.orderIndex = c.orderIndex + 1 " +
             "WHERE c.orderIndex >= :new_order_index " +
@@ -59,7 +59,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
      * @param courseId           the specified course's id
      * @param chapterId          the changed chapter's id
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Chapter c " +
             "SET c.orderIndex = c.orderIndex - 1 " +
             "WHERE c.orderIndex >= :previous_order_index " +
@@ -76,7 +76,8 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
      * @param targetOrderIndex the order index of the deleted chapter
      * @param courseId the specified course's id
      */
-    @Modifying
+
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Chapter c " +
             "SET c.orderIndex = c.orderIndex - 1 " +
             "WHERE c.orderIndex > :target_order_index AND c.course.id = :course_id")
@@ -104,10 +105,10 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
      * @param chapterId the specified chapter's id
      * @param newTitle the new title
      */
-    @Modifying
-    @Query("UPDATE Chapter c SET c.title = :new_title WHERE c.id = :target_id")
-    void updateChapterTitle(@Param("target_id") UUID chapterId,
-                            @Param("new_title") String newTitle);
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Chapter c SET c.title = :title WHERE c.id = :id")
+    void updateChapterTitle(@Param("id") UUID chapterId,
+                            @Param("title") String newTitle);
 
     /**
      * Changes the order index of a chapter inside a course
@@ -115,7 +116,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
      * @param courseId the parent course's id
      * @param newOrderIndex the new
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Chapter c SET c.orderIndex = :new_order_index WHERE c.id = :chapter_id AND c.course.id = :course_id")
     void updateChapterOrderIndex(@Param("chapter_id") UUID chapterId,
                                  @Param("new_order_index") int newOrderIndex,
