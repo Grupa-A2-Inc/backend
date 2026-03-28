@@ -60,9 +60,6 @@ public class ChapterService {
      */
     @Transactional
     public void updateChapterTitle(UUID chapterId, String newTitle){
-        if(!chapterRepository.existsById(chapterId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Chapter not found");
-        }
         chapterRepository.updateChapterTitle(chapterId, newTitle);
     }
 
@@ -74,10 +71,6 @@ public class ChapterService {
      */
     @Transactional
     public void updateChapterOrder(UUID chapterId, int newOrderIndex){
-        if(!chapterRepository.existsById(chapterId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Chapter not found");
-        }
-
         UUID courseId = chapterRepository.findCourseIdFromId(chapterId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
 
@@ -142,8 +135,8 @@ public class ChapterService {
             updateChapterTitle(chapterId, chapterDTOPost.getTitle());
         }
 
-        // Forteaza refresh din DB, nu din cache
         chapterRepository.flush();
         return chapterRepository.findById(chapterId).orElse(new Chapter());
     }
+
 }
