@@ -28,6 +28,7 @@ class LessonResourceControllerTests {
     private JdbcTemplate jdbcTemplate;
 
     private UUID lessonId;
+    private UUID chapterId;
 
     @BeforeEach
     void setUp() {
@@ -37,7 +38,8 @@ class LessonResourceControllerTests {
                         "VALUES ('" + courseId + "', 'Test Course', '" + UUID.randomUUID() + "', 'DRAFT', 'PRIVATE')"
         );
 
-        UUID chapterId = UUID.randomUUID();
+
+        chapterId = UUID.randomUUID();
         jdbcTemplate.execute(
                 "INSERT INTO chapters (id, course_id, title) " +
                         "VALUES ('" + chapterId + "', '" + courseId + "', 'Test Chapter')"
@@ -361,6 +363,32 @@ class LessonResourceControllerTests {
         assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
+    @Test
+    void shouldNotPatchIfExistingLessonIsNotRelatedToExistingResource(){
+        UUID unrelatedLessonId = UUID.randomUUID();
+        jdbcTemplate.execute(
+                "INSERT INTO lessons (id, chapter_id, title, order_index) " +
+                        "VALUES ('" + unrelatedLessonId + "', '" + chapterId + "', 'Test Lesson', 1)"
+        );
+        UUID unrelatedResourceId = insertLessonResource("Resource to update", "https://update.com");
+        String body = """
+                {
+                    "title" : "I will not change",
+                    "url" : "https://Iwillnotchange.com"
+           
+                }
+                """;
+        ResponseEntity<String> updateResponse = restTemplate.exchange(
+                "/api/lessons/" + unrelatedLessonId + "/resources/" + unrelatedResourceId,
+                HttpMethod.PATCH,
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+    }
+
 
 
     /**
@@ -378,6 +406,10 @@ class LessonResourceControllerTests {
 
         return lessonResourceID;
     }
+
+
+
+
 
     private HttpHeaders jsonHeaders() {
         HttpHeaders headers = new HttpHeaders();

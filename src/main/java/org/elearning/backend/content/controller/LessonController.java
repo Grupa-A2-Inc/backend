@@ -4,6 +4,7 @@ package org.elearning.backend.content.controller;
 import jakarta.validation.Valid;
 import org.elearning.backend.content.dto.LessonDTOEntity;
 import org.elearning.backend.content.dto.LessonDTOMetadata;
+import org.elearning.backend.content.dto.LessonDTOPost;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.service.LessonService;
 import org.springframework.http.HttpStatus;
@@ -40,9 +41,9 @@ public class LessonController {
 
     @PostMapping("/api/chapters/{chapterID}/lessons")
     public ResponseEntity<LessonDTOEntity> createNewLesson(
-            @RequestBody @Valid Lesson newLesson,
+            @RequestBody @Valid LessonDTOPost modifiableLessonContent,
             @PathVariable UUID chapterID){
-            return ResponseEntity.status(HttpStatus.CREATED).body(lessonService.createNewLesson(newLesson, chapterID));
+            return ResponseEntity.status(HttpStatus.CREATED).body(lessonService.createNewLesson(modifiableLessonContent, chapterID));
     }
 
     // DELETE /api/lessons/{id}  Entrypoint
