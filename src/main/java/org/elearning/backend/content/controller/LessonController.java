@@ -41,12 +41,11 @@ public class LessonController {
             summary = "Creates new lesson",
             description = "Create a new lesson associated with with a chapter via its ID"
     )
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Lesson successfully created"),
             @ApiResponse(responseCode = "400", description = "Invalid data (For example, missing title)"),
             @ApiResponse(responseCode = "404", description = "Inexistent chapter")
     })
-
     @PostMapping("/api/chapters/{chapterID}/lessons")
     public ResponseEntity<LessonDTOEntity> createNewLesson(
             @RequestBody @Valid LessonDTOPost modifiableLessonContent,
@@ -61,11 +60,10 @@ public class LessonController {
 
     @Operation( summary = "Delete a lesson",
                 description = "Deletes the lesson with a given ID, making sure to also repair the order index")
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Lesson successfully deleted"),
             @ApiResponse(responseCode = "404", description = "Inexistent lesson")
     })
-
     @DeleteMapping("/api/lessons/{id}")
     public ResponseEntity<Void> deleteLesson(@PathVariable UUID id){
         lessonService.deleteLesson(id);
@@ -80,11 +78,10 @@ public class LessonController {
 
     @Operation( summary = "Get all lessons",
             description = "Returns every single lesson from a specified chapter given by its ID, in order of order index")
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lessons successfully returned"),
             @ApiResponse(responseCode = "404", description = "Inexistent chapter")
     })
-
     @GetMapping("/api/chapters/{chapterID}/lessons")
     public ResponseEntity<List<LessonDTOEntity>> getAllLessonsFromChapterID(@PathVariable UUID chapterID){
         return ResponseEntity.ok(lessonService.getAllLessonsFromChapter(chapterID));
@@ -97,11 +94,10 @@ public class LessonController {
 
     @Operation( summary = "Get lesson content ",
             description = "Returns the markdown content of a given lesson from its ID")
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Markdown successfully returned"),
             @ApiResponse(responseCode = "404", description = "Inexistent lesson or content")
     })
-
     @GetMapping("/api/lessons/{id}/content")
     public ResponseEntity<String> getLessonContent(
             @PathVariable UUID id){
@@ -117,14 +113,12 @@ public class LessonController {
     @Operation( summary = "Update lesson metadata ",
             description = "Updates either the title and order index of a given lesson from its id. " +
                     "If the order index is changed, it makes sure to also repair the order of every lesson from that chapter")
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Metadata successfully updated"),
             @ApiResponse(responseCode = "400", description = "Out of range order index; It cannot be lesser than 1 or bigger than the total amount of lessons inside the chapter"),
             @ApiResponse(responseCode = "404", description = "Inexistent content (lesson or chapter associated with it)")
 
     })
-
-
     @PatchMapping("/api/lessons/{id}/metadata")
     public ResponseEntity<LessonDTOEntity> updateLessonMetadata(
             @PathVariable UUID id,
@@ -140,19 +134,15 @@ public class LessonController {
 
     @Operation( summary = "Update lesson content",
             description = "Updates the content markdown of a lesson given by its id")
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Content successfully updated"),
             @ApiResponse(responseCode = "404", description = "Inexistent lesson")
 
     })
-
     @PatchMapping("/api/lessons/{id}/content")
     public ResponseEntity<LessonDTOEntity> updateLessonContent(
             @PathVariable UUID id,
             @RequestBody String markdownContent){
         return ResponseEntity.ok(lessonService.updateLessonMarkdownContent(id, markdownContent));
     }
-
-
-
 }

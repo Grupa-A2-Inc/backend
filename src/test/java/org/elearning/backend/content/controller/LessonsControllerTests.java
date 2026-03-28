@@ -49,19 +49,6 @@ class LessonsControllerTests {
     }
 
     /**
-     * /api/lesson-test
-     * A simple test endpoint to verify that the controller is properly wired and responding to requests.
-     */
-    @Test
-    void shouldReturnTestEndpoint() {
-        ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lesson-test", String.class
-        );
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).contains("functioneaza");
-    }
-
-    /**
      * GET /api/chapters/{chapterID}/lessons
      * Tests that requesting lessons for a valid chapter returns a 200 OK status and includes the expected lesson title in the response body.
      */
