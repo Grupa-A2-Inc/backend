@@ -1,6 +1,7 @@
 package org.elearning.backend.content.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -18,6 +19,8 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @NotNull
+    @Column(nullable = false)
     private String title;
 
     @Column(columnDefinition="TEXT")
@@ -28,23 +31,23 @@ public class Course {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM) //pt enum postgres altfel eroare
-    @Column(name="status")
+    @Column(name="status", nullable = false)
     private CourseStatus status=CourseStatus.DRAFT;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "visibility")
+    @Column(name = "visibility", nullable = false)
     private CourseVisibility visibility = CourseVisibility.PRIVATE;
 
     @Column(name="created_by")
     private UUID createdBy;
 
     @org.hibernate.annotations.CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @org.hibernate.annotations.UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
