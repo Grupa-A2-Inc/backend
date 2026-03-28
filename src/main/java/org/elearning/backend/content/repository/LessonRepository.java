@@ -24,7 +24,8 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
 
     // Repairs the order index of elements inside a specific chapter, after changing the order index of any lesson
     // Increments the order indexes between the new value and the previous, if the new value is lesser than the previous
-    @Modifying
+
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Lesson l " +
             "SET l.orderIndex = l.orderIndex + 1 " +
             "WHERE ( l.orderIndex >= :newOrderIndex " +
@@ -36,7 +37,8 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
                                 @Param("chapter_id") UUID chapterID, @Param("lesson_id") UUID lessonID);
 
     // Decrements the order indexes between the new value and the previous, if the new value is bigger than the previous
-    @Modifying
+
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Lesson l " +
             "SET l.orderIndex = l.orderIndex - 1 " +
             "WHERE ( l.orderIndex <= :newOrderIndex " +
@@ -49,7 +51,8 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
 
     // Repairs the order index of elements inside a specific chapter, after changing the order index of any lesson
     // Every element after the deleted one will have its order index decremented
-    @Modifying
+
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Lesson l SET l.orderIndex = l.orderIndex - 1 " +
             "WHERE l.orderIndex > :referenceOrderIndex AND l.chapter.id = :chapter_id")
     void repairLessonOrderIndexAfterDeletion(@Param("referenceOrderIndex") int referenceOrderIndex,
@@ -69,24 +72,26 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     Optional<String> findContentMarkdown(@Param("givenID") UUID lessonID);
 
     //Changes the title of a lesson
-    @Modifying
-    @Query("UPDATE Lesson l SET l.title = :new_title WHERE l.id = :lessonID")
-    void updateLessonTitle(@Param("lessonID") UUID lessonID, @Param("new_title") String newTitle);
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Lesson l SET l.title = :title WHERE l.id = :id")
+    void updateLessonTitle(@Param("id") UUID id, @Param("title") String title);
 
     //Changes the order index of a lesson from a specific chapter
-    @Modifying
+
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Lesson l SET l.orderIndex = :order_index WHERE l.id = :lessonID AND l.chapter.id = :chapter_id")
     void updateLessonOrderIndex(@Param("lessonID") UUID lessonID,
                                 @Param("order_index") int newOrderIndex,
                                 @Param("chapter_id") UUID chapterID);
 
     //Updates the information inside content markdown
-    @Modifying
-    @Query("UPDATE Lesson l SET l.contentMarkdown = :content_md WHERE l.id = :lessonID")
-    void updateLessonContentMarkdown(@Param("lessonID") UUID lessonID, @Param("content_md") String markdownContent);
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Lesson l SET l.contentMarkdown = :content WHERE l.id = :id")
+    void updateLessonContentMarkdown(@Param("id") UUID id, @Param("content") String content);
 
     //Deletes a specific lesson
-    @Modifying
+
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Lesson l WHERE l.id = :lessonID")
     void deleteLesson(@Param("lessonID") UUID lessonID);
 

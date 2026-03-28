@@ -172,6 +172,7 @@ public class LessonService {
         if(lessonDTOMetadata.getTitle()!=null){
             updateLessonTitle(lessonID, lessonDTOMetadata.getTitle());
         }
+        lessonRepository.flush();
         return new LessonDTOEntity(lessonRepository.findById(lessonID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND)));
     }

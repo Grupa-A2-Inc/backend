@@ -35,7 +35,6 @@ public class CourseService {
         if ("INSTRUCTOR".equals(role)) {
             courses = courseRepository.findByCreatedBy(userId);
         } else {
-            // era: courseRepository.findByStatus(CourseStatus.PUBLISHED);
             courses = courseRepository.findByStatusAndVisibility(
                     CourseStatus.PUBLISHED,
                     CourseVisibility.PUBLIC
@@ -89,20 +88,16 @@ public class CourseService {
      */
     @Transactional(readOnly = true)
     public CourseFullViewDTO getCourseFullView(UUID courseId) {
-
-        // Get the course with its chapters (Query 1)
+        // Query 1 — cursul cu capitole
         Course course = courseRepository.findCourseWithChapters(courseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course with ID " + courseId + " not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Course with ID " + courseId + " not found."));
 
-        // Get the chapters with their lessons (Query 2)
-        // Hibernate will automatically "link" the chapters to the course
+        // Query 2 si 3 trebuie sa fie in ACEEASI tranzactie cu Query 1
+        // ca Hibernate sa poata asocia rezultatele in primul nivel cache
         chapterRepository.findChaptersWithLessonsByCourseId(courseId);
-
-        // Get the lessons with their resources (Query 3)
-        // Hibernate will automatically "link" the lessons to their respective chapters (and implicitly to the course)
         lessonRepository.findLessonsWithResourcesByCourseId(courseId);
 
-        // transform the fully loaded Course entity into a CourseFullViewDTO using the mapper
         return courseFullViewMapper.toCourseFullViewDTO(course);
     }
 }
