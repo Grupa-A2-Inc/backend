@@ -236,10 +236,12 @@ class ChapterControllerTest {
 
     /**
      * PATCH /api/chapters/{id}
-     * Tests that updating a chapter's order index returns a 200 OK status.
+     * Tests that moving a chapter to a higher order index (forward) returns 200 OK
+     * and correctly shifts other chapters down.
+     * Covers the previousOrderIndex < newOrderIndex branch in updateChapterOrder.
      */
     @Test
-    void shouldUpdateChapterOrderIndex() {
+    void shouldUpdateChapterOrderIndexMovingForward() {
         UUID chapter1 = insertChapter("Chapter 1", 1);
         UUID chapter2 = insertChapter("Chapter 2", 2);
         UUID chapter3 = insertChapter("Chapter 3", 3);
@@ -261,6 +263,64 @@ class ChapterControllerTest {
         assertThat(orderIndexOf(chapter1)).isEqualTo(3);
         assertThat(orderIndexOf(chapter2)).isEqualTo(1);
         assertThat(orderIndexOf(chapter3)).isEqualTo(2);
+    }
+
+    /**
+     * PATCH /api/chapters/{id}
+     * Tests that moving a chapter to a lower order index (backwards) returns 200 OK
+     * and correctly shifts other chapters up.
+     * Covers the previousOrderIndex > newOrderIndex branch in updateChapterOrder (line 96-97).
+     */
+    @Test
+    void shouldUpdateChapterOrderIndexMovingBackwards() {
+        UUID chapter1 = insertChapter("Chapter 1", 1);
+        UUID chapter2 = insertChapter("Chapter 2", 2);
+        UUID chapter3 = insertChapter("Chapter 3", 3);
+
+        String body = """
+                {
+                    "orderIndex": 1
+                }
+                """;
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/chapters/" + chapter3,
+                HttpMethod.PATCH,
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(orderIndexOf(chapter3)).isEqualTo(1);
+        assertThat(orderIndexOf(chapter1)).isEqualTo(2);
+        assertThat(orderIndexOf(chapter2)).isEqualTo(3);
+    }
+
+    /**
+     * PATCH /api/chapters/{id}
+     * Tests that updating a chapter with the same order index (no-op path) returns 200 OK.
+     * Covers the previousOrderIndex == newOrderIndex early return branch in updateChapterOrder.
+     */
+    @Test
+    void shouldUpdateChapterOrderIndexWithSameIndex() {
+        UUID chapter1 = insertChapter("Chapter 1", 1);
+        insertChapter("Chapter 2", 2);
+
+        String body = """
+                {
+                    "orderIndex": 1
+                }
+                """;
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/chapters/" + chapter1,
+                HttpMethod.PATCH,
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(orderIndexOf(chapter1)).isEqualTo(1);
     }
 
     /**
@@ -300,16 +360,18 @@ class ChapterControllerTest {
 
     /**
      * PATCH /api/chapters/{id}
-     * Tests that updating a non-existent chapter returns a 404 Not Found status.
+     * Tests that updating a non-existent chapter returns 404 Not Found,
+     * regardless of whether title, orderIndex, or both are provided.
+     * Covers the chapter not found branch in updateChapterMetadata,
+     * updateChapterTitle, and updateChapterOrder.
      */
-    @Test
-    void shouldReturnNotFoundWhenUpdatingInvalidChapter() {
-        String body = """
-                {
-                    "title": "Updated Title"
-                }
-                """;
-
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"title\": \"Some Title\", \"orderIndex\": 1}",
+            "{\"title\": \"Some Title\"}",
+            "{\"orderIndex\": 1}"
+    })
+    void shouldReturnNotFoundWhenUpdatingNonExistentChapter(String body) {
         ResponseEntity<String> response = restTemplate.exchange(
                 "/api/chapters/" + UUID.randomUUID(),
                 HttpMethod.PATCH,
@@ -322,14 +384,14 @@ class ChapterControllerTest {
 
     /**
      * PATCH /api/chapters/{id}
-     * Tests that updating a chapter with an invalid order index (too large) returns a 400 Bad Request status.
+     * Tests that updating a chapter with an invalid order index returns a 400 Bad Request status.
+     * Covers the out of range branch in updateChapterOrder.
      */
     @ParameterizedTest
     @ValueSource(ints = {10, 0, -1})
     void shouldReturnBadRequestWhenOrderIndexIsInvalid(int invalidOrderIndex) {
         UUID chapter1 = insertChapter("Chapter 1", 1);
 
-        // Using String.format to inject the parameterized invalidOrderIndex into the JSON body
         String body = String.format("""
                 {
                     "orderIndex": %d
