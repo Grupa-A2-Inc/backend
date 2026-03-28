@@ -5,7 +5,6 @@ import jakarta.validation.Valid;
 import org.elearning.backend.content.dto.LessonDTOEntity;
 import org.elearning.backend.content.dto.LessonDTOMetadata;
 import org.elearning.backend.content.dto.LessonDTOPost;
-import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.service.LessonService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

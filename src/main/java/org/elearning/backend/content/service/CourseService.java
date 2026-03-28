@@ -26,12 +26,14 @@ public class CourseService {
 
     public List<CourseDto> getCourses(String role, UUID userId) {
         List<Course> courses;
-        if ("TEACHER".equals(role)) {
+        if ("INSTRUCTOR".equals(role)) {
             courses = courseRepository.findByCreatedBy(userId);
-        }
-        else
-        {
-            courses = courseRepository.findByStatus(CourseStatus.PUBLISHED);
+        } else {
+            // era: courseRepository.findByStatus(CourseStatus.PUBLISHED);
+            courses = courseRepository.findByStatusAndVisibility(
+                    CourseStatus.PUBLISHED,
+                    CourseVisibility.PUBLIC
+            );
         }
         return courses.stream()
                 .map(this::convertToDto)
