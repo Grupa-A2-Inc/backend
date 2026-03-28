@@ -1,7 +1,11 @@
 package org.elearning.backend.content.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.content.dto.CourseDto;
+import org.elearning.backend.content.dto.CourseFullViewDTO;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.service.CourseService;
 import org.springframework.http.HttpStatus;
@@ -40,5 +44,25 @@ public class CourseController {
     public ResponseEntity<Void> deleteCourse(@PathVariable UUID id) {
         courseService.deleteCourse(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * GET /api/courses/{courseId}/full-view Entrypoint
+     * @PathVariable - extracts dynamic value directly from the URI
+     * Retrieves a Course entity along with its associated chapters, lessons, and resources based on the provided course ID.
+     * Returns HTTP 200 OK with the Course entity in the response body if found.
+     * If no course with the given ID exists, returns HTTP 404 Not Found.
+     */
+    @Operation(summary = "Get full view of a course",
+            description = "Retrieves a Course entity along with its associated chapters, lessons, and resources based on the provided course ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Course retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Course not found")
+    })
+    @GetMapping("/{courseId}/full-view")
+    public ResponseEntity<CourseFullViewDTO> getCourseFullView(@PathVariable UUID courseId) {
+        CourseFullViewDTO courseServiceCourseFullView = courseService.getCourseFullView(courseId);
+
+        return ResponseEntity.ok(courseServiceCourseFullView);
     }
 }

@@ -6,7 +6,6 @@ import org.elearning.backend.content.dto.LessonResourceDTOPost;
 import org.elearning.backend.content.mapper.LessonResourceMapper;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.LessonRepository;
-import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.elearning.backend.content.model.LessonResource;

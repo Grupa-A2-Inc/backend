@@ -1,9 +1,12 @@
 package org.elearning.backend.content.service;
 
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.content.mapper.CourseFullViewMapper;
 import org.elearning.backend.content.model.*;
 import org.elearning.backend.content.dto.*;
+import org.elearning.backend.content.repository.ChapterRepository;
 import org.elearning.backend.content.repository.CourseRepository;
+import org.elearning.backend.content.repository.LessonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +20,9 @@ import java.util.List;
 public class CourseService {
 
     private final CourseRepository courseRepository;
+    private final ChapterRepository chapterRepository;
+    private final LessonRepository lessonRepository;
+    private final CourseFullViewMapper courseFullViewMapper;
 
     //logica pentru POST
     public Course createCourse(Course course) {
@@ -72,5 +78,31 @@ public class CourseService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cursul cu acest ID nu a fost gasit!");
         }
         courseRepository.deleteById(id);
+    }
+
+    /**
+     * Retrieves a Course entity along with its associated chapters, lessons, and resources based on the provided course ID.
+     * This method performs three separate queries to fetch the course, its chapters, and their lessons with resources.
+     * @param courseId The UUID of the course to retrieve.
+     * @return The Course entity with its chapters, lessons, and resources fully loaded.
+     * @throws ResponseStatusException NOT_FOUND if no course is found with the provided ID.
+     */
+    @Transactional(readOnly = true)
+    public CourseFullViewDTO getCourseFullView(UUID courseId) {
+
+        // Get the course with its chapters (Query 1)
+        Course course = courseRepository.findCourseWithChapters(courseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course with ID " + courseId + " not found."));
+
+        // Get the chapters with their lessons (Query 2)
+        // Hibernate will automatically "link" the chapters to the course
+        chapterRepository.findChaptersWithLessonsByCourseId(courseId);
+
+        // Get the lessons with their resources (Query 3)
+        // Hibernate will automatically "link" the lessons to their respective chapters (and implicitly to the course)
+        lessonRepository.findLessonsWithResourcesByCourseId(courseId);
+
+        // transform the fully loaded Course entity into a CourseFullViewDTO using the mapper
+        return courseFullViewMapper.toCourseFullViewDTO(course);
     }
 }
