@@ -3,6 +3,7 @@ package org.elearning.backend.user.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.role.entity.Role;
 import org.hibernate.annotations.JdbcType;
 import org.hibernate.dialect.PostgreSQLEnumJdbcType;
@@ -45,6 +46,10 @@ public class User {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @ManyToOne
+    @JoinColumn(name = "organization_id", nullable = true)
+    private Organization organization;
 
     public User() {}
 }
