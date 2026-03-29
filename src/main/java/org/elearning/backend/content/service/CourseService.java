@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.stream.Collectors;
+
 import java.util.UUID;
 import java.util.List;
 
@@ -87,7 +87,7 @@ public class CourseService {
      * @throws ResponseStatusException NOT_FOUND if no course is found with the provided ID.
      */
     @Transactional(readOnly = true)
-    public CourseFullViewDTO getCourseFullView(UUID courseId) {
+    public CourseFullViewDto getCourseFullView(UUID courseId) {
         // Query 1 — cursul cu capitole
         Course course = courseRepository.findCourseWithChapters(courseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,

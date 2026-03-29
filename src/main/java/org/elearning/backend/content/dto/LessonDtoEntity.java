@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
-public class LessonDTOEntity {
+public class LessonDtoEntity {
 
     private final UUID id;
     private final UUID chapterID;
@@ -17,7 +17,7 @@ public class LessonDTOEntity {
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
-    public LessonDTOEntity(Lesson lesson){
+    public LessonDtoEntity(Lesson lesson){
         this.id = lesson.getId();
         this.chapterID = lesson.getChapter().getId();
         this.title = lesson.getTitle();

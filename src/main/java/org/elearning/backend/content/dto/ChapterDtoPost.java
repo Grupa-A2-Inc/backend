@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-public class ChapterDTOPost {
+public class ChapterDtoPost {
     private String title = null;
     private Integer orderIndex = null;
 }

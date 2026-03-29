@@ -10,12 +10,12 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-public class ChapterDTOResponse {
+public class ChapterDtoResponse {
     private UUID id = null;
     private String title = null;
     private Integer orderIndex = null;
 
-    public ChapterDTOResponse(Chapter chapter) {
+    public ChapterDtoResponse(Chapter chapter) {
         this.id = chapter.getId();
         this.title = chapter.getTitle();
         this.orderIndex = chapter.getOrderIndex();

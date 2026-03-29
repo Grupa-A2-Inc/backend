@@ -14,7 +14,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CourseFullViewDTO {
+public class CourseFullViewDto {
     private UUID id;
     private String title;
     private String description;
@@ -46,6 +46,6 @@ public class CourseFullViewDTO {
         private String contentMarkdown;
         private int orderIndex;
 
-        private List<LessonResourceDTOGet> lessonResources;
+        private List<LessonResourceDtoGet> lessonResources;
     }
 }
