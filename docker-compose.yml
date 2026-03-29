@@ -28,3 +28,4 @@ services:
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
       - SPRING_FLYWAY_ENABLED=true
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set}
