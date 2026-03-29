@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.content.dto.CourseDto;
-import org.elearning.backend.content.dto.CourseFullViewDTO;
+import org.elearning.backend.content.dto.CourseFullViewDto;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.service.CourseService;
 import org.springframework.http.HttpStatus;
@@ -18,7 +18,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/courses")
 @RequiredArgsConstructor
-public class CourseController {
+public class CoursesController {
 
     private final CourseService courseService;
 
@@ -60,8 +60,8 @@ public class CourseController {
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @GetMapping("/{courseId}/full-view")
-    public ResponseEntity<CourseFullViewDTO> getCourseFullView(@PathVariable UUID courseId) {
-        CourseFullViewDTO courseServiceCourseFullView = courseService.getCourseFullView(courseId);
+    public ResponseEntity<CourseFullViewDto> getCourseFullView(@PathVariable UUID courseId) {
+        CourseFullViewDto courseServiceCourseFullView = courseService.getCourseFullView(courseId);
 
         return ResponseEntity.ok(courseServiceCourseFullView);
     }

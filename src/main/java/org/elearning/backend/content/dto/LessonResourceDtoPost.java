@@ -6,14 +6,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO for PATCH requests to update a lesson resource.
- * Only includes fields that can be updated (title and url).
+ * DTO for POST requests to create a new LessonResource.
+ * Contains the title and URL of the resource.
  */
 @Getter
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class LessonResourceDTOPatch {
+public class LessonResourceDtoPost {
     private String title;
     private String url;
 }

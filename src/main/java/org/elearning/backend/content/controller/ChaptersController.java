@@ -4,8 +4,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.persistence.EntityNotFoundException;
-import org.elearning.backend.content.dto.ChapterDTOPost;
-import org.elearning.backend.content.dto.ChapterDTOResponse;
+import org.elearning.backend.content.dto.ChapterDtoPost;
+import org.elearning.backend.content.dto.ChapterDtoResponse;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.service.ChapterService;
 import org.springframework.http.HttpStatus;
@@ -16,9 +16,9 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-public class ChapterController {
+public class ChaptersController {
     private final ChapterService chapterService;
-    public ChapterController(ChapterService chapterService) {
+    public ChaptersController(ChapterService chapterService) {
         this.chapterService = chapterService;
     }
 
@@ -37,11 +37,11 @@ public class ChapterController {
             @ApiResponse(responseCode = "201", description = "Chapter created successfully"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
-    public ResponseEntity<ChapterDTOResponse> createNewChapter(@PathVariable UUID courseId,
+    public ResponseEntity<ChapterDtoResponse> createNewChapter(@PathVariable UUID courseId,
                                                                @RequestBody String newChapterTitle) {
-        ChapterDTOResponse chapterInfo;
+        ChapterDtoResponse chapterInfo;
         try {
-            chapterInfo = new ChapterDTOResponse(chapterService.createNewChapter(courseId, newChapterTitle));
+            chapterInfo = new ChapterDtoResponse(chapterService.createNewChapter(courseId, newChapterTitle));
         }
         catch (IllegalArgumentException exception) {
             return ResponseEntity.notFound().build();
@@ -63,12 +63,12 @@ public class ChapterController {
             @ApiResponse(responseCode = "200", description = "Chapters retrieved successfully"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
-    public ResponseEntity<List<ChapterDTOResponse>> getChaptersByCourseId(@PathVariable UUID courseId) {
+    public ResponseEntity<List<ChapterDtoResponse>> getChaptersByCourseId(@PathVariable UUID courseId) {
         List<Chapter> chapters;
-        List<ChapterDTOResponse> chapterDTOMetadataList;
+        List<ChapterDtoResponse> chapterDTOMetadataList;
         try {
             chapters = chapterService.getAllChaptersFromCourse(courseId);
-            chapterDTOMetadataList = chapters.stream().map(ChapterDTOResponse::new).toList();
+            chapterDTOMetadataList = chapters.stream().map(ChapterDtoResponse::new).toList();
         }
         catch (IllegalArgumentException exception) {
             return ResponseEntity.notFound().build();
@@ -117,11 +117,11 @@ public class ChapterController {
             @ApiResponse(responseCode = "404", description = "Chapter not found"),
             @ApiResponse(responseCode = "400", description = "Invalid input data")
     })
-    public ResponseEntity<ChapterDTOResponse> updateChapter(@PathVariable UUID id,
-                                                        @RequestBody ChapterDTOPost chapterDTOPost) {
-        ChapterDTOResponse updatedChapterInfo;
+    public ResponseEntity<ChapterDtoResponse> updateChapter(@PathVariable UUID id,
+                                                            @RequestBody ChapterDtoPost chapterDTOPost) {
+        ChapterDtoResponse updatedChapterInfo;
         try {
-            updatedChapterInfo = new ChapterDTOResponse(chapterService.updateChapterMetadata(id, chapterDTOPost));
+            updatedChapterInfo = new ChapterDtoResponse(chapterService.updateChapterMetadata(id, chapterDTOPost));
         }
         catch (IllegalArgumentException exception) {
             return ResponseEntity.notFound().build();

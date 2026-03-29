@@ -6,9 +6,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.elearning.backend.content.dto.LessonDTOEntity;
-import org.elearning.backend.content.dto.LessonDTOMetadata;
-import org.elearning.backend.content.dto.LessonDTOPost;
+import org.elearning.backend.content.dto.LessonDtoEntity;
+import org.elearning.backend.content.dto.LessonDtoMetadata;
+import org.elearning.backend.content.dto.LessonDtoPost;
 import org.elearning.backend.content.service.LessonService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,14 +19,14 @@ import java.util.UUID;
 
 @Tag(name = "Lessons", description = "Lesson administration")
 @RestController
-public class LessonController {
+public class LessonsController {
 
     //Equivalent expression: @Autowired. IntelliJ says it's safer to implement it this way, however.
     //JPA makes sure to create the service automatically
 
     private final LessonService lessonService;
 
-    public LessonController(LessonService lessonService) {
+    public LessonsController(LessonService lessonService) {
         this.lessonService = lessonService;
     }
 
@@ -47,8 +47,8 @@ public class LessonController {
             @ApiResponse(responseCode = "404", description = "Inexistent chapter")
     })
     @PostMapping("/api/chapters/{chapterID}/lessons")
-    public ResponseEntity<LessonDTOEntity> createNewLesson(
-            @RequestBody @Valid LessonDTOPost modifiableLessonContent,
+    public ResponseEntity<LessonDtoEntity> createNewLesson(
+            @RequestBody @Valid LessonDtoPost modifiableLessonContent,
             @PathVariable UUID chapterID){
             return ResponseEntity.status(HttpStatus.CREATED).body(lessonService.createNewLesson(modifiableLessonContent, chapterID));
     }
@@ -83,7 +83,7 @@ public class LessonController {
             @ApiResponse(responseCode = "404", description = "Inexistent chapter")
     })
     @GetMapping("/api/chapters/{chapterID}/lessons")
-    public ResponseEntity<List<LessonDTOEntity>> getAllLessonsFromChapterID(@PathVariable UUID chapterID){
+    public ResponseEntity<List<LessonDtoEntity>> getAllLessonsFromChapterID(@PathVariable UUID chapterID){
         return ResponseEntity.ok(lessonService.getAllLessonsFromChapter(chapterID));
     }
 
@@ -120,9 +120,9 @@ public class LessonController {
 
     })
     @PatchMapping("/api/lessons/{id}/metadata")
-    public ResponseEntity<LessonDTOEntity> updateLessonMetadata(
+    public ResponseEntity<LessonDtoEntity> updateLessonMetadata(
             @PathVariable UUID id,
-            @RequestBody LessonDTOMetadata lessonDTOMetadata){
+            @RequestBody LessonDtoMetadata lessonDTOMetadata){
         return ResponseEntity.ok(lessonService.updateLessonMetadata(id, lessonDTOMetadata));
     }
 
@@ -140,7 +140,7 @@ public class LessonController {
 
     })
     @PatchMapping("/api/lessons/{id}/content")
-    public ResponseEntity<LessonDTOEntity> updateLessonContent(
+    public ResponseEntity<LessonDtoEntity> updateLessonContent(
             @PathVariable UUID id,
             @RequestBody String markdownContent){
         return ResponseEntity.ok(lessonService.updateLessonMarkdownContent(id, markdownContent));

@@ -2,7 +2,7 @@ package org.elearning.backend.content.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import org.elearning.backend.content.dto.ChapterDTOPost;
+import org.elearning.backend.content.dto.ChapterDtoPost;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.repository.ChapterRepository;
@@ -124,7 +124,7 @@ public class ChapterService {
      * @return
      */
     @Transactional
-    public Chapter updateChapterMetadata(UUID chapterId, ChapterDTOPost chapterDTOPost) {
+    public Chapter updateChapterMetadata(UUID chapterId, ChapterDtoPost chapterDTOPost) {
         if (!chapterRepository.existsById(chapterId)) {
             throw new IllegalArgumentException("Chapter not found with ID: " + chapterId);
         }
