@@ -2,11 +2,9 @@ package org.elearning.backend.auth.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
-import org.elearning.backend.role.entity.RoleName;
 
 @Getter
 @Setter
@@ -26,9 +24,6 @@ public class RegisterRequest {
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 
-    @NotNull(message = "Role is required")
-    private RoleName role;
-
-    // optional - doar pentru ORGANIZATION_ADMIN
+    @NotBlank(message = "Organization name is required")
     private String organizationName;
 }
