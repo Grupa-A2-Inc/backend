@@ -1,9 +1,9 @@
 package org.elearning.backend.content.service;
 
 import jakarta.transaction.Transactional;
-import org.elearning.backend.content.dto.LessonDTOEntity;
-import org.elearning.backend.content.dto.LessonDTOMetadata;
-import org.elearning.backend.content.dto.LessonDTOPost;
+import org.elearning.backend.content.dto.LessonDtoEntity;
+import org.elearning.backend.content.dto.LessonDtoMetadata;
+import org.elearning.backend.content.dto.LessonDtoPost;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.ChapterRepository;
@@ -38,16 +38,16 @@ public class LessonService {
 
     //Returns every lesson from a given chapter
 
-    public List<LessonDTOEntity> getAllLessonsFromChapter(UUID chapterID){
+    public List<LessonDtoEntity> getAllLessonsFromChapter(UUID chapterID){
         if(!chapterRepository.existsById(chapterID)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND);
         }
         List<Lesson> allLessonsFromChapter = lessonRepository.findLessonOrderByIndex(chapterID);
 
-        List<LessonDTOEntity> allLessonsFromChapterDTO = new ArrayList<>();
+        List<LessonDtoEntity> allLessonsFromChapterDTO = new ArrayList<>();
 
         for( Lesson eachLesson : allLessonsFromChapter){
-            allLessonsFromChapterDTO.add(new LessonDTOEntity(eachLesson));
+            allLessonsFromChapterDTO.add(new LessonDtoEntity(eachLesson));
         }
 
 
@@ -71,7 +71,7 @@ public class LessonService {
     //We return the saved Lesson for the ResponseEntity class inside LessonController
     //It makes sure to send the HTTP status and the update information
 
-    public LessonDTOEntity createNewLesson(LessonDTOPost modifiableLessonData, UUID chapterID){
+    public LessonDtoEntity createNewLesson(LessonDtoPost modifiableLessonData, UUID chapterID){
         Chapter chapter = chapterRepository.findById(chapterID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND));
         Lesson newLesson = new Lesson();
@@ -86,7 +86,7 @@ public class LessonService {
         int lastOrderIndex = lessonRepository.findLastOrderIndex(chapterID).orElse(0) + 1;
         newLesson.setOrderIndex(lastOrderIndex);
         lessonRepository.save(newLesson);
-        return new LessonDTOEntity(newLesson);
+        return new LessonDtoEntity(newLesson);
     }
 
     //Every single update and deletion has a "@Transactional" Tag
@@ -96,12 +96,12 @@ public class LessonService {
 
 
     @Transactional
-    public LessonDTOEntity updateLessonMarkdownContent(UUID lessonID, String markdownContent){
+    public LessonDtoEntity updateLessonMarkdownContent(UUID lessonID, String markdownContent){
         if(!lessonRepository.existsById(lessonID)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND);
         }
         lessonRepository.updateLessonContentMarkdown(lessonID, markdownContent);
-        return new LessonDTOEntity(lessonRepository.findById(lessonID)
+        return new LessonDtoEntity(lessonRepository.findById(lessonID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND)));
     }
 
@@ -160,7 +160,7 @@ public class LessonService {
     //It makes sure to send the HTTP status and the update information
 
     @Transactional
-    public LessonDTOEntity updateLessonMetadata(UUID lessonID, LessonDTOMetadata lessonDTOMetadata){
+    public LessonDtoEntity updateLessonMetadata(UUID lessonID, LessonDtoMetadata lessonDTOMetadata){
 
         if(!lessonRepository.existsById(lessonID)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND);
@@ -173,7 +173,7 @@ public class LessonService {
             updateLessonTitle(lessonID, lessonDTOMetadata.getTitle());
         }
         lessonRepository.flush();
-        return new LessonDTOEntity(lessonRepository.findById(lessonID)
+        return new LessonDtoEntity(lessonRepository.findById(lessonID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND)));
     }
 
