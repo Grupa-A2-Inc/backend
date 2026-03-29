@@ -1,6 +1,5 @@
 package org.elearning.backend.security.jwt;
 
-import org.elearning.backend.security.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import org.elearning.backend.role.entity.RoleName;

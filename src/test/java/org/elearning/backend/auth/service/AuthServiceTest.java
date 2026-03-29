@@ -3,6 +3,9 @@ package org.elearning.backend.auth.service;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.request.LoginRequest;
+import org.elearning.backend.common.exception.DuplicateResourceException;
+import org.elearning.backend.common.exception.InvalidCredentials;
+import org.elearning.backend.common.exception.ResourceNotFoundException;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -59,8 +62,8 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("existent@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessage("Email already in use");
+                .isInstanceOf(DuplicateResourceException.class)
+                .hasMessage("Email already in use: existent@test.com");
 
         verify(userRepository, never()).save(any());
     }
@@ -79,7 +82,7 @@ class AuthServiceTest {
         when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Role not found: TEACHER");
 
         verify(userRepository, never()).save(any());
@@ -147,16 +150,14 @@ class AuthServiceTest {
         request.setOrganizationName("Scoala Ion");
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
-        User savedUser = new User();
 
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(roleRepository.findByName(RoleName.ORGANIZATION_ADMIN)).thenReturn(Optional.of(role));
         when(passwordEncoder.encode(any())).thenReturn("hashed");
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
         when(organizationRepository.existsByName("Scoala Ion")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(DuplicateResourceException.class)
                 .hasMessage("Organization name already exists: Scoala Ion");
 
         verify(organizationRepository, never()).save(any());
@@ -173,16 +174,14 @@ class AuthServiceTest {
         request.setOrganizationName("Scoala Inexistenta");
 
         Role role = new Role(RoleName.TEACHER);
-        User savedUser = new User();
 
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
         when(passwordEncoder.encode(any())).thenReturn("hashed");
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
         when(organizationRepository.findByName("Scoala Inexistenta")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Organization not found: Scoala Inexistenta");
     }
 
@@ -242,7 +241,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("inexistent@test.com")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(InvalidCredentials.class)
                 .hasMessage("Invalid credentials");
     }
 
@@ -260,7 +259,7 @@ class AuthServiceTest {
         when(passwordEncoder.matches("parolaGresita", "hashed_parola")).thenReturn(false);
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(InvalidCredentials.class)
                 .hasMessage("Invalid credentials");
     }
 }

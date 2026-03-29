@@ -13,3 +13,5 @@ CREATE TABLE organizations (
 -- INDEXES
 -- =====================
 CREATE INDEX idx_organizations_owner_id ON organizations(owner_id);
+
+ALTER TABLE users ADD COLUMN organization_id UUID REFERENCES organizations(id);

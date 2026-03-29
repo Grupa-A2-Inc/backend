@@ -1,4 +1,4 @@
-package org.elearning.backend.user.config;
+package org.elearning.backend.security.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
