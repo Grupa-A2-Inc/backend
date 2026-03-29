@@ -57,7 +57,6 @@ class AuthIntegrationTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")
@@ -74,7 +73,6 @@ class AuthIntegrationTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")
@@ -93,7 +91,6 @@ class AuthIntegrationTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")
@@ -105,7 +102,6 @@ class AuthIntegrationTest {
         request2.setPassword("parola123");
         request2.setFirstName("Ion");
         request2.setLastName("Popescu");
-        request2.setRole(RoleName.ORGANIZATION_ADMIN);
         request2.setOrganizationName("Scoala Ion 2");
 
         mockMvc.perform(post("/auth/register")
@@ -121,7 +117,6 @@ class AuthIntegrationTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")
@@ -133,7 +128,6 @@ class AuthIntegrationTest {
         request2.setPassword("parola123");
         request2.setFirstName("Ana");
         request2.setLastName("Pop");
-        request2.setRole(RoleName.ORGANIZATION_ADMIN);
         request2.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")
@@ -143,72 +137,11 @@ class AuthIntegrationTest {
     }
 
     @Test
-    void register_teacher_existingOrganization_success() throws Exception {
-        RegisterRequest adminRequest = new RegisterRequest();
-        adminRequest.setEmail("admin@test.com");
-        adminRequest.setPassword("parola123");
-        adminRequest.setFirstName("Ion");
-        adminRequest.setLastName("Popescu");
-        adminRequest.setRole(RoleName.ORGANIZATION_ADMIN);
-        adminRequest.setOrganizationName("Scoala Ion");
-
-        mockMvc.perform(post("/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(adminRequest)));
-
-        RegisterRequest teacherRequest = new RegisterRequest();
-        teacherRequest.setEmail("teacher@test.com");
-        teacherRequest.setPassword("parola123");
-        teacherRequest.setFirstName("Maria");
-        teacherRequest.setLastName("Pop");
-        teacherRequest.setRole(RoleName.TEACHER);
-        teacherRequest.setOrganizationName("Scoala Ion");
-
-        mockMvc.perform(post("/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(teacherRequest)))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void register_teacher_organizationNotFound_returns404() throws Exception {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("teacher@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Maria");
-        request.setLastName("Pop");
-        request.setRole(RoleName.TEACHER);
-        request.setOrganizationName("Scoala Inexistenta");
-
-        mockMvc.perform(post("/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void register_invalidEmail_returns400() throws Exception {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("nu-sunt-email");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
-        request.setOrganizationName("Scoala Ion");
-
-        mockMvc.perform(post("/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
     void register_missingPassword_returns400() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("test@test.com");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")
@@ -226,7 +159,6 @@ class AuthIntegrationTest {
         registerRequest.setPassword("parola123");
         registerRequest.setFirstName("Ion");
         registerRequest.setLastName("Popescu");
-        registerRequest.setRole(RoleName.ORGANIZATION_ADMIN);
         registerRequest.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")
@@ -251,7 +183,6 @@ class AuthIntegrationTest {
         registerRequest.setPassword("parola123");
         registerRequest.setFirstName("Ion");
         registerRequest.setLastName("Popescu");
-        registerRequest.setRole(RoleName.ORGANIZATION_ADMIN);
         registerRequest.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")

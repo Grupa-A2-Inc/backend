@@ -34,8 +34,12 @@ public class AuthService {
             throw new DuplicateResourceException("Email already in use: " + request.getEmail());
         }
 
-        Role role = roleRepository.findByName(request.getRole())
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + request.getRole()));
+        if (organizationRepository.existsByName(request.getOrganizationName())) {
+            throw new DuplicateResourceException("Organization name already exists: " + request.getOrganizationName());
+        }
+
+        Role role = roleRepository.findByName(RoleName.ORGANIZATION_ADMIN)
+                .orElseThrow(() -> new ResourceNotFoundException("Role ORGANIZATION_ADMIN not found"));
 
         User user = new User();
         user.setEmail(request.getEmail());
@@ -45,28 +49,15 @@ public class AuthService {
         user.setRole(role);
         user.setStatus(UserStatus.ACTIVE);
 
-        if (request.getRole() == RoleName.ORGANIZATION_ADMIN) {
-            if (organizationRepository.existsByName(request.getOrganizationName())) {
-                throw new DuplicateResourceException("Organization name already exists: " + request.getOrganizationName());
-            }
+        User savedUser = userRepository.save(user);
 
-            User savedUser = userRepository.save(user);
+        Organization organization = new Organization();
+        organization.setName(request.getOrganizationName());
+        organization.setOwner(savedUser);
+        Organization savedOrganization = organizationRepository.save(organization);
 
-            Organization organization = new Organization();
-            organization.setName(request.getOrganizationName());
-            organization.setOwner(savedUser);
-            Organization savedOrganization = organizationRepository.save(organization);
-
-            savedUser.setOrganization(savedOrganization);
-            userRepository.save(savedUser);
-
-        } else {
-            Organization organization = organizationRepository.findByName(request.getOrganizationName())
-                    .orElseThrow(() -> new ResourceNotFoundException("Organization not found: " + request.getOrganizationName()));
-
-            user.setOrganization(organization);
-            userRepository.save(user);
-        }
+        savedUser.setOrganization(savedOrganization);
+        userRepository.save(savedUser);
 
         return new AuthResponse("User registered successfully");
     }

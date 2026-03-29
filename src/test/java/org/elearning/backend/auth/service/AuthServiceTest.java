@@ -5,7 +5,6 @@ import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.common.exception.DuplicateResourceException;
 import org.elearning.backend.common.exception.InvalidCredentials;
-import org.elearning.backend.common.exception.ResourceNotFoundException;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -56,7 +55,6 @@ class AuthServiceTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         when(userRepository.existsByEmail("existent@test.com")).thenReturn(true);
@@ -69,33 +67,12 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_roleNotFound_throwsException() {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("test@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setRole(RoleName.TEACHER);
-        request.setOrganizationName("Scoala Ion");
-
-        when(userRepository.existsByEmail("test@test.com")).thenReturn(false);
-        when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Role not found: TEACHER");
-
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
     void register_passwordIsHashed() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("test@test.com");
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
@@ -121,7 +98,6 @@ class AuthServiceTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
@@ -146,7 +122,6 @@ class AuthServiceTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
@@ -160,55 +135,6 @@ class AuthServiceTest {
                 .isInstanceOf(DuplicateResourceException.class)
                 .hasMessage("Organization name already exists: Scoala Ion");
 
-        verify(organizationRepository, never()).save(any());
-    }
-
-    @Test
-    void register_teacher_organizationNotFound_throwsException() {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("teacher@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setRole(RoleName.TEACHER);
-        request.setOrganizationName("Scoala Inexistenta");
-
-        Role role = new Role(RoleName.TEACHER);
-
-        when(userRepository.existsByEmail(any())).thenReturn(false);
-        when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
-        when(passwordEncoder.encode(any())).thenReturn("hashed");
-        when(organizationRepository.findByName("Scoala Inexistenta")).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Organization not found: Scoala Inexistenta");
-    }
-
-    @Test
-    void register_teacher_existingOrganization_success() {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("teacher@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setRole(RoleName.TEACHER);
-        request.setOrganizationName("Scoala Ion");
-
-        Role role = new Role(RoleName.TEACHER);
-        User savedUser = new User();
-        Organization organization = new Organization();
-        organization.setName("Scoala Ion");
-
-        when(userRepository.existsByEmail(any())).thenReturn(false);
-        when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
-        when(passwordEncoder.encode(any())).thenReturn("hashed");
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
-        when(organizationRepository.findByName("Scoala Ion")).thenReturn(Optional.of(organization));
-
-        AuthResponse response = authService.register(request);
-
-        assertThat(response.getMessage()).isEqualTo("User registered successfully");
         verify(organizationRepository, never()).save(any());
     }
 
