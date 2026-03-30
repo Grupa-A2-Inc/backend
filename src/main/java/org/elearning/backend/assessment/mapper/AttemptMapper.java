@@ -19,9 +19,9 @@ public interface AttemptMapper {
      * questions e setat manual în service după mapare
      * deoarece vine din altă sursă (questionRepository).
      */
-    @Mapping(target = "questions", ignore = true)
+    /*@Mapping(target = "questions", ignore = true)
     @Mapping(target = "timeLimitSec", ignore = true)
-    StartAttemptResponseDTO toStartAttemptResponseDTO(TestAttempt attempt);
+    StartAttemptResponseDTO toStartAttemptResponseDTO(TestAttempt attempt);*/
 
     /**
      * Mapează TestResult → TestResultDTO.

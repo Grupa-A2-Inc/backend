@@ -10,6 +10,5 @@ import java.util.List;
 public class SubmitAnswerDTO {
     private Long questionId;
     private List<Long> selectedOptionIds;
-    /** Timp în secunde — măsurat de frontend, stocat ca atare */
     private BigDecimal timeSpent;
 }

@@ -8,9 +8,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.UUID;
 
-public interface QuestionRepository extends JpaRepository<Question, UUID> {
+public interface QuestionRepository extends JpaRepository<Question, Long> {
 
-    @Query("SELECT q FROM Question q LEFT JOIN FETCH q.options WHERE q.testId = :testId AND q.isActive = true")
+    @Query("SELECT q FROM Question q LEFT JOIN FETCH q.options WHERE q.test.id = :testId AND q.isActive = true")
     List<Question> findByTestIdWithOptions(@Param("testId") UUID testId);
 
     List<Question> findByTestIdAndIsActiveTrue(UUID testId);

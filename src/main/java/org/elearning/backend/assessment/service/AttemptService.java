@@ -2,12 +2,18 @@ package org.elearning.backend.assessment.service;
 
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.dto.*;
+import org.elearning.backend.assessment.exception.AttemptAlreadySubmittedException;
+import org.elearning.backend.assessment.exception.TestNotPublishedException;
+import org.elearning.backend.assessment.exception.TimerExpiredException;
 import org.elearning.backend.assessment.mapper.AttemptMapper;
 import org.elearning.backend.assessment.mapper.QuestionMapper;
 import org.elearning.backend.assessment.model.*;
 import org.elearning.backend.assessment.repository.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import reactor.netty.http.Http11SslContextSpec;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,7 +32,6 @@ public class AttemptService {
     private final QuestionRepository questionRepository;
     private final QuestionOptionRepository optionRepository;
 
-    // injectezi mapper-ele
     private final AttemptMapper attemptMapper;
     private final QuestionMapper questionMapper;
 
@@ -34,18 +39,17 @@ public class AttemptService {
     public StartAttemptResponseDTO startAttempt(UUID testId, UUID studentId) {
         Test test = testRepository.findById(testId)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Testul cu id " + testId + " nu există"));
+                        "The test with id " + testId + " does not exist"));
 
         if (test.getStatus() != TestStatus.PUBLISHED) {
-            throw new IllegalStateException(
-                    "Testul nu este publicat. Status curent: " + test.getStatus());
+            throw new TestNotPublishedException(
+                    "The test with id " + testId + " is not published yet");
         }
 
-        int attemptNumber = attemptRepository
-                .countByTestIdAndStudentId(testId, studentId) + 1;
+        int attemptNumber = attemptRepository.countByTestIdAndStudentId(testId, studentId) + 1;
 
         TestAttempt attempt = new TestAttempt();
-        attempt.setTestId(testId);
+        attempt.setTest(test);
         attempt.setStudentId(studentId);
         attempt.setAttemptNumber(attemptNumber);
         attempt.setStartedAt(LocalDateTime.now());
@@ -55,7 +59,6 @@ public class AttemptService {
 
         List<Question> questionsFromDb = questionRepository.findByTestIdWithOptions(testId);
 
-// 2. MapStruct transformă toată lista dintr-o singură lovitură! Gata cu stream-urile!
         List<QuestionForStudentDTO> questions = questionMapper.toQuestionForStudentDTOList(questionsFromDb);
 
         return attemptMapper.toStartAttemptResponseDTO(saved, test, questions);
@@ -66,35 +69,39 @@ public class AttemptService {
                                        SubmitRequestDTO request) {
         TestAttempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Attempt-ul cu id " + attemptId + " nu există"));
+                        "Attempt with id " + attemptId + " does not exist"));
 
         if (attempt.getStatus() == AttemptStatus.DONE) {
-            throw new IllegalStateException("Attempt-ul a fost deja finalizat");
+            throw new AttemptAlreadySubmittedException("The attempt has already been submitted");
         }
         if (attempt.getStatus() == AttemptStatus.EXPIRED) {
-            throw new IllegalStateException("Attempt-ul a expirat");
+            throw new TimerExpiredException("The attempt has expired and cannot be submitted");
         }
-        if (!attempt.getStudentId().equals(studentId)) {
+        /*if (!attempt.getStudentId().equals(studentId)) {
             throw new SecurityException(
                     "Nu ai permisiunea să submit-ezi acest attempt");
-        }
+        }*/
 
-        Test test = testRepository.findById(attempt.getTestId())
-                .orElseThrow(() -> new IllegalArgumentException("Testul nu există"));
-
-        LocalDateTime expireTime = attempt.getStartedAt()
-                .plusSeconds(test.getTimeLimitSec());
+        Test test = attempt.getTest();
+        /*testRepository.findById(attempt.getTest().getId())
+                .orElseThrow(() -> new IllegalArgumentException("The test with id " + attempt.getTest().getId() + " does not exist"));
+*/
+        LocalDateTime expireTime = attempt.getStartedAt().plusSeconds(test.getTimeLimitSec());
         if (LocalDateTime.now().isAfter(expireTime)) {
             attempt.setStatus(AttemptStatus.EXPIRED);
             attempt.setEndedAt(LocalDateTime.now());
             attemptRepository.save(attempt);
-            throw new IllegalStateException("Timpul pentru test a expirat");
+            throw new TimerExpiredException("The time limit for this attempt has expired");
         }
 
         int correctCount = 0;
         int totalCount = request.getAnswers().size();
 
         for (SubmitAnswerDTO answerDTO : request.getAnswers()) {
+            Question question = questionRepository.findById(answerDTO.getQuestionId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Question with id " + answerDTO.getQuestionId() + " does not exist"));
+
             Set<Long> correctOptionIds = optionRepository
                     .findByQuestionIdAndIsCorrectTrue(answerDTO.getQuestionId())
                     .stream()
@@ -108,12 +115,13 @@ public class AttemptService {
             }
 
             AttemptAnswer answer = new AttemptAnswer();
-            answer.setAttemptId(attemptId);
-            answer.setQuestionId(answerDTO.getQuestionId());
+            answer.setAttempt(attempt);
+            answer.setQuestion(question);
             answer.setSelectedOptionIds(answerDTO.getSelectedOptionIds());
             answer.setCorrect(isCorrect);
             answer.setTimeSpent(answerDTO.getTimeSpent());
             answer.setAnsweredAt(LocalDateTime.now());
+
             answerRepository.save(answer);
         }
 
@@ -127,9 +135,9 @@ public class AttemptService {
         boolean passed = scorePercent.compareTo(BigDecimal.valueOf(60)) >= 0;
 
         TestResult result = new TestResult();
-        result.setAttemptId(attemptId);
+        result.setAttempt(attempt);
         result.setStudentId(studentId);
-        result.setTestId(attempt.getTestId());
+        result.setTest(test);
         result.setScore(score);
         result.setScorePercent(scorePercent);
         result.setPassed(passed);
@@ -144,7 +152,6 @@ public class AttemptService {
             // TODO sprint 3: sendToAiAsync(attempt, result);
         }
 
-        // ── mapper pentru result → DTO ────────────────────────────────
         return attemptMapper.toTestResultDTO(result);
     }
 }

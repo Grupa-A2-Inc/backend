@@ -17,7 +17,7 @@ public interface QuestionMapper {
      * options e setat manual în service după mapare.
      */
     @Mapping(target = "questionId", source = "id")
-    @Mapping(target = "questionType", source = "questionType")
+    //@Mapping(target = "questionType", source = "questionType")
     QuestionForStudentDTO toQuestionForStudentDTO(Question question);
 
     List<QuestionForStudentDTO> toQuestionForStudentDTOList(List<Question> questions);
