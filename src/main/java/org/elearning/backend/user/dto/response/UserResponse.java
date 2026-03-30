@@ -15,5 +15,6 @@ public class UserResponse {
     private String firstName;
     private String lastName;
     private RoleName roleName;
+    private UUID organizationId;
     private UserStatus status;
 }

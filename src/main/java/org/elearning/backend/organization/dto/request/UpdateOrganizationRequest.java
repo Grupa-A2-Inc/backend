@@ -11,4 +11,9 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class UpdateOrganizationRequest {
     private String name;
+    private String country;
+    private String city;
+    private String organizationType;
+    private String address;
+    private String phoneNumber;
 }

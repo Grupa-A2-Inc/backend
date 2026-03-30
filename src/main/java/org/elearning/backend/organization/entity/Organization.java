@@ -21,6 +21,21 @@ public class Organization {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
+    private String country;
+
+    @Column(nullable = false)
+    private String city;
+
+    @Column(name = "organization_type", nullable = false)
+    private String organizationType;
+
+    @Column
+    private String address;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
     @ManyToOne
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;

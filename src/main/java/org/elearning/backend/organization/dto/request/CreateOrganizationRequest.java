@@ -13,5 +13,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateOrganizationRequest {
     private String name;
+    private String country;
+    private String city;
+    private String organizationType;
+    private String address;
+    private String phoneNumber;
     private UUID ownerId;
 }

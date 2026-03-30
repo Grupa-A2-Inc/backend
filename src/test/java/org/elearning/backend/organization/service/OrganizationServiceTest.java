@@ -24,6 +24,8 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+
+@ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 public class OrganizationServiceTest {
 
@@ -51,19 +53,31 @@ public class OrganizationServiceTest {
         Organization org = new Organization();
         org.setId(UUID.randomUUID());
         org.setName("Scoala Nr. 1");
+        org.setCountry("Romania");
+        org.setCity("Cluj-Napoca");
+        org.setOrganizationType("Scoala");
+        org.setAddress("Str. Principala 1");
+        org.setPhoneNumber("0740000000");
         org.setOwner(owner);
         return org;
+    }
+
+    private CreateOrganizationRequest createOrganizationRequest(UUID ownerId) {
+        return CreateOrganizationRequest.builder()
+                .name("Scoala Nr. 1")
+                .country("Romania")
+                .city("Cluj-Napoca")
+                .organizationType("Scoala")
+                .address("Str. Principala 1")
+                .phoneNumber("0740000000")
+                .ownerId(ownerId)
+                .build();
     }
 
     @Test
     void createOrganization_success() {
         User owner = createTestUser();
-
-        CreateOrganizationRequest request = CreateOrganizationRequest.builder()
-                .name("Scoala Nr. 1")
-                .ownerId(owner.getId())
-                .build();
-
+        CreateOrganizationRequest request = createOrganizationRequest(owner.getId());
         Organization saved = createTestOrganization(owner);
 
         when(userRepository.findById(owner.getId())).thenReturn(Optional.of(owner));
@@ -72,18 +86,49 @@ public class OrganizationServiceTest {
         OrganizationResponse response = organizationService.createOrganization(request);
 
         assertEquals("Scoala Nr. 1", response.getName());
+        assertEquals("Romania", response.getCountry());
+        assertEquals("Cluj-Napoca", response.getCity());
+        assertEquals("Scoala", response.getOrganizationType());
+        assertEquals("Str. Principala 1", response.getAddress());
+        assertEquals("0740000000", response.getPhoneNumber());
         assertEquals(owner.getId(), response.getOwnerId());
         assertEquals("owner@scoala.ro", response.getOwnerEmail());
     }
 
     @Test
-    void createOrganization_ownerNotFound_throwsException() {
-        UUID ownerId = UUID.randomUUID();
+    void createOrganization_withoutOptionalFields_success() {
+        User owner = createTestUser();
 
         CreateOrganizationRequest request = CreateOrganizationRequest.builder()
                 .name("Scoala Nr. 1")
-                .ownerId(ownerId)
+                .country("Romania")
+                .city("Cluj-Napoca")
+                .organizationType("Scoala")
+                .ownerId(owner.getId())
                 .build();
+
+        Organization saved = new Organization();
+        saved.setId(UUID.randomUUID());
+        saved.setName("Scoala Nr. 1");
+        saved.setCountry("Romania");
+        saved.setCity("Cluj-Napoca");
+        saved.setOrganizationType("Scoala");
+        saved.setOwner(owner);
+
+        when(userRepository.findById(owner.getId())).thenReturn(Optional.of(owner));
+        when(organizationRepository.save(any(Organization.class))).thenReturn(saved);
+
+        OrganizationResponse response = organizationService.createOrganization(request);
+
+        assertEquals("Scoala Nr. 1", response.getName());
+        assertNull(response.getAddress());
+        assertNull(response.getPhoneNumber());
+    }
+
+    @Test
+    void createOrganization_ownerNotFound_throwsException() {
+        UUID ownerId = UUID.randomUUID();
+        CreateOrganizationRequest request = createOrganizationRequest(ownerId);
 
         when(userRepository.findById(ownerId)).thenReturn(Optional.empty());
 
@@ -101,6 +146,9 @@ public class OrganizationServiceTest {
         OrganizationResponse response = organizationService.getOrganizationById(org.getId());
 
         assertEquals("Scoala Nr. 1", response.getName());
+        assertEquals("Romania", response.getCountry());
+        assertEquals("Cluj-Napoca", response.getCity());
+        assertEquals("Scoala", response.getOrganizationType());
         assertEquals(owner.getId(), response.getOwnerId());
     }
 
@@ -118,8 +166,14 @@ public class OrganizationServiceTest {
     void getAllOrganizations_returnsListOfOrganizations() {
         User owner = createTestUser();
         Organization org1 = createTestOrganization(owner);
-        Organization org2 = createTestOrganization(owner);
+
+        Organization org2 = new Organization();
+        org2.setId(UUID.randomUUID());
         org2.setName("Scoala Nr. 2");
+        org2.setCountry("Romania");
+        org2.setCity("Timisoara");
+        org2.setOrganizationType("Liceu");
+        org2.setOwner(owner);
 
         when(organizationRepository.findAll()).thenReturn(List.of(org1, org2));
 
@@ -128,6 +182,17 @@ public class OrganizationServiceTest {
         assertEquals(2, responses.size());
         assertEquals("Scoala Nr. 1", responses.get(0).getName());
         assertEquals("Scoala Nr. 2", responses.get(1).getName());
+        assertEquals("Cluj-Napoca", responses.get(0).getCity());
+        assertEquals("Timisoara", responses.get(1).getCity());
+    }
+
+    @Test
+    void getAllOrganizations_emptyList() {
+        when(organizationRepository.findAll()).thenReturn(List.of());
+
+        List<OrganizationResponse> responses = organizationService.getAllOrganizations();
+
+        assertTrue(responses.isEmpty());
     }
 
     @Test
@@ -137,6 +202,11 @@ public class OrganizationServiceTest {
 
         UpdateOrganizationRequest request = UpdateOrganizationRequest.builder()
                 .name("Scoala Nr. 1 Actualizata")
+                .country("Romania")
+                .city("Bucuresti")
+                .organizationType("Liceu")
+                .address("Str. Noua 5")
+                .phoneNumber("0750000000")
                 .build();
 
         when(organizationRepository.findById(org.getId())).thenReturn(Optional.of(org));
@@ -145,6 +215,10 @@ public class OrganizationServiceTest {
         OrganizationResponse response = organizationService.updateOrganization(org.getId(), request);
 
         assertEquals("Scoala Nr. 1 Actualizata", response.getName());
+        assertEquals("Bucuresti", response.getCity());
+        assertEquals("Liceu", response.getOrganizationType());
+        assertEquals("Str. Noua 5", response.getAddress());
+        assertEquals("0750000000", response.getPhoneNumber());
     }
 
     @Test
@@ -153,6 +227,9 @@ public class OrganizationServiceTest {
 
         UpdateOrganizationRequest request = UpdateOrganizationRequest.builder()
                 .name("Scoala Nr. 1 Actualizata")
+                .country("Romania")
+                .city("Bucuresti")
+                .organizationType("Liceu")
                 .build();
 
         when(organizationRepository.findById(id)).thenReturn(Optional.empty());
