@@ -124,11 +124,7 @@ class AuthServiceTest {
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
 
-        Role role = new Role(RoleName.ORGANIZATION_ADMIN);
-
         when(userRepository.existsByEmail(any())).thenReturn(false);
-        when(roleRepository.findByName(RoleName.ORGANIZATION_ADMIN)).thenReturn(Optional.of(role));
-        when(passwordEncoder.encode(any())).thenReturn("hashed");
         when(organizationRepository.existsByName("Scoala Ion")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))

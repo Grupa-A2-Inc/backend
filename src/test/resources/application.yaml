@@ -1,4 +1,4 @@
-JWT_SECRET:
+JWT_SECRET: your-secret-here-at-least-32-bites
 
 spring:
 #  autoconfigure:

@@ -17,6 +17,8 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import org.springframework.web.filter.DelegatingFilterProxy;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -94,7 +96,7 @@ class SecurityConfigTest {
     static class NoopJwtUtil extends JwtUtil {
 
         @Override
-        public String extractUsername(String token) {
+        public UUID extractId(String token) {
             throw new UnsupportedOperationException("JWT parsing is not used in this MVC config test");
         }
 

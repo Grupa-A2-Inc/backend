@@ -11,6 +11,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -75,14 +76,14 @@ class JwtAuthenticationFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         TrackingFilterChain filterChain = new TrackingFilterChain();
 
-        jwtUtil.username = "user@test.com";
+        jwtUtil.userId = UUID.randomUUID();
         jwtUtil.role = RoleName.ADMIN;
 
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         assertThat(authentication).isNotNull();
-        assertThat(authentication.getPrincipal()).isEqualTo("user@test.com");
+        assertThat(authentication.getPrincipal()).isEqualTo(jwtUtil.userId.toString());
         assertThat(authentication.getAuthorities())
                 .extracting("authority")
                 .containsExactly("ROLE_ADMIN");
@@ -127,16 +128,16 @@ class JwtAuthenticationFilterTest {
 
     private static final class StubJwtUtil extends JwtUtil {
 
-        private String username;
+        private UUID userId;
         private RoleName role;
         private boolean throwJwtException;
 
         @Override
-        public String extractUsername(String token) {
+        public UUID extractId(String token) {
             if (throwJwtException) {
                 throw new JwtException("bad token");
             }
-            return username;
+            return userId;
         }
 
         @Override
