@@ -1,10 +1,8 @@
 package org.elearning.backend.content.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.content.dto.CourseDto;
+import org.elearning.backend.content.dto.CourseDtoGet;
 import org.elearning.backend.content.dto.CourseFullViewDto;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.service.CourseService;
@@ -23,21 +21,30 @@ public class CoursesController {
     private final CourseService courseService;
 
     @PostMapping
-    public ResponseEntity<Course> createCourse(@RequestBody Course course) {
-
-        Course savedCourse = courseService.createCourse(course);
-
-        return new ResponseEntity<>(savedCourse, HttpStatus.CREATED);
+    public ResponseEntity<CourseDtoGet> createCourse(@RequestBody CourseDto courseDto) {
+        Course savedCourse = courseService.createCourse(courseDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapToDtoGet(savedCourse));
     }
 
     @GetMapping
-    public ResponseEntity<List<CourseDto>> getAllCourses(@RequestParam String role, @RequestParam UUID userId) {
-        return ResponseEntity.ok(courseService.getCourses(role, userId));
+    public ResponseEntity<List<CourseDtoGet>> getAllCourses(@RequestParam String role, @RequestParam UUID userId) {
+        List<Course> courses = courseService.getCourses(role, userId);
+        List<CourseDtoGet> responseList = courses.stream()
+                .map(this::mapToDtoGet)
+                .toList();
+        return ResponseEntity.ok(responseList);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CourseDto> updateCourse(@PathVariable UUID id, @RequestBody Course courseDetails) {
-        return ResponseEntity.ok(courseService.updateCourse(id, courseDetails));
+    public ResponseEntity<CourseDtoGet> updateCourse(@PathVariable UUID id, @RequestBody CourseDto courseDto) {
+        Course updatedCourse = courseService.updateCourse(id, courseDto);
+        return ResponseEntity.ok(mapToDtoGet(updatedCourse));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<CourseDtoGet> patchCourse(@PathVariable UUID id, @RequestBody CourseDto courseDto) {
+        Course patchedCourse = courseService.patchCourse(id, courseDto);
+        return ResponseEntity.ok(mapToDtoGet(patchedCourse));
     }
 
     @DeleteMapping("/{id}")
@@ -46,23 +53,20 @@ public class CoursesController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * GET /api/courses/{courseId}/full-view Entrypoint
-     * @PathVariable - extracts dynamic value directly from the URI
-     * Retrieves a Course entity along with its associated chapters, lessons, and resources based on the provided course ID.
-     * Returns HTTP 200 OK with the Course entity in the response body if found.
-     * If no course with the given ID exists, returns HTTP 404 Not Found.
-     */
-    @Operation(summary = "Get full view of a course",
-            description = "Retrieves a Course entity along with its associated chapters, lessons, and resources based on the provided course ID.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Course retrieved successfully"),
-            @ApiResponse(responseCode = "404", description = "Course not found")
-    })
     @GetMapping("/{courseId}/full-view")
     public ResponseEntity<CourseFullViewDto> getCourseFullView(@PathVariable UUID courseId) {
-        CourseFullViewDto courseServiceCourseFullView = courseService.getCourseFullView(courseId);
+        return ResponseEntity.ok(courseService.getCourseFullView(courseId));
+    }
 
-        return ResponseEntity.ok(courseServiceCourseFullView);
+    private CourseDtoGet mapToDtoGet(Course c) {
+        CourseDtoGet dto = new CourseDtoGet();
+        dto.setId(c.getId());
+        dto.setTitle(c.getTitle());
+        dto.setDescription(c.getDescription());
+        dto.setCategory(c.getCategory());
+        dto.setStatus(c.getStatus());
+        dto.setVisibility(c.getVisibility());
+        dto.setCreatedBy(c.getCreatedBy());
+        return dto;
     }
 }
