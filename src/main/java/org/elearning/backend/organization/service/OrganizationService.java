@@ -28,6 +28,11 @@ public class OrganizationService {
 
         Organization organization = new Organization();
         organization.setName(request.getName());
+        organization.setCountry(request.getCountry());
+        organization.setCity(request.getCity());
+        organization.setOrganizationType(request.getOrganizationType());
+        organization.setAddress(request.getAddress());
+        organization.setPhoneNumber(request.getPhoneNumber());
         organization.setOwner(owner);
 
         Organization saved = organizationRepository.save(organization);
@@ -52,6 +57,11 @@ public class OrganizationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found: " + id));
 
         organization.setName(request.getName());
+        organization.setCountry(request.getCountry());
+        organization.setCity(request.getCity());
+        organization.setOrganizationType(request.getOrganizationType());
+        organization.setAddress(request.getAddress());
+        organization.setPhoneNumber(request.getPhoneNumber());
         organization.setUpdatedAt(LocalDateTime.now());
 
         Organization saved = organizationRepository.save(organization);
@@ -69,6 +79,11 @@ public class OrganizationService {
         return new OrganizationResponse(
                 organization.getId(),
                 organization.getName(),
+                organization.getCountry(),
+                organization.getCity(),
+                organization.getOrganizationType(),
+                organization.getAddress(),
+                organization.getPhoneNumber(),
                 organization.getOwner().getId(),
                 organization.getOwner().getEmail()
         );

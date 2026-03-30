@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.elearning.backend.role.entity.RoleName;
 
+import java.util.UUID;
+
 @Getter
 @Builder
 @AllArgsConstructor
@@ -16,5 +18,5 @@ public class CreateUserRequest {
     private String firstName;
     private String lastName;
     private RoleName roleName;
-
+    private UUID organizationId;
 }

@@ -42,6 +42,7 @@ class UserControllerTest {
                 "Ana",
                 "Pop",
                 RoleName.STUDENT,
+                null,
                 UserStatus.ACTIVE
         );
 
@@ -64,6 +65,7 @@ class UserControllerTest {
                 "Ana",
                 "Pop",
                 RoleName.STUDENT,
+                null,
                 UserStatus.ACTIVE
         );
 

@@ -3,6 +3,8 @@ package org.elearning.backend.user.service;
 import lombok.AllArgsConstructor;
 import org.elearning.backend.common.exception.DuplicateResourceException;
 import org.elearning.backend.common.exception.ResourceNotFoundException;
+import org.elearning.backend.organization.entity.Organization;
+import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
@@ -23,6 +25,7 @@ import java.util.UUID;
 public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final OrganizationRepository organizationRepository;
 
     public UserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -38,6 +41,12 @@ public class UserService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setRole(role);
+
+        if (request.getOrganizationId() != null) {
+            Organization org = organizationRepository.findById(request.getOrganizationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Organization not found: " + request.getOrganizationId()));
+            user.setOrganization(org);
+        }
         user.setStatus(UserStatus.ACTIVE);
 
         User saved = userRepository.save(user);
@@ -66,6 +75,12 @@ public class UserService {
         user.setEmail(request.getEmail());
         user.setUpdatedAt(LocalDateTime.now());
 
+        if (request.getOrganizationId() != null) {
+            Organization org = organizationRepository.findById(request.getOrganizationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Organization not found: " + request.getOrganizationId()));
+            user.setOrganization(org);
+        }
+
         User saved = userRepository.save(user);
         return toResponse(saved);
     }
@@ -84,6 +99,7 @@ public class UserService {
                 user.getFirstName(),
                 user.getLastName(),
                 user.getRole().getName(),
+                user.getOrganization() != null ? user.getOrganization().getId() : null,
                 user.getStatus()
         );
     }

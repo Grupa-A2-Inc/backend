@@ -2,6 +2,7 @@ package org.elearning.backend.user.service;
 
 import org.elearning.backend.common.exception.DuplicateResourceException;
 import org.elearning.backend.common.exception.ResourceNotFoundException;
+import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
@@ -26,6 +27,8 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import org.elearning.backend.organization.entity.Organization;
+import org.elearning.backend.organization.repository.OrganizationRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
@@ -41,6 +44,9 @@ public class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
+
+    @Mock
+    private OrganizationRepository organizationRepository;
 
     @Test
     void createUser_success() {
@@ -316,5 +322,128 @@ public class UserServiceTest {
         when(userRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> userService.getUserById(id));
+    }
+
+    @Test
+    void createUser_withOrganization_success() {
+        Organization org = new Organization();
+        org.setId(UUID.randomUUID());
+        org.setName("Scoala Nr. 1");
+
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("ion@scoala.ro")
+                .password("parola123")
+                .firstName("Ion")
+                .lastName("Pop")
+                .roleName(RoleName.TEACHER)
+                .organizationId(org.getId())
+                .build();
+
+        Role role = new Role(RoleName.TEACHER);
+
+        User savedUser = new User();
+        savedUser.setId(UUID.randomUUID());
+        savedUser.setEmail("ion@scoala.ro");
+        savedUser.setFirstName("Ion");
+        savedUser.setLastName("Pop");
+        savedUser.setRole(role);
+        savedUser.setStatus(UserStatus.ACTIVE);
+        savedUser.setOrganization(org);
+
+        when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(false);
+        when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
+        when(organizationRepository.findById(org.getId())).thenReturn(Optional.of(org));
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        UserResponse response = userService.createUser(request);
+
+        assertEquals("ion@scoala.ro", response.getEmail());
+        assertEquals(org.getId(), response.getOrganizationId());
+    }
+
+    @Test
+    void createUser_organizationNotFound_throwsException() {
+        UUID orgId = UUID.randomUUID();
+
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("ion@scoala.ro")
+                .password("parola123")
+                .firstName("Ion")
+                .lastName("Pop")
+                .roleName(RoleName.TEACHER)
+                .organizationId(orgId)
+                .build();
+
+        Role role = new Role(RoleName.TEACHER);
+
+        when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(false);
+        when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> userService.createUser(request));
+    }
+
+    @Test
+    void updateUser_withOrganization_success() {
+        UUID id = UUID.randomUUID();
+        Role role = new Role(RoleName.TEACHER);
+
+        Organization org = new Organization();
+        org.setId(UUID.randomUUID());
+        org.setName("Scoala Nr. 1");
+
+        User existingUser = new User();
+        existingUser.setId(id);
+        existingUser.setEmail("ion@scoala.ro");
+        existingUser.setFirstName("Ion");
+        existingUser.setLastName("Pop");
+        existingUser.setRole(role);
+        existingUser.setStatus(UserStatus.ACTIVE);
+
+        UpdateUserRequest request = UpdateUserRequest.builder()
+                .email("ion@scoala.ro")
+                .firstName("Ion")
+                .lastName("Pop")
+                .organizationId(org.getId())
+                .build();
+
+        existingUser.setOrganization(org);
+
+        when(userRepository.findById(id)).thenReturn(Optional.of(existingUser));
+        when(organizationRepository.findById(org.getId())).thenReturn(Optional.of(org));
+        when(userRepository.save(any(User.class))).thenReturn(existingUser);
+
+        UserResponse response = userService.updateUser(id, request);
+
+        assertEquals(org.getId(), response.getOrganizationId());
+    }
+
+    @Test
+    void updateUser_organizationNotFound_throwsException() {
+        UUID id = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        Role role = new Role(RoleName.TEACHER);
+
+        User existingUser = new User();
+        existingUser.setId(id);
+        existingUser.setEmail("ion@scoala.ro");
+        existingUser.setFirstName("Ion");
+        existingUser.setLastName("Pop");
+        existingUser.setRole(role);
+        existingUser.setStatus(UserStatus.ACTIVE);
+
+        UpdateUserRequest request = UpdateUserRequest.builder()
+                .email("ion@scoala.ro")
+                .firstName("Ion")
+                .lastName("Pop")
+                .organizationId(orgId)
+                .build();
+
+        when(userRepository.findById(id)).thenReturn(Optional.of(existingUser));
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> userService.updateUser(id, request));
     }
 }
