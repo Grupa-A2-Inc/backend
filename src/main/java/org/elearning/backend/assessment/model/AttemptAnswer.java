@@ -77,5 +77,5 @@ public class AttemptAnswer {
      * orphanRemoval = true ensures that if an answer is removed from the attempt's list of answers, it will also be deleted from the database.
      */
     /*@OneToMany(mappedBy = "attempt_answers", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<AttemptAnswer> answers = new ArrayList<>();*/
+    private List<TestAttempt> testAttempts = new ArrayList<>();*/
 }

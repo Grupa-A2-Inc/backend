@@ -103,6 +103,15 @@ public class Test {
     private List<Question> questions = new ArrayList<>();
 
     /**
+     * This is a one-to-many relationship, as a test can have multiple test results.
+     * The mappedBy attribute indicates that the "test" field in the TestResult entity owns the relationship.
+     * CascadeType.ALL means that any changes to the Test entity (like persist, merge, remove) will be cascaded to the associated TestResult entities.
+     * orphanRemoval = true means that if a TestResult is removed from the testResults list, it will also be removed from the database.
+     */
+    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TestResult> testResults = new ArrayList<>();
+
+    /**
      * This method is called before the entity is persisted (saved for the first time) to the database.
      * It sets the createdAt and updatedAt timestamps to the current time.
      */
