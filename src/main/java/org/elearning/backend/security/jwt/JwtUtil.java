@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -28,9 +29,9 @@ public class JwtUtil {
         return key;
     }
 
-    public String generateAccessToken(String username, RoleName role) {
+    public String generateAccessToken(UUID id, RoleName role) {
         return Jwts.builder()
-                .subject(username)
+                .subject(id.toString())
                 .claim("role", role.name())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 10*60*1000)) // 10 min
@@ -38,9 +39,9 @@ public class JwtUtil {
                 .compact();
     }
 
-    public String generateRefreshToken(String username) {
+    public String generateRefreshToken(UUID id) {
         return Jwts.builder()
-                .subject(username)
+                .subject(id.toString())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 7*24*60*60*1000L)) // 7 zile
                 .signWith(getKey())
@@ -55,8 +56,8 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    public String extractUsername(String token) {
-        return validateToken(token).getSubject();
+    public UUID extractId(String token) {
+        return UUID.fromString(validateToken(token).getSubject());
     }
 
     public RoleName extractRole(String token) {
