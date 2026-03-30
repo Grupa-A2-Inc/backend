@@ -1,7 +1,9 @@
 package org.elearning.backend.auth.service;
 
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.auth.dto.request.LoginRequest;
+import org.elearning.backend.auth.dto.request.RefreshRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.common.exception.DuplicateResourceException;
@@ -12,6 +14,7 @@ import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
+import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
@@ -27,6 +30,7 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final OrganizationRepository organizationRepository;
+    private final JwtUtil jwtUtil;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -70,6 +74,8 @@ public class AuthService {
             throw new InvalidCredentials("Invalid credentials");
         }
 
-        return new AuthResponse("Login successful", null);
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().getName());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+        return new AuthResponse("Login successful", accessToken, refreshToken);
     }
 }
