@@ -23,10 +23,9 @@ public class AttemptController {
     @PostMapping("/api/tests/{testId}/start")
     public ResponseEntity<StartAttemptResponseDTO> startAttempt(@PathVariable UUID testId) {
 
-        //de pus JWT-ul aici când o să avem autentificare, momentan e hardcodat
-        UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001"); // placeholder
+        // Placeholder for JWT - to be replaced with actual authentication logic
+        UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-        // GATA cu try-catch! Dacă pică, se duce direct în GlobalExceptionHandler
         StartAttemptResponseDTO response = attemptService.startAttempt(testId, studentId);
         return ResponseEntity.ok(response);
     }
@@ -41,9 +40,9 @@ public class AttemptController {
             @PathVariable UUID attemptId,
             @RequestBody SubmitRequestDTO request) {
 
-        UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001"); // placeholder JWT
+        // Placeholder for JWT - to be replaced with actual authentication logic
+        UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-        // GATA cu if-urile pe string-uri din erori!
         TestResultDTO result = attemptService.submitAttempt(attemptId, studentId, request);
         return ResponseEntity.ok(result);
     }

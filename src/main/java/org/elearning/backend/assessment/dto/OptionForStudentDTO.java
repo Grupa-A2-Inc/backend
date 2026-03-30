@@ -9,5 +9,4 @@ public class OptionForStudentDTO {
     private int optionId;
     private String text;
     private int displayOrder;
-    // ❌ fără is_correct — securitate
 }
