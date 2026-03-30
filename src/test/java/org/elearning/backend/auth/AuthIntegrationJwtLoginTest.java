@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.organization.repository.OrganizationRepository;
-import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +53,6 @@ class AuthIntegrationJwtLoginTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setRole(RoleName.ORGANIZATION_ADMIN);
         request.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")

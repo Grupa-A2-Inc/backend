@@ -1,9 +1,7 @@
 package org.elearning.backend.auth.service;
 
-import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.auth.dto.request.LoginRequest;
-import org.elearning.backend.auth.dto.request.RefreshRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.common.exception.DuplicateResourceException;
