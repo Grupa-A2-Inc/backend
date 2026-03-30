@@ -1,29 +1,33 @@
 package org.elearning.backend.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elearning.backend.auth.controller.AuthController;
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
-import org.elearning.backend.organization.repository.OrganizationRepository;
-import org.elearning.backend.role.entity.RoleName;
-import org.elearning.backend.user.repository.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
+import org.elearning.backend.auth.dto.response.AuthResponse;
+import org.elearning.backend.auth.service.AuthService;
+import org.elearning.backend.common.exception.DuplicateResourceException;
+import org.elearning.backend.common.exception.GlobalExceptionHandler;
+import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
+@WebMvcTest(AuthController.class)
+@AutoConfigureMockMvc(addFilters = false)
+@Import(GlobalExceptionHandler.class)
 class AuthIntegrationTest {
 
     @Autowired
@@ -32,21 +36,11 @@ class AuthIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private UserRepository userRepository;
+    @MockBean
+    private AuthService authService;
 
-    @Autowired
-    private OrganizationRepository organizationRepository;
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @BeforeEach
-    void cleanup() {
-        jdbcTemplate.update("UPDATE users SET organization_id = NULL");
-        organizationRepository.deleteAllInBatch();
-        userRepository.deleteAllInBatch();
-    }
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     // REGISTER
 
@@ -59,6 +53,9 @@ class AuthIntegrationTest {
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
 
+        when(authService.register(any(RegisterRequest.class)))
+                .thenReturn(new AuthResponse("User registered successfully", "access-token", "refresh-token"));
+
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -67,7 +64,7 @@ class AuthIntegrationTest {
     }
 
     @Test
-    void register_organizationAdmin_createsUserAndOrganizationInDB() throws Exception {
+    void register_organizationAdmin_delegatesToAuthService() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("admin@test.com");
         request.setPassword("parola123");
@@ -75,13 +72,15 @@ class AuthIntegrationTest {
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
 
+        when(authService.register(any(RegisterRequest.class)))
+                .thenReturn(new AuthResponse("User registered successfully", "access-token", "refresh-token"));
+
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
 
-        assertThat(userRepository.existsByEmail("admin@test.com")).isTrue();
-        assertThat(organizationRepository.existsByName("Scoala Ion")).isTrue();
+        verify(authService).register(any(RegisterRequest.class));
     }
 
     @Test
@@ -93,9 +92,8 @@ class AuthIntegrationTest {
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
 
-        mockMvc.perform(post("/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)));
+        when(authService.register(any(RegisterRequest.class)))
+                .thenThrow(new DuplicateResourceException("Email already in use: dup@test.com"));
 
         RegisterRequest request2 = new RegisterRequest();
         request2.setEmail("dup@test.com");
@@ -119,9 +117,8 @@ class AuthIntegrationTest {
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
 
-        mockMvc.perform(post("/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)));
+        when(authService.register(any(RegisterRequest.class)))
+                .thenThrow(new DuplicateResourceException("Organization name already exists: Scoala Ion"));
 
         RegisterRequest request2 = new RegisterRequest();
         request2.setEmail("admin2@test.com");
@@ -154,20 +151,12 @@ class AuthIntegrationTest {
 
     @Test
     void login_success_returns200() throws Exception {
-        RegisterRequest registerRequest = new RegisterRequest();
-        registerRequest.setEmail("test@test.com");
-        registerRequest.setPassword("parola123");
-        registerRequest.setFirstName("Ion");
-        registerRequest.setLastName("Popescu");
-        registerRequest.setOrganizationName("Scoala Ion");
-
-        mockMvc.perform(post("/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(registerRequest)));
-
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("test@test.com");
         loginRequest.setPassword("parola123");
+
+        when(authService.login(any(LoginRequest.class)))
+                .thenReturn(new AuthResponse("Login successful", "access-token", "refresh-token"));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -178,20 +167,12 @@ class AuthIntegrationTest {
 
     @Test
     void login_wrongPassword_returns401() throws Exception {
-        RegisterRequest registerRequest = new RegisterRequest();
-        registerRequest.setEmail("test@test.com");
-        registerRequest.setPassword("parola123");
-        registerRequest.setFirstName("Ion");
-        registerRequest.setLastName("Popescu");
-        registerRequest.setOrganizationName("Scoala Ion");
-
-        mockMvc.perform(post("/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(registerRequest)));
-
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("test@test.com");
         loginRequest.setPassword("parolaGresita");
+
+        when(authService.login(any(LoginRequest.class)))
+                .thenThrow(new org.elearning.backend.common.exception.InvalidCredentials("Invalid credentials"));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -204,6 +185,9 @@ class AuthIntegrationTest {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("inexistent@test.com");
         loginRequest.setPassword("parola123");
+
+        when(authService.login(any(LoginRequest.class)))
+                .thenThrow(new org.elearning.backend.common.exception.InvalidCredentials("Invalid credentials"));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

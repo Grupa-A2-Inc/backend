@@ -10,6 +10,7 @@ import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
+import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -21,10 +22,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,8 +46,18 @@ class AuthServiceTest {
     @Mock
     private OrganizationRepository organizationRepository;
 
+    @Mock
+    private JwtUtil jwtUtil;
+
     @InjectMocks
     private AuthService authService;
+
+    private User saveUserWithGeneratedId(User user) {
+        if (user.getId() == null) {
+            user.setId(UUID.randomUUID());
+        }
+        return user;
+    }
 
     // REGISTER
 
@@ -76,13 +89,15 @@ class AuthServiceTest {
         request.setOrganizationName("Scoala Ion");
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
-        User savedUser = new User();
 
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(roleRepository.findByName(any())).thenReturn(Optional.of(role));
         when(passwordEncoder.encode("parola123")).thenReturn("hashed_parola");
         when(organizationRepository.existsByName(any())).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> saveUserWithGeneratedId(invocation.getArgument(0)));
+        when(organizationRepository.save(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtUtil.generateAccessToken(any(UUID.class), eq(RoleName.ORGANIZATION_ADMIN))).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(any(UUID.class))).thenReturn("refresh-token");
 
         authService.register(request);
 
@@ -101,13 +116,15 @@ class AuthServiceTest {
         request.setOrganizationName("Scoala Ion");
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
-        User savedUser = new User();
 
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(roleRepository.findByName(RoleName.ORGANIZATION_ADMIN)).thenReturn(Optional.of(role));
         when(passwordEncoder.encode(any())).thenReturn("hashed");
         when(organizationRepository.existsByName("Scoala Ion")).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> saveUserWithGeneratedId(invocation.getArgument(0)));
+        when(organizationRepository.save(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtUtil.generateAccessToken(any(UUID.class), eq(RoleName.ORGANIZATION_ADMIN))).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(any(UUID.class))).thenReturn("refresh-token");
 
         AuthResponse response = authService.register(request);
 
@@ -143,11 +160,15 @@ class AuthServiceTest {
         request.setPassword("parola123");
 
         User user = new User();
+        user.setId(UUID.randomUUID());
         user.setEmail("test@test.com");
         user.setPasswordHash("hashed_parola");
+        user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
 
         when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("parola123", "hashed_parola")).thenReturn(true);
+        when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(user.getId())).thenReturn("refresh-token");
 
         AuthResponse response = authService.login(request);
 
