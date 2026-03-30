@@ -8,9 +8,9 @@ CREATE TYPE test_status AS ENUM (
 );
 
 CREATE TYPE question_type AS ENUM (
-    'single_choice',
-    'multi_choice',
-    'true_false'
+    'SINGLE_CHOICE',
+    'MULTI_CHOICE',
+    'TRUE_FALSE'
 );
 
 CREATE TYPE attempt_status AS ENUM (
