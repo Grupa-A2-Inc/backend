@@ -31,7 +31,7 @@ class UserSchemaTest {
                 String.class
         );
         assertThat(columns).contains("id", "email", "password_hash",
-                "first_name", "last_name", "role_id", "status",
+                "first_name", "last_name", "role_id", "organization_id", "status",
                 "created_at", "updated_at");
     }
 
@@ -61,6 +61,16 @@ class UserSchemaTest {
                 String.class
         );
         assertThat(roles).contains("ADMIN", "ORGANIZATION_ADMIN", "TEACHER", "STUDENT", "PARENT");
+    }
+
+    @Test
+    void shouldEnforceForeignKeyBetweenUsersAndOrganizations() {
+        org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () ->
+                jdbcTemplate.execute(
+                        "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, organization_id, status) " +
+                                "VALUES (gen_random_uuid(), 'org@test.com', 'hash', 'Test', 'User', 1, gen_random_uuid(), 'ACTIVE')"
+                )
+        );
     }
 
     @Test

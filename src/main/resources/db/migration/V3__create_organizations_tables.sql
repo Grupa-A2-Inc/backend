@@ -19,5 +19,6 @@ CREATE TABLE organizations (
 -- =====================
 CREATE INDEX idx_organizations_owner_id ON organizations(owner_id);
 
-
-
+ALTER TABLE users
+    ADD CONSTRAINT fk_users_organization
+        FOREIGN KEY (organization_id) REFERENCES organizations(id);
