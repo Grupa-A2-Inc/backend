@@ -61,7 +61,9 @@ public class AuthService {
         savedUser.setOrganization(savedOrganization);
         userRepository.save(savedUser);
 
-        return new AuthResponse("User registered successfully");
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().getName());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+        return new AuthResponse("User registered successfully", accessToken, refreshToken);
     }
 
     public AuthResponse login(LoginRequest request) {
