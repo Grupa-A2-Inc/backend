@@ -4,17 +4,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.auth.controller.AuthController;
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
+import org.elearning.backend.auth.dto.response.UserDataResponse;
 import org.elearning.backend.auth.service.AuthService;
 import org.elearning.backend.common.exception.GlobalExceptionHandler;
+import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
+import org.elearning.backend.user.entity.UserStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -34,56 +39,67 @@ class AuthIntegrationJwtLoginTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private AuthService authService;
 
-    @MockBean
+    @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Test
-    void login_success_returnsAccessToken() throws Exception {
+    private AuthResponse mockAuthResponse() {
+        UserDataResponse mockUser = new UserDataResponse(
+                UUID.randomUUID(),
+                "Test",
+                "User",
+                "test@test.com",
+                RoleName.STUDENT,
+                UserStatus.ACTIVE,
+                "Test Organization"
+        );
+
+        return new AuthResponse(
+                "Login successful",
+                "header.payload.signature",
+                "refresh-token",
+                mockUser
+        );
+    }
+
+    private LoginRequest mockLoginRequest() {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("test@test.com");
         loginRequest.setPassword("parola123");
+        return loginRequest;
+    }
 
-        when(authService.login(any(LoginRequest.class)))
-                .thenReturn(new AuthResponse("Login successful", "header.payload.signature", "refresh-token"));
+    @Test
+    void login_success_returnsAccessToken() throws Exception {
+        when(authService.login(any(LoginRequest.class))).thenReturn(mockAuthResponse());
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
+                        .content(objectMapper.writeValueAsString(mockLoginRequest())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty());
     }
 
     @Test
     void login_success_returnsRefreshToken() throws Exception {
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail("test@test.com");
-        loginRequest.setPassword("parola123");
-
-        when(authService.login(any(LoginRequest.class)))
-                .thenReturn(new AuthResponse("Login successful", "header.payload.signature", "refresh-token"));
+        when(authService.login(any(LoginRequest.class))).thenReturn(mockAuthResponse());
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
+                        .content(objectMapper.writeValueAsString(mockLoginRequest())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.refreshToken").isNotEmpty());
     }
 
     @Test
     void login_success_accessTokenIsValidJwtFormat() throws Exception {
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail("test@test.com");
-        loginRequest.setPassword("parola123");
-
-        when(authService.login(any(LoginRequest.class)))
-                .thenReturn(new AuthResponse("Login successful", "header.payload.signature", "refresh-token"));
+        when(authService.login(any(LoginRequest.class))).thenReturn(mockAuthResponse());
 
         String response = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
+                        .content(objectMapper.writeValueAsString(mockLoginRequest())))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()

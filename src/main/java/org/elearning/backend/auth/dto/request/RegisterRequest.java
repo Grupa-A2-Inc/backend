@@ -26,4 +26,17 @@ public class RegisterRequest {
 
     @NotBlank(message = "Organization name is required")
     private String organizationName;
+
+    @NotBlank(message = "Country is required")
+    private String country;
+
+    @NotBlank(message = "City is required")
+    private String city;
+
+    @NotBlank(message = "Organization type is required")
+    private String organizationType;
+
+    private String address;
+
+    private String phoneNumber;
 }
