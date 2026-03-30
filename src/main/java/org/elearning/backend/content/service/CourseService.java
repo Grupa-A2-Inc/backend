@@ -2,6 +2,7 @@ package org.elearning.backend.content.service;
 
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.content.mapper.CourseFullViewMapper;
+import org.elearning.backend.content.mapper.CourseMapper;
 import org.elearning.backend.content.model.*;
 import org.elearning.backend.content.dto.*;
 import org.elearning.backend.content.repository.ChapterRepository;
@@ -23,23 +24,39 @@ public class CourseService {
     private final ChapterRepository chapterRepository;
     private final LessonRepository lessonRepository;
     private final CourseFullViewMapper courseFullViewMapper;
+    private final CourseMapper courseMapper;
 
+    @Transactional
+    public CourseFullViewDto createCourse(CreateCourseDTO dto) {
+        if(dto.getVisibility() == null) {
+            dto.setVisibility(CourseVisibility.PRIVATE);
+        }
+        if(dto.getStatus() == null) {
+            dto.setStatus(CourseStatus.DRAFT);
+        }
+        Course course = courseMapper.toCourse(dto);
 
-    public Course createCourse(CourseDto dto) {
-        Course course = new Course();
-        course.setTitle(dto.getTitle());
-        course.setDescription(dto.getDescription());
-        course.setCategory(dto.getCategory());
-        course.setCreatedBy(dto.getCreatedBy());
-        if (dto.getStatus() != null) {
-            course.setStatus(dto.getStatus());
+        if (course.getChapters() != null) {
+            for (Chapter chapter : course.getChapters()) {
+                chapter.setCourse(course);
+
+                if(chapter.getLessons() != null) {
+                    for (Lesson lesson : chapter.getLessons()) {
+                        lesson.setChapter(chapter);
+
+                        if(lesson.getLessonResources() != null) {
+                            for (LessonResource resource : lesson.getLessonResources()) {
+                                resource.setLesson(lesson);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        if (dto.getVisibility() != null) {
-            course.setVisibility(dto.getVisibility());
-        }
+        course = courseRepository.saveAndFlush(course);
 
-        return courseRepository.save(course);
+        return courseFullViewMapper.toCourseFullViewDTO(course);
     }
 
     public List<Course> getCourses(String role, UUID userId) {

@@ -21,5 +21,4 @@ public class CourseDto {
     private CourseStatus status;
     private CourseVisibility visibility;
     private UUID createdBy;
-    private List<Chapter> chapters;
 }

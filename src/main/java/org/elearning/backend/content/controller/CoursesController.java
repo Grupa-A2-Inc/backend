@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.content.dto.CourseDto;
 import org.elearning.backend.content.dto.CourseDtoGet;
 import org.elearning.backend.content.dto.CourseFullViewDto;
+import org.elearning.backend.content.dto.CreateCourseDTO;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.service.CourseService;
 import org.springframework.http.HttpStatus;
@@ -21,9 +22,9 @@ public class CoursesController {
     private final CourseService courseService;
 
     @PostMapping
-    public ResponseEntity<CourseDtoGet> createCourse(@RequestBody CourseDto courseDto) {
-        Course savedCourse = courseService.createCourse(courseDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapToDtoGet(savedCourse));
+    public ResponseEntity<CourseFullViewDto> createCourse(@RequestBody CreateCourseDTO courseDto) {
+        CourseFullViewDto savedCourse = courseService.createCourse(courseDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse);
     }
 
     @GetMapping
