@@ -10,16 +10,16 @@ public class AuthResponse {
     private String message;
     private String accessToken;
     private String refreshToken;
+    private UserDataResponse user;
 
     public AuthResponse(String message) {
         this.message = message;
-        this.accessToken = null;
-        this.refreshToken = null;
     }
 
-    public AuthResponse(String message, String accessToken, String refreshToken) {
+    public AuthResponse(String message, String accessToken, String refreshToken, UserDataResponse user) {
         this.message = message;
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
+        this.user = user;
     }
 }

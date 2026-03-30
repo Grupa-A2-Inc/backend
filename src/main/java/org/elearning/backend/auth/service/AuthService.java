@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
+import org.elearning.backend.auth.dto.response.UserDataResponse;
 import org.elearning.backend.common.exception.DuplicateResourceException;
 import org.elearning.backend.common.exception.InvalidCredentials;
 import org.elearning.backend.common.exception.ResourceNotFoundException;
@@ -55,15 +56,31 @@ public class AuthService {
 
         Organization organization = new Organization();
         organization.setName(request.getOrganizationName());
+        organization.setCountry(request.getCountry());
+        organization.setCity(request.getCity());
+        organization.setOrganizationType(request.getOrganizationType());
+        organization.setAddress(request.getAddress());
+        organization.setPhoneNumber(request.getPhoneNumber());
         organization.setOwner(savedUser);
         Organization savedOrganization = organizationRepository.save(organization);
 
         savedUser.setOrganization(savedOrganization);
         userRepository.save(savedUser);
 
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().getName());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
-        return new AuthResponse("User registered successfully", accessToken, refreshToken);
+        String accessToken = jwtUtil.generateAccessToken(savedUser.getId(), RoleName.ORGANIZATION_ADMIN);
+        String refreshToken = jwtUtil.generateRefreshToken(savedUser.getId());
+
+        UserDataResponse userData = new UserDataResponse(
+                savedUser.getId(),
+                savedUser.getFirstName(),
+                savedUser.getLastName(),
+                savedUser.getEmail(),
+                RoleName.ORGANIZATION_ADMIN,
+                savedUser.getStatus(),
+                savedOrganization.getName()
+        );
+
+        return new AuthResponse("User registered successfully", accessToken, refreshToken, userData);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -76,6 +93,17 @@ public class AuthService {
 
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().getName());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
-        return new AuthResponse("Login successful", accessToken, refreshToken);
+
+        UserDataResponse userData = new UserDataResponse(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getRole().getName(),
+                user.getStatus(),
+                user.getOrganization() != null ? user.getOrganization().getName() : null
+        );
+
+        return new AuthResponse("Login successful", accessToken, refreshToken, userData);
     }
 }

@@ -12,6 +12,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
+import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -151,6 +152,62 @@ class AuthServiceTest {
         verify(organizationRepository, never()).save(any());
     }
 
+    @Test
+    void register_success_returnsAccessToken() {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("test@test.com");
+        request.setPassword("parola123");
+        request.setFirstName("Ion");
+        request.setLastName("Popescu");
+        request.setOrganizationName("Scoala Ion");
+
+        Role role = new Role(RoleName.ORGANIZATION_ADMIN);
+
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(organizationRepository.existsByName(any())).thenReturn(false);
+        when(roleRepository.findByName(any())).thenReturn(Optional.of(role));
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> saveUserWithGeneratedId(invocation.getArgument(0)));
+        when(organizationRepository.save(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtUtil.generateAccessToken(any(UUID.class), eq(RoleName.ORGANIZATION_ADMIN))).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(any(UUID.class))).thenReturn("refresh-token");
+
+        AuthResponse response = authService.register(request);
+
+        assertThat(response.getAccessToken()).isEqualTo("access-token");
+        assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
+    }
+
+    @Test
+    void register_success_returnsUserData() {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("test@test.com");
+        request.setPassword("parola123");
+        request.setFirstName("Ion");
+        request.setLastName("Popescu");
+        request.setOrganizationName("Scoala Ion");
+
+        Role role = new Role(RoleName.ORGANIZATION_ADMIN);
+
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(organizationRepository.existsByName(any())).thenReturn(false);
+        when(roleRepository.findByName(any())).thenReturn(Optional.of(role));
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> saveUserWithGeneratedId(invocation.getArgument(0)));
+        when(organizationRepository.save(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtUtil.generateAccessToken(any(UUID.class), eq(RoleName.ORGANIZATION_ADMIN))).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(any(UUID.class))).thenReturn("refresh-token");
+
+        AuthResponse response = authService.register(request);
+
+        assertThat(response.getUser()).isNotNull();
+        assertThat(response.getUser().getEmail()).isEqualTo("test@test.com");
+        assertThat(response.getUser().getFirstName()).isEqualTo("Ion");
+        assertThat(response.getUser().getLastName()).isEqualTo("Popescu");
+        assertThat(response.getUser().getRole()).isEqualTo(RoleName.ORGANIZATION_ADMIN);
+        assertThat(response.getUser().getOrganizationName()).isEqualTo("Scoala Ion");
+    }
+
     // LOGIN
 
     @Test
@@ -204,5 +261,63 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(InvalidCredentials.class)
                 .hasMessage("Invalid credentials");
+    }
+
+    @Test
+    void login_success_returnsAccessToken() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@test.com");
+        request.setPassword("parola123");
+
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setEmail("test@test.com");
+        user.setPasswordHash("hashed_parola");
+        user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
+
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("parola123", "hashed_parola")).thenReturn(true);
+        when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(user.getId())).thenReturn("refresh-token");
+
+        AuthResponse response = authService.login(request);
+
+        assertThat(response.getAccessToken()).isEqualTo("access-token");
+        assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
+    }
+
+    @Test
+    void login_success_returnsUserData() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@test.com");
+        request.setPassword("parola123");
+
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setEmail("test@test.com");
+        user.setFirstName("Ion");
+        user.setLastName("Popescu");
+        user.setPasswordHash("hashed_parola");
+        user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
+        user.setStatus(UserStatus.ACTIVE);
+
+        Organization org = new Organization();
+        org.setName("Scoala Ion");
+        user.setOrganization(org);
+
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("parola123", "hashed_parola")).thenReturn(true);
+        when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(user.getId())).thenReturn("refresh-token");
+
+        AuthResponse response = authService.login(request);
+
+        assertThat(response.getUser()).isNotNull();
+        assertThat(response.getUser().getEmail()).isEqualTo("test@test.com");
+        assertThat(response.getUser().getFirstName()).isEqualTo("Ion");
+        assertThat(response.getUser().getLastName()).isEqualTo("Popescu");
+        assertThat(response.getUser().getRole()).isEqualTo(RoleName.ORGANIZATION_ADMIN);
+        assertThat(response.getUser().getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(response.getUser().getOrganizationName()).isEqualTo("Scoala Ion");
     }
 }
