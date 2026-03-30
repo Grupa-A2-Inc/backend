@@ -24,54 +24,70 @@ public class CourseService {
     private final LessonRepository lessonRepository;
     private final CourseFullViewMapper courseFullViewMapper;
 
-    //logica pentru POST
-    public Course createCourse(Course course) {
-        // il salvez in baza de date (dar si returnez obiectul Course)
+
+    public Course createCourse(CourseDto dto) {
+        Course course = new Course();
+        course.setTitle(dto.getTitle());
+        course.setDescription(dto.getDescription());
+        course.setCategory(dto.getCategory());
+        course.setCreatedBy(dto.getCreatedBy());
+        if (dto.getStatus() != null) {
+            course.setStatus(dto.getStatus());
+        }
+
+        if (dto.getVisibility() != null) {
+            course.setVisibility(dto.getVisibility());
+        }
+
         return courseRepository.save(course);
     }
 
-    public List<CourseDto> getCourses(String role, UUID userId) {
-        List<Course> courses;
+    public List<Course> getCourses(String role, UUID userId) {
         if ("INSTRUCTOR".equals(role)) {
-            courses = courseRepository.findByCreatedBy(userId);
+            return courseRepository.findByCreatedBy(userId);
         } else {
-            courses = courseRepository.findByStatusAndVisibility(
+            return courseRepository.findByStatusAndVisibility(
                     CourseStatus.PUBLISHED,
                     CourseVisibility.PUBLIC
             );
         }
-        return courses.stream()
-                .map(this::convertToDto)
-                .toList();
-    }
-
-    private CourseDto convertToDto(Course course) {
-        CourseDto dto = new CourseDto();
-        dto.setId(course.getId());
-        dto.setTitle(course.getTitle());
-        dto.setDescription(course.getDescription());
-        dto.setCategory(course.getCategory());
-        dto.setStatus(course.getStatus());
-        dto.setVisibility(course.getVisibility());
-        dto.setCreatedBy(course.getCreatedBy());
-        return dto;
     }
 
     @Transactional
-    public CourseDto updateCourse(UUID id, Course courseDetails) {
+    public Course updateCourse(UUID id, CourseDto dto) {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cursul nu a fost gasit."));
 
-        course.setTitle(courseDetails.getTitle());
-        course.setCategory(courseDetails.getCategory());
-        course.setStatus(courseDetails.getStatus());
-        course.setVisibility(courseDetails.getVisibility());
+        course.setTitle(dto.getTitle());
+        course.setDescription(dto.getDescription());
+        course.setCategory(dto.getCategory());
 
-        Course updatedCourse = courseRepository.save(course);
+        if (dto.getStatus() != null) {
+            course.setStatus(dto.getStatus());
+        }
 
-        return convertToDto(updatedCourse);
+        if (dto.getVisibility() != null) {
+            course.setVisibility(dto.getVisibility());
+        }
+
+        return courseRepository.save(course);
     }
 
+    @Transactional
+    public Course patchCourse(UUID id, CourseDto dto) {
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        // PATCH = Modificare partiala. Setam doar ce nu e NULL in DTO
+        if (dto.getTitle() != null) course.setTitle(dto.getTitle());
+        if (dto.getDescription() != null) course.setDescription(dto.getDescription());
+        if (dto.getCategory() != null) course.setCategory(dto.getCategory());
+        if (dto.getStatus() != null) course.setStatus(dto.getStatus());
+        if (dto.getVisibility() != null) course.setVisibility(dto.getVisibility());
+        if (dto.getCreatedBy() != null) course.setCreatedBy(dto.getCreatedBy());
+
+        return courseRepository.save(course);
+    }
     public void deleteCourse(UUID id) {
         if (!courseRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cursul cu acest ID nu a fost gasit!");

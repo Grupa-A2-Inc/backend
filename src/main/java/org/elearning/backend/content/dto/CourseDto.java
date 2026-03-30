@@ -1,17 +1,25 @@
 package org.elearning.backend.content.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import java.util.UUID;
+import lombok.NoArgsConstructor;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.model.CourseVisibility;
+import org.elearning.backend.content.model.Chapter;
+import java.util.List;
+import java.util.UUID;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CourseDto {
-    private UUID id;
     private String title;
     private String description;
     private String category;
     private CourseStatus status;
     private CourseVisibility visibility;
     private UUID createdBy;
+    private List<Chapter> chapters;
 }
