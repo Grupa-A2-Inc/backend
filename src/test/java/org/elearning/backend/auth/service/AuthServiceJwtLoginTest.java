@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -122,7 +123,9 @@ class AuthServiceJwtLoginTest {
         when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("parolaGresita", "hashed_parola")).thenReturn(false);
 
-        try { authService.login(request); } catch (Exception ignored) {}
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(org.elearning.backend.common.exception.InvalidCredentials.class)
+                .hasMessage("Invalid credentials");
 
         verify(jwtUtil, never()).generateAccessToken(any(), any());
         verify(jwtUtil, never()).generateRefreshToken(any());
@@ -136,7 +139,9 @@ class AuthServiceJwtLoginTest {
 
         when(userRepository.findByEmail("inexistent@test.com")).thenReturn(Optional.empty());
 
-        try { authService.login(request); } catch (Exception ignored) {}
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(org.elearning.backend.common.exception.InvalidCredentials.class)
+                .hasMessage("Invalid credentials");
 
         verify(jwtUtil, never()).generateAccessToken(any(), any());
         verify(jwtUtil, never()).generateRefreshToken(any());

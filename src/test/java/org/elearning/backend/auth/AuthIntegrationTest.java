@@ -83,6 +83,9 @@ class AuthIntegrationTest {
         request.setFirstName("Ion");
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
+        request.setCountry("Romania");
+        request.setCity("Bucharest");
+        request.setOrganizationType("School");
 
         when(authService.register(any(RegisterRequest.class)))
                 .thenReturn(new AuthResponse("User registered successfully", "access-token", "refresh-token", null));
@@ -102,6 +105,9 @@ class AuthIntegrationTest {
         request.setFirstName("Ion");
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
+        request.setCountry("Romania");
+        request.setCity("Bucharest");
+        request.setOrganizationType("School");
 
         when(authService.register(any(RegisterRequest.class)))
                 .thenReturn(new AuthResponse("User registered successfully", "access-token", "refresh-token", null));
@@ -122,6 +128,9 @@ class AuthIntegrationTest {
         request.setFirstName("Ion");
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
+        request.setCountry("Romania");
+        request.setCity("Bucharest");
+        request.setOrganizationType("School");
 
         when(authService.register(any(RegisterRequest.class)))
                 .thenThrow(new DuplicateResourceException("Email already in use: dup@test.com"));
@@ -132,6 +141,9 @@ class AuthIntegrationTest {
         request2.setFirstName("Ion");
         request2.setLastName("Popescu");
         request2.setOrganizationName("Scoala Ion 2");
+        request2.setCountry("Romania");
+        request2.setCity("Bucharest");
+        request2.setOrganizationType("School");
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -147,6 +159,9 @@ class AuthIntegrationTest {
         request.setFirstName("Ion");
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
+        request.setCountry("Romania");
+        request.setCity("Bucharest");
+        request.setOrganizationType("School");
 
         when(authService.register(any(RegisterRequest.class)))
                 .thenThrow(new DuplicateResourceException("Organization name already exists: Scoala Ion"));
@@ -157,6 +172,9 @@ class AuthIntegrationTest {
         request2.setFirstName("Ana");
         request2.setLastName("Pop");
         request2.setOrganizationName("Scoala Ion");
+        request2.setCountry("Romania");
+        request2.setCity("Bucharest");
+        request2.setOrganizationType("School");
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

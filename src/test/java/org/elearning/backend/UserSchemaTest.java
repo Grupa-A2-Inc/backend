@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -75,16 +76,23 @@ class UserSchemaTest {
 
     @Test
     void shouldEnforceUniqueEmail() {
-        org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> {
-            jdbcTemplate.execute(
-                    "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                            "VALUES (gen_random_uuid(), 'duplicate@test.com', 'hash', 'Test', 'User', 1, 'ACTIVE')"
+        String email = "duplicate-" + UUID.randomUUID() + "@test.com";
+
+        jdbcTemplate.execute(
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
+                        "VALUES (gen_random_uuid(), '" + email + "', 'hash', 'Test', 'User', 1, 'ACTIVE')"
+        );
+
+        try {
+            org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () ->
+                    jdbcTemplate.execute(
+                            "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
+                                    "VALUES (gen_random_uuid(), '" + email + "', 'hash', 'Test2', 'User2', 1, 'ACTIVE')"
+                    )
             );
-            jdbcTemplate.execute(
-                    "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                            "VALUES (gen_random_uuid(), 'duplicate@test.com', 'hash', 'Test2', 'User2', 1, 'ACTIVE')"
-            );
-        });
+        } finally {
+            jdbcTemplate.update("DELETE FROM users WHERE email = ?", email);
+        }
     }
 
     @Test

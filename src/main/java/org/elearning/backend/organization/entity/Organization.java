@@ -2,6 +2,7 @@ package org.elearning.backend.organization.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.elearning.backend.user.entity.User;
 
@@ -11,6 +12,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
+@NoArgsConstructor
 @Table(name = "organizations")
 public class Organization {
 
@@ -45,6 +47,5 @@ public class Organization {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
-
-    public Organization() {}
+    
 }
