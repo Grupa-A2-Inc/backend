@@ -15,7 +15,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class LessonResourceDtoGet {
+public class ResponseLessonResourceDto {
     private UUID id;
     private UUID lessonId;
     private String title;

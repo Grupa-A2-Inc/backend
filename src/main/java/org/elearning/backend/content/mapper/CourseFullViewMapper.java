@@ -1,6 +1,6 @@
 package org.elearning.backend.content.mapper;
 
-import org.elearning.backend.content.dto.CourseFullViewDto;
+import org.elearning.backend.content.dto.ResponseCourseFullViewDto;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.Lesson;
@@ -21,7 +21,7 @@ public interface CourseFullViewMapper {
      * @param course the Course entity to be mapped
      * @return the corresponding CourseFullViewDTO
      */
-    CourseFullViewDto toCourseFullViewDTO(Course course);
+    ResponseCourseFullViewDto toCourseFullViewDTO(Course course);
 
     /**
      * Maps a Chapter entity to a CourseFullViewDTO.ChapterDTO.
@@ -30,7 +30,7 @@ public interface CourseFullViewMapper {
      * @return the corresponding CourseFullViewDTO.ChapterDTO
      */
     @Mapping(source = "course.id", target = "courseId")
-    CourseFullViewDto.ChapterFullViewDTO toChapterDTO(Chapter chapter);
+    ResponseCourseFullViewDto.ChapterFullViewDTO toChapterDTO(Chapter chapter);
 
     /**
      * Maps a Lesson entity to a CourseFullViewDTO.LessonDTO.
@@ -39,5 +39,5 @@ public interface CourseFullViewMapper {
      * @return the corresponding CourseFullViewDTO.LessonDTO
      */
     @Mapping(source = "chapter.id", target = "chapterId")
-    CourseFullViewDto.LessonFullViewDTO toLessonDTO(Lesson lesson);
+    ResponseCourseFullViewDto.LessonFullViewDTO toLessonDTO(Lesson lesson);
 }

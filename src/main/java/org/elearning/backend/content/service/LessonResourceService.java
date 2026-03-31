@@ -1,8 +1,8 @@
 package org.elearning.backend.content.service;
 
-import org.elearning.backend.content.dto.LessonResourceDtoGet;
-import org.elearning.backend.content.dto.LessonResourceDtoPatch;
-import org.elearning.backend.content.dto.LessonResourceDtoPost;
+import org.elearning.backend.content.dto.ResponseLessonResourceDto;
+import org.elearning.backend.content.dto.UpdateLessonResourceDto;
+import org.elearning.backend.content.dto.CreateLessonResourceDto;
 import org.elearning.backend.content.mapper.LessonResourceMapper;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.LessonRepository;
@@ -35,13 +35,13 @@ public class LessonResourceService {
     /**
      * Creates a new lesson resource and associates it with a specific lesson ID.
      *
-     * @param lessonResourceDTOPost The LessonResource object containing the details of the resource to be created.
+     * @param CreateLessonResourceDto The LessonResource object containing the details of the resource to be created.
      * @param lessonId       The ID of the lesson to which the resource will be associated.
      * @return The created LessonResource object with its generated ID and associated lesson ID.
      * @throws ResponseStatusException NOT_FOUND if no lesson with the given ID exists
      * @throws ResponseStatusException BAD_REQUEST if the title or URL of the resource is null.
      */
-    public LessonResourceDtoGet createNewLessonResource(LessonResourceDtoPost lessonResourceDTOPost, UUID lessonId) {
+    public ResponseLessonResourceDto createNewLessonResource(CreateLessonResourceDto lessonResourceDTOPost, UUID lessonId) {
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found with ID: " + lessonId));
 
@@ -81,7 +81,7 @@ public class LessonResourceService {
      * @return A list of LessonResource objects associated with the specified lesson ID.
      * @throws ResponseStatusException NOT_FOUND if no lesson with the given ID exists.
      */
-    public List<LessonResourceDtoGet> getResourcesByLessonId(UUID lessonId) {
+    public List<ResponseLessonResourceDto> getResourcesByLessonId(UUID lessonId) {
         if(!lessonRepository.existsById(lessonId)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found with ID: " + lessonId);
         }
@@ -96,12 +96,12 @@ public class LessonResourceService {
      *
      * @param lessonId        The ID of the lesson to which the resource is associated.
      * @param resourceId      The ID of the lesson resource to be updated.
-     * @param updatedResourceDTOPatch A LessonResourceDTOPatch object containing the updated details for the lesson resource. Only non-null fields will be updated.
+     * @param UpdateLessonResourceDto A UpdateLessonResourceDto object containing the updated details for the lesson resource. Only non-null fields will be updated.
      * @return The updated LessonResource object after saving it to the database.
      * @throws ResponseStatusException NOT_FOUND if no lesson with the given ID exists, if no resource with the given ID exists, or if the resource does not belong to the specified lesson.
      */
     @Transactional
-    public LessonResourceDtoGet updateLessonResource(UUID lessonId, UUID resourceId, LessonResourceDtoPatch updatedResourceDTOPatch) {
+    public ResponseLessonResourceDto updateLessonResource(UUID lessonId, UUID resourceId, UpdateLessonResourceDto updatedResourceDTOPatch) {
         if(!lessonRepository.existsById(lessonId)){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found with ID: " + lessonId);
         }

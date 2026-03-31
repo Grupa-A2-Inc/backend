@@ -3,9 +3,9 @@ package org.elearning.backend.content.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import org.elearning.backend.content.dto.LessonResourceDtoGet;
-import org.elearning.backend.content.dto.LessonResourceDtoPatch;
-import org.elearning.backend.content.dto.LessonResourceDtoPost;
+import org.elearning.backend.content.dto.ResponseLessonResourceDto;
+import org.elearning.backend.content.dto.UpdateLessonResourceDto;
+import org.elearning.backend.content.dto.CreateLessonResourceDto;
 import org.elearning.backend.content.service.LessonResourceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,11 +43,11 @@ public class LessonResourcesController {
             @ApiResponse(responseCode = "400", description = "Title or URL of the resource cannot be null")
     })
     @PostMapping("/api/lessons/{lessonId}/resources")
-    public ResponseEntity<LessonResourceDtoGet> createNewLessonResource(
-            @RequestBody LessonResourceDtoPost newLessonResourceDTOPost,
+    public ResponseEntity<ResponseLessonResourceDto> createNewLessonResource(
+            @RequestBody CreateLessonResourceDto newLessonResourceDTOPost,
             @PathVariable UUID lessonId
             ) {
-        LessonResourceDtoGet lessonResource = lessonResourceService.createNewLessonResource(newLessonResourceDTOPost, lessonId);
+        ResponseLessonResourceDto lessonResource = lessonResourceService.createNewLessonResource(newLessonResourceDTOPost, lessonId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(lessonResource);
     }
@@ -66,8 +66,8 @@ public class LessonResourcesController {
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
     @GetMapping("/api/lessons/{lessonId}/resources")
-    public ResponseEntity<List<LessonResourceDtoGet>> getResourcesByLessonId(@PathVariable UUID lessonId) {
-        List<LessonResourceDtoGet> resources = lessonResourceService.getResourcesByLessonId(lessonId);
+    public ResponseEntity<List<ResponseLessonResourceDto>> getResourcesByLessonId(@PathVariable UUID lessonId) {
+        List<ResponseLessonResourceDto> resources = lessonResourceService.getResourcesByLessonId(lessonId);
 
         return ResponseEntity.ok(resources);
     }
@@ -105,11 +105,11 @@ public class LessonResourcesController {
             @ApiResponse(responseCode = "404", description = "Lesson resource not found, does not belong to the specified lesson, or lesson not found")
     })
     @PatchMapping("/api/lessons/{lessonId}/resources/{resourceId}")
-    public ResponseEntity<LessonResourceDtoGet> updateLessonMetadata(
+    public ResponseEntity<ResponseLessonResourceDto> updateLessonMetadata(
             @PathVariable UUID lessonId,
             @PathVariable UUID resourceId,
-            @RequestBody LessonResourceDtoPatch lessonResourceDTOPatch){
-        LessonResourceDtoGet updatedResource = lessonResourceService.updateLessonResource(lessonId, resourceId, lessonResourceDTOPatch);
+            @RequestBody UpdateLessonResourceDto lessonResourceDTOPatch){
+        ResponseLessonResourceDto updatedResource = lessonResourceService.updateLessonResource(lessonId, resourceId, lessonResourceDTOPatch);
 
         return ResponseEntity.ok(updatedResource);
     }
