@@ -3,7 +3,7 @@ package org.elearning.backend.content.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.persistence.EntityNotFoundException;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.elearning.backend.content.dto.ChapterDtoPost;
 import org.elearning.backend.content.dto.ChapterDtoResponse;
 import org.elearning.backend.content.model.Chapter;
@@ -15,118 +15,58 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Chapters", description = "Chapter administration")
 @RestController
 public class ChaptersController {
     private final ChapterService chapterService;
+
     public ChaptersController(ChapterService chapterService) {
         this.chapterService = chapterService;
     }
 
-    /**
-     * POST /api/courses/{courseId}/chapters Entrypoint
-     * Creates a new chapter inside a course.
-     * Returns HTTP 201 if successfully created, along with the created chapter's info in the response body.
-     * Returns HTTP 404 if no course with the given id exists.
-     * @param courseId the course's id
-     * @param newChapterTitle the new chapter's title
-     * @return ResponseEntity with the created chapter's info and HTTP status code 201 if successful, or HTTP 404 if the course is not found.
-     */
-    @PostMapping("/api/courses/{courseId}/chapters")
-    @Operation(summary = "Creates a new chapter.", description = "API endpoint for creating a new chapter inside a course.")
+    @Operation(summary = "Create a new chapter", description = "Creates a new chapter inside a course given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Chapter created successfully"),
+            @ApiResponse(responseCode = "201", description = "Chapter successfully created"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
+    @PostMapping("/api/courses/{courseId}/chapters")
     public ResponseEntity<ChapterDtoResponse> createNewChapter(@PathVariable UUID courseId,
                                                                @RequestBody String newChapterTitle) {
-        ChapterDtoResponse chapterInfo;
-        try {
-            chapterInfo = new ChapterDtoResponse(chapterService.createNewChapter(courseId, newChapterTitle));
-        }
-        catch (IllegalArgumentException exception) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.status(HttpStatus.CREATED).body(chapterInfo);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ChapterDtoResponse(chapterService.createNewChapter(courseId, newChapterTitle)));
     }
 
-    /**
-     * GET /api/courses/{courseId}/chapters
-     * Retrieves a list of all chapters from a course.
-     * Returns HTTP 200 if successfully retrieved, along with the list of chapters in the response body.
-     * Returns HTTP 404 if no course with the given id exists.
-     * @param courseId the course's id
-     * @return ResponseEntity with the list of chapters and HTTP status code 200 if successful, or HTTP 404 if the course is not found.
-     */
-    @GetMapping("/api/courses/{courseId}/chapters")
-    @Operation(summary = "Retrieves all chapters from a course.", description = "API endpoint for retrieving all chapters from a course.")
+    @Operation(summary = "Get all chapters", description = "Returns all chapters from a course given by its ID, ordered by order index")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Chapters retrieved successfully"),
+            @ApiResponse(responseCode = "200", description = "Chapters successfully returned"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
+    @GetMapping("/api/courses/{courseId}/chapters")
     public ResponseEntity<List<ChapterDtoResponse>> getChaptersByCourseId(@PathVariable UUID courseId) {
-        List<Chapter> chapters;
-        List<ChapterDtoResponse> chapterDTOMetadataList;
-        try {
-            chapters = chapterService.getAllChaptersFromCourse(courseId);
-            chapterDTOMetadataList = chapters.stream().map(ChapterDtoResponse::new).toList();
-        }
-        catch (IllegalArgumentException exception) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(chapterDTOMetadataList);
-
+        List<Chapter> chapters = chapterService.getAllChaptersFromCourse(courseId);
+        return ResponseEntity.ok(chapters.stream().map(ChapterDtoResponse::new).toList());
     }
 
-    /**
-     * DELETE /api/chapters/{id}
-     * Deletes a chapter with the given id.
-     * Returns HTTP 204 if successfully deleted.
-     * Returns HTTP 404 if no chapter with the given id exists.
-     * @param id the chapter's id
-     * @return ResponseEntity with HTTP status code 204 if successful, or HTTP 404 if the chapter is not found.
-     */
-    @DeleteMapping("/api/chapters/{id}")
-    @Operation(summary = "Deletes a chapter.", description = "API endpoint for deleting a chapter.")
+    @Operation(summary = "Delete a chapter", description = "Deletes a chapter given by its ID, repairing the order index of remaining chapters")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Chapter deleted successfully"),
+            @ApiResponse(responseCode = "204", description = "Chapter successfully deleted"),
             @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
+    @DeleteMapping("/api/chapters/{id}")
     public ResponseEntity<Void> deleteChapter(@PathVariable UUID id) {
-        try {
-            chapterService.deleteChapter(id);
-        }
-        catch (IllegalArgumentException | EntityNotFoundException exception) {
-            return ResponseEntity.notFound().build();
-        }
+        chapterService.deleteChapter(id);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * PATCH /api/chapers/{id}
-     * Updates a chapter's title and/or order index.
-     * Returns HTTP 200 if successfully updated, along with the updated chapter's info in the response body.
-     * Returns HTTP 404 if no chapter with the given id exists, or if the new order index goes out of bounds.
-     * @param id the chapter's id
-     * @param chapterDTOPost an object containing the new title and/or order index
-     * @return ResponseEntity with the updated chapter's info and HTTP status code 200 if successful, or HTTP 404 if the chapter is not found or if the new order index is out of bounds.
-     */
-    @PatchMapping("/api/chapters/{id}")
-    @Operation(summary = "Updates a chapter's metadata.", description = "API endpoint for updating a chapter's title and/or order index.")
+    @Operation(summary = "Update chapter metadata", description = "Updates the title and/or order index of a chapter given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Chapter updated successfully"),
-            @ApiResponse(responseCode = "404", description = "Chapter not found"),
-            @ApiResponse(responseCode = "400", description = "Invalid input data")
+            @ApiResponse(responseCode = "200", description = "Chapter successfully updated"),
+            @ApiResponse(responseCode = "400", description = "Order index out of range"),
+            @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
+    @PatchMapping("/api/chapters/{id}")
     public ResponseEntity<ChapterDtoResponse> updateChapter(@PathVariable UUID id,
                                                             @RequestBody ChapterDtoPost chapterDTOPost) {
-        ChapterDtoResponse updatedChapterInfo;
-        try {
-            updatedChapterInfo = new ChapterDtoResponse(chapterService.updateChapterMetadata(id, chapterDTOPost));
-        }
-        catch (IllegalArgumentException exception) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(updatedChapterInfo);
+        return ResponseEntity.ok(new ChapterDtoResponse(chapterService.updateChapterMetadata(id, chapterDTOPost)));
     }
-
 }
