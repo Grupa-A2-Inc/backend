@@ -9,11 +9,8 @@ import org.elearning.backend.assessment.mapper.AttemptMapper;
 import org.elearning.backend.assessment.mapper.QuestionMapper;
 import org.elearning.backend.assessment.model.*;
 import org.elearning.backend.assessment.repository.*;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-import reactor.netty.http.Http11SslContextSpec;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
