@@ -28,35 +28,55 @@ public class CourseService {
 
     @Transactional
     public CourseFullViewDto createCourse(CreateCourseDTO dto) {
-        if(dto.getVisibility() == null) {
-            dto.setVisibility(CourseVisibility.PRIVATE);
-        }
-        if(dto.getStatus() == null) {
-            dto.setStatus(CourseStatus.DRAFT);
-        }
+        setDefaultCourseProperties(dto);
+
         Course course = courseMapper.toCourse(dto);
-
-        if (course.getChapters() != null) {
-            for (Chapter chapter : course.getChapters()) {
-                chapter.setCourse(course);
-
-                if(chapter.getLessons() != null) {
-                    for (Lesson lesson : chapter.getLessons()) {
-                        lesson.setChapter(chapter);
-
-                        if(lesson.getLessonResources() != null) {
-                            for (LessonResource resource : lesson.getLessonResources()) {
-                                resource.setLesson(lesson);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        linkChaptersToCourse(course);
 
         course = courseRepository.saveAndFlush(course);
 
         return courseFullViewMapper.toCourseFullViewDTO(course);
+    }
+
+    private void setDefaultCourseProperties(CreateCourseDTO dto) {
+        if (dto.getVisibility() == null) {
+            dto.setVisibility(CourseVisibility.PRIVATE);
+        }
+        if (dto.getStatus() == null) {
+            dto.setStatus(CourseStatus.DRAFT);
+        }
+    }
+
+    private void linkChaptersToCourse(Course course) {
+        if (course.getChapters() == null) {
+            return;
+        }
+
+        for (Chapter chapter : course.getChapters()) {
+            chapter.setCourse(course);
+            linkLessonsToChapter(chapter);
+        }
+    }
+
+    private void linkLessonsToChapter(Chapter chapter) {
+        if (chapter.getLessons() == null) {
+            return;
+        }
+
+        for (Lesson lesson : chapter.getLessons()) {
+            lesson.setChapter(chapter);
+            linkResourcesToLesson(lesson);
+        }
+    }
+
+    private void linkResourcesToLesson(Lesson lesson) {
+        if (lesson.getLessonResources() == null) {
+            return;
+        }
+
+        for (LessonResource resource : lesson.getLessonResources()) {
+            resource.setLesson(lesson);
+        }
     }
 
     public List<Course> getCourses(String role, UUID userId) {
@@ -83,10 +103,6 @@ public class CourseService {
             course.setStatus(dto.getStatus());
         }
 
-        if (dto.getVisibility() != null) {
-            course.setVisibility(dto.getVisibility());
-        }
-
         return courseRepository.save(course);
     }
 
@@ -100,7 +116,6 @@ public class CourseService {
         if (dto.getDescription() != null) course.setDescription(dto.getDescription());
         if (dto.getCategory() != null) course.setCategory(dto.getCategory());
         if (dto.getStatus() != null) course.setStatus(dto.getStatus());
-        if (dto.getVisibility() != null) course.setVisibility(dto.getVisibility());
         if (dto.getCreatedBy() != null) course.setCreatedBy(dto.getCreatedBy());
 
         return courseRepository.save(course);

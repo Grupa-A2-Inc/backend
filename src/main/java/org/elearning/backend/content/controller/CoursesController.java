@@ -28,7 +28,10 @@ public class CoursesController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CourseDtoGet>> getAllCourses(@RequestParam String role, @RequestParam UUID userId) {
+    public ResponseEntity<List<CourseDtoGet>> getAllCourses() {
+        String role = "STUDENT";
+        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+
         List<Course> courses = courseService.getCourses(role, userId);
         List<CourseDtoGet> responseList = courses.stream()
                 .map(this::mapToDtoGet)
