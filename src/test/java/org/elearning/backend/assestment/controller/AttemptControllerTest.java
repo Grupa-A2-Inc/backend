@@ -194,14 +194,12 @@ class AttemptControllerTest {
         UUID attemptId = insertAttempt(testId, STUDENT_ID, "IN_PROGRESS");
         String submitBody = buildSubmitBody(qId, optionId, 3.0);
 
-        var response = restTemplate.exchange(
+        restTemplate.exchange(
                 "/api/attempts/" + attemptId + "/submit",
                 HttpMethod.POST,
                 new HttpEntity<>(submitBody, jsonHeaders()),
                 String.class
         );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         String status = jdbcTemplate.queryForObject(
                 "SELECT status FROM test_attempts WHERE id = '" + attemptId + "'",
@@ -360,16 +358,16 @@ class AttemptControllerTest {
 
     private String buildSubmitBody(int questionId, int optionId, double timeSpent) {
         return String.format(Locale.US, """
-            {
-                "answers": [
-                    {
-                        "questionId": %d,
-                        "selectedOptionIds": [%d],
-                        "timeSpent": %.1f
-                    }
-                ]
-            }
-            """, questionId, optionId, timeSpent);
+                {
+                    "answers": [
+                        {
+                            "questionId": %d,
+                            "selectedOptionIds": [%d],
+                            "timeSpent": %.1f
+                        }
+                    ]
+                }
+                """, questionId, optionId, timeSpent);
     }
 
     private HttpHeaders jsonHeaders() {

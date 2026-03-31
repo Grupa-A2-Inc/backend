@@ -1,18 +1,20 @@
 package org.elearning.backend.content.service;
 
-import jakarta.persistence.EntityNotFoundException;
+
 import jakarta.transaction.Transactional;
 import org.elearning.backend.content.dto.ChapterDtoPost;
+import org.elearning.backend.content.exception.ChapterNotFoundException;
+import org.elearning.backend.content.exception.CourseNotFoundException;
+import org.elearning.backend.content.exception.InvalidOrderIndexException;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.repository.ChapterRepository;
 import org.elearning.backend.content.repository.CourseRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
+
 
 @Service
 public class ChapterService {
@@ -31,7 +33,7 @@ public class ChapterService {
      */
     public List<Chapter> getAllChaptersFromCourse(UUID courseId) {
         if (!courseRepository.existsById(courseId)) {
-            throw new IllegalArgumentException("Course not found with ID: " + courseId);
+            throw new CourseNotFoundException(courseId);
         }
         return chapterRepository.findChapterOrderByIndex(courseId);
     }
@@ -43,7 +45,8 @@ public class ChapterService {
      * @param newChapterTitle the new chapter's title
      */
     public Chapter createNewChapter(UUID courseId, String newChapterTitle) {
-        Course course = courseRepository.findById(courseId).orElseThrow(() -> new IllegalArgumentException("Course not found with ID: " + courseId));
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new CourseNotFoundException(courseId));
         Chapter newChapter = new Chapter();
         newChapter.setCourse(course);
         int lastOrderIndex = chapterRepository.findLastOrderIndex(courseId).orElse(0) + 1;
@@ -70,50 +73,45 @@ public class ChapterService {
      * @param newOrderIndex the new index value
      */
     @Transactional
-    public void updateChapterOrder(UUID chapterId, int newOrderIndex){
+    public void updateChapterOrder(UUID chapterId, int newOrderIndex) {
         UUID courseId = chapterRepository.findCourseIdFromId(chapterId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+                .orElseThrow(() -> new CourseNotFoundException(chapterId));
 
         int lastOrderIndex = chapterRepository.findLastOrderIndex(courseId).orElse(1);
         int previousOrderIndex = chapterRepository.findOrderIndexFromId(chapterId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order Index not found"));
+                .orElseThrow(() -> new InvalidOrderIndexException("Order index not found for chapter ID: " + chapterId));
 
-        if(newOrderIndex > lastOrderIndex || newOrderIndex <= 0){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order index out of range");
+        if (newOrderIndex > lastOrderIndex || newOrderIndex <= 0) {
+            throw new InvalidOrderIndexException("Order index out of range");
         }
 
         chapterRepository.updateChapterOrderIndex(chapterId, newOrderIndex, courseId);
-        if(previousOrderIndex==newOrderIndex){
-            return;
-        }
-        if(previousOrderIndex>newOrderIndex) {
+        if (previousOrderIndex == newOrderIndex) return;
+
+        if (previousOrderIndex > newOrderIndex) {
             chapterRepository.repairChapterOrderIndexAfterOrderChangeBigger(previousOrderIndex, newOrderIndex, courseId, chapterId);
-        }
-        else {
+        } else {
             chapterRepository.repairChapterOrderIndexAfterOrderChangeSmaller(previousOrderIndex, newOrderIndex, courseId, chapterId);
         }
-
     }
-
     /**
      * Deletes a chapter from a course. If either the chapter or the parent course doesn't exist, it will throw an exception instead.
      * @param chapterId the chapter's id
      */
     @Transactional
-    public void deleteChapter(UUID chapterId){
-        if(!chapterRepository.existsById(chapterId)) {
-            throw new IllegalArgumentException("Chapter not found with ID: " + chapterId);
+    public void deleteChapter(UUID chapterId) {
+        if (!chapterRepository.existsById(chapterId)) {
+            throw new ChapterNotFoundException(chapterId);
         }
 
         UUID courseId = chapterRepository.findCourseIdFromId(chapterId)
-                .orElseThrow(() -> new EntityNotFoundException("Course not found for chapter with ID: " + chapterId));
+                .orElseThrow(() -> new CourseNotFoundException(chapterId));
 
         Integer orderIndex = chapterRepository.findOrderIndexFromId(chapterId)
-                .orElseThrow(() -> new EntityNotFoundException("Order index not found for chapter ID: " + chapterId));
+                .orElseThrow(() -> new InvalidOrderIndexException("Order index not found for chapter ID: " + chapterId));
 
         chapterRepository.repairChapterOrderIndexAfterDeletion(orderIndex, courseId);
         chapterRepository.deleteById(chapterId);
-
     }
 
     /**
@@ -121,12 +119,11 @@ public class ChapterService {
      * If the chapter doesn't exist, it will throw an exception instead.
      * @param chapterId the chapter's id
      * @param chapterDTOPost a ChapterDTOPost object containing the updated metadata for the chapter
-     * @return
      */
     @Transactional
     public Chapter updateChapterMetadata(UUID chapterId, ChapterDtoPost chapterDTOPost) {
         if (!chapterRepository.existsById(chapterId)) {
-            throw new IllegalArgumentException("Chapter not found with ID: " + chapterId);
+            throw new ChapterNotFoundException(chapterId);
         }
         if (chapterDTOPost.getOrderIndex() != null) {
             updateChapterOrder(chapterId, chapterDTOPost.getOrderIndex());
@@ -134,7 +131,6 @@ public class ChapterService {
         if (chapterDTOPost.getTitle() != null) {
             updateChapterTitle(chapterId, chapterDTOPost.getTitle());
         }
-
         chapterRepository.flush();
         return chapterRepository.findById(chapterId).orElse(new Chapter());
     }

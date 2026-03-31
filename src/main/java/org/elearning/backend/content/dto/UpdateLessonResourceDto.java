@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class LessonResourceDtoPatch {
+public class UpdateLessonResourceDto {
     private String title;
     private String url;
 }

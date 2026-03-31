@@ -4,52 +4,43 @@ import lombok.*;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.model.CourseVisibility;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Data Transfer Object (DTO) for transferring course data in GET requests.
- * This DTO is used to represent the data of a course along with its chapters and lessons when it is retrieved from the backend.
- */
 @Getter
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CourseFullViewDto {
-    private UUID id;
+public class CreateCourseDto {
+    private UUID createdBy;
     private String title;
     private String description;
+    private String category;
     private CourseStatus status;
     private CourseVisibility visibility;
-    private LocalDateTime createdAt;
 
-    private List<ChapterFullViewDTO> chapters;
+    private List<CreateChapterDTO> chapters;
 
     @Getter
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ChapterFullViewDTO {
-        private UUID id;
-        private UUID courseId;
+    public static class CreateChapterDTO {
         private String title;
         private int orderIndex;
 
-        private List<LessonFullViewDTO> lessons;
+        private List<CreateLessonDTO> lessons;
     }
 
     @Getter
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class LessonFullViewDTO {
-        private UUID id;
-        private  UUID chapterId;
+    public static class CreateLessonDTO {
         private String title;
         private String contentMarkdown;
         private int orderIndex;
 
-        private List<LessonResourceDtoGet> lessonResources;
+        private List<CreateLessonResourceDto> lessonResources;
     }
 }
