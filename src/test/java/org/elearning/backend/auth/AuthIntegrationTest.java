@@ -48,6 +48,8 @@ class AuthIntegrationTest {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private AuthResponse mockAuthResponse() {
+        UUID organizationId = UUID.randomUUID();
+
         UserDataResponse mockUser = new UserDataResponse(
                 UUID.randomUUID(),
                 "Test",
@@ -55,7 +57,7 @@ class AuthIntegrationTest {
                 "test@test.com",
                 RoleName.STUDENT,
                 UserStatus.ACTIVE,
-                "Test Organization"
+                organizationId
         );
 
         return new AuthResponse(
@@ -82,7 +84,6 @@ class AuthIntegrationTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
         request.setCountry("Romania");
         request.setCity("Bucharest");
         request.setOrganizationType("School");
@@ -104,7 +105,6 @@ class AuthIntegrationTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
         request.setCountry("Romania");
         request.setCity("Bucharest");
         request.setOrganizationType("School");
@@ -127,7 +127,6 @@ class AuthIntegrationTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
         request.setCountry("Romania");
         request.setCity("Bucharest");
         request.setOrganizationType("School");
@@ -140,7 +139,6 @@ class AuthIntegrationTest {
         request2.setPassword("parola123");
         request2.setFirstName("Ion");
         request2.setLastName("Popescu");
-        request2.setOrganizationName("Scoala Ion 2");
         request2.setCountry("Romania");
         request2.setCity("Bucharest");
         request2.setOrganizationType("School");
@@ -171,7 +169,6 @@ class AuthIntegrationTest {
         request2.setPassword("parola123");
         request2.setFirstName("Ana");
         request2.setLastName("Pop");
-        request2.setOrganizationName("Scoala Ion");
         request2.setCountry("Romania");
         request2.setCity("Bucharest");
         request2.setOrganizationType("School");
@@ -188,7 +185,6 @@ class AuthIntegrationTest {
         request.setEmail("test@test.com");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -259,6 +255,8 @@ class AuthIntegrationTest {
     void login_success_returnsUserData() throws Exception {
         when(authService.login(any(LoginRequest.class))).thenReturn(mockAuthResponse());
 
+        UUID expectedOrganizationId = mockAuthResponse().getUser().getOrganizationId();
+
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(mockLoginRequest())))
@@ -268,6 +266,6 @@ class AuthIntegrationTest {
                 .andExpect(jsonPath("$.user.lastName").value("User"))
                 .andExpect(jsonPath("$.user.role").value("STUDENT"))
                 .andExpect(jsonPath("$.user.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.user.organizationName").value("Test Organization"));
+                .andExpect(jsonPath("$.user.organizationId").value(expectedOrganizationId.toString()));
     }
 }

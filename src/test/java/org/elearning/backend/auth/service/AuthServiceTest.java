@@ -185,16 +185,21 @@ class AuthServiceTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
+
+        UUID organizationId = UUID.randomUUID();
 
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(organizationRepository.existsByName(any())).thenReturn(false);
         when(roleRepository.findByName(any())).thenReturn(Optional.of(role));
         when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(organizationRepository.save(any(Organization.class))).thenAnswer(invocation -> {
+                    Organization org = invocation.getArgument(0);
+                    org.setId(organizationId);
+                    return org;
+                });
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> saveUserWithGeneratedId(invocation.getArgument(0)));
-        when(organizationRepository.save(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(jwtUtil.generateAccessToken(any(UUID.class), eq(RoleName.ORGANIZATION_ADMIN))).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken(any(UUID.class))).thenReturn("refresh-token");
 
@@ -205,7 +210,9 @@ class AuthServiceTest {
         assertThat(response.getUser().getFirstName()).isEqualTo("Ion");
         assertThat(response.getUser().getLastName()).isEqualTo("Popescu");
         assertThat(response.getUser().getRole()).isEqualTo(RoleName.ORGANIZATION_ADMIN);
-        assertThat(response.getUser().getOrganizationName()).isEqualTo("Scoala Ion");
+
+        assertThat(response.getUser().getOrganizationId())
+                .isEqualTo(organizationId);
     }
 
     // LOGIN
@@ -301,8 +308,10 @@ class AuthServiceTest {
         user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
         user.setStatus(UserStatus.ACTIVE);
 
+        UUID organizationId = UUID.randomUUID();
+
         Organization org = new Organization();
-        org.setName("Scoala Ion");
+        org.setId(organizationId);
         user.setOrganization(org);
 
         when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
@@ -318,6 +327,6 @@ class AuthServiceTest {
         assertThat(response.getUser().getLastName()).isEqualTo("Popescu");
         assertThat(response.getUser().getRole()).isEqualTo(RoleName.ORGANIZATION_ADMIN);
         assertThat(response.getUser().getStatus()).isEqualTo(UserStatus.ACTIVE);
-        assertThat(response.getUser().getOrganizationName()).isEqualTo("Scoala Ion");
+        assertThat(response.getUser().getOrganizationId()).isEqualTo(organizationId);
     }
 }
