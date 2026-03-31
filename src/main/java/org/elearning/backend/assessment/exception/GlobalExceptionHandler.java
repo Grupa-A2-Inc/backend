@@ -26,16 +26,33 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ex, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(DoesNotExistException.class)
+    public ResponseEntity<Map<String, Object>> handleTestDoesNotExist(DoesNotExistException exception){
+        return buildErrorResponse(exception, HttpStatus.NOT_FOUND);
+    }
+
     // Prindem testele nepublicate (400)
     @ExceptionHandler(TestNotPublishedException.class)
     public ResponseEntity<Map<String, Object>> handleNotPublished(TestNotPublishedException ex) {
         return buildErrorResponse(ex, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(TestCannotBePublished.class)
+    public ResponseEntity<Map<String, Object>> handleNotPublished(TestCannotBePublished exception) {
+        return buildErrorResponse(exception, HttpStatus.BAD_REQUEST);
+    }
+
+
+
     // Prindem Attempt-ul deja trimis (409)
     @ExceptionHandler(AttemptAlreadySubmittedException.class)
     public ResponseEntity<Map<String, Object>> handleAlreadySubmitted(AttemptAlreadySubmittedException ex) {
         return buildErrorResponse(ex, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(LessonAlreadyHasTestException.class)
+    public ResponseEntity<Map<String, Object>> handleAlreadySubmitted(LessonAlreadyHasTestException exception) {
+        return buildErrorResponse(exception, HttpStatus.CONFLICT);
     }
 
     // Prindem Timer Expirat (410)
