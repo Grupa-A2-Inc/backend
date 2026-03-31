@@ -1,10 +1,12 @@
 package org.elearning.backend.auth.dto.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@AllArgsConstructor
 public class AuthResponse {
 
     private String message;
@@ -16,10 +18,4 @@ public class AuthResponse {
         this.message = message;
     }
 
-    public AuthResponse(String message, String accessToken, String refreshToken, UserDataResponse user) {
-        this.message = message;
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        this.user = user;
-    }
 }

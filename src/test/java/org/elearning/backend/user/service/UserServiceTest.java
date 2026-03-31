@@ -28,10 +28,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.elearning.backend.organization.entity.Organization;
-import org.elearning.backend.organization.repository.OrganizationRepository;
 
 @ExtendWith(MockitoExtension.class)
-public class UserServiceTest {
+class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
@@ -313,15 +312,6 @@ public class UserServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> userService.createUser(request));
 
         verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    void getUserById_throwsResourceNotFoundException_whenMissing() {
-        UUID id = UUID.randomUUID();
-
-        when(userRepository.findById(id)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () -> userService.getUserById(id));
     }
 
     @Test

@@ -2,6 +2,7 @@ package org.elearning.backend.user.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.role.entity.Role;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
+@NoArgsConstructor
 @Entity
 @Table(name = "users")
 public class User {
@@ -50,6 +52,4 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "organization_id", nullable = true)
     private Organization organization;
-
-    public User() {}
 }
