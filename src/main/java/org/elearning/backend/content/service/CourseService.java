@@ -1,6 +1,7 @@
 package org.elearning.backend.content.service;
 
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.content.exception.CourseNotFoundException;
 import org.elearning.backend.content.mapper.CourseFullViewMapper;
 import org.elearning.backend.content.mapper.CourseMapper;
 import org.elearning.backend.content.model.*;
@@ -9,9 +10,7 @@ import org.elearning.backend.content.repository.ChapterRepository;
 import org.elearning.backend.content.repository.CourseRepository;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 import java.util.List;
@@ -29,12 +28,9 @@ public class CourseService {
     @Transactional
     public ResponseCourseFullViewDto createCourse(CreateCourseDto dto) {
         setDefaultCourseProperties(dto);
-
         Course course = courseMapper.toCourse(dto);
         linkChaptersToCourse(course);
-
         course = courseRepository.saveAndFlush(course);
-
         return courseFullViewMapper.toCourseFullViewDTO(course);
     }
 
@@ -48,10 +44,7 @@ public class CourseService {
     }
 
     private void linkChaptersToCourse(Course course) {
-        if (course.getChapters() == null) {
-            return;
-        }
-
+        if (course.getChapters() == null) return;
         for (Chapter chapter : course.getChapters()) {
             chapter.setCourse(course);
             linkLessonsToChapter(chapter);
@@ -59,10 +52,7 @@ public class CourseService {
     }
 
     private void linkLessonsToChapter(Chapter chapter) {
-        if (chapter.getLessons() == null) {
-            return;
-        }
-
+        if (chapter.getLessons() == null) return;
         for (Lesson lesson : chapter.getLessons()) {
             lesson.setChapter(chapter);
             linkResourcesToLesson(lesson);
@@ -70,10 +60,7 @@ public class CourseService {
     }
 
     private void linkResourcesToLesson(Lesson lesson) {
-        if (lesson.getLessonResources() == null) {
-            return;
-        }
-
+        if (lesson.getLessonResources() == null) return;
         for (LessonResource resource : lesson.getLessonResources()) {
             resource.setLesson(lesson);
         }
@@ -93,62 +80,39 @@ public class CourseService {
     @Transactional
     public Course updateCourse(UUID id, CourseDto dto) {
         Course course = courseRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "The course with the provided ID was not found!"));
-
+                .orElseThrow(() -> new CourseNotFoundException(id));
         course.setTitle(dto.getTitle());
         course.setDescription(dto.getDescription());
         course.setCategory(dto.getCategory());
-
-        if (dto.getStatus() != null) {
-            course.setStatus(dto.getStatus());
-        }
-
+        if (dto.getStatus() != null) course.setStatus(dto.getStatus());
         return courseRepository.save(course);
     }
 
     @Transactional
     public Course patchCourse(UUID id, CourseDto dto) {
         Course course = courseRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        // PATCH = Modificare partiala. Setam doar ce nu e NULL in DTO
+                .orElseThrow(() -> new CourseNotFoundException(id));
         if (dto.getTitle() != null) course.setTitle(dto.getTitle());
         if (dto.getDescription() != null) course.setDescription(dto.getDescription());
         if (dto.getCategory() != null) course.setCategory(dto.getCategory());
         if (dto.getStatus() != null) course.setStatus(dto.getStatus());
         if (dto.getCreatedBy() != null) course.setCreatedBy(dto.getCreatedBy());
-
         return courseRepository.save(course);
     }
+
     public void deleteCourse(UUID id) {
         if (!courseRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "The course with the provided ID was not found!");
+            throw new CourseNotFoundException(id);
         }
         courseRepository.deleteById(id);
     }
 
-    /**
-     * Retrieves a Course entity along with its associated chapters, lessons, and resources based on the provided course ID.
-     * This method performs three separate queries to fetch the course, its chapters, and their lessons with resources.
-     * @param courseId The UUID of the course to retrieve.
-     * @return The Course entity with its chapters, lessons, and resources fully loaded.
-     * @throws ResponseStatusException NOT_FOUND if no course is found with the provided ID.
-     */
     @Transactional(readOnly = true)
     public ResponseCourseFullViewDto getCourseFullView(UUID courseId) {
-        // Query 1: Fetch the course with its basic details. \
-        // This query is necessary to ensure that the course exists and to load it into the first level cache.
         Course course = courseRepository.findCourseWithChapters(courseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Course with ID " + courseId + " not found."));
-
-        // Query 2: Fetch the chapters associated with the course.
-        // This query is necessary to load the chapters into the first level cache, which allows us to access them without triggering additional queries later.
+                .orElseThrow(() -> new CourseNotFoundException(courseId));
         chapterRepository.findChaptersWithLessonsByCourseId(courseId);
-
-        // Query 3: Fetch the lessons along with their resources for the chapters of the course.
         lessonRepository.findLessonsWithResourcesByCourseId(courseId);
-
         return courseFullViewMapper.toCourseFullViewDTO(course);
     }
 }

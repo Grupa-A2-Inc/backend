@@ -1,5 +1,9 @@
 package org.elearning.backend.content.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.content.dto.CourseDto;
 import org.elearning.backend.content.dto.CourseDtoGet;
@@ -14,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Courses", description = "Course administration")
 @RestController
 @RequestMapping("/api/courses")
 @RequiredArgsConstructor
@@ -21,42 +26,64 @@ public class CoursesController {
 
     private final CourseService courseService;
 
+    @Operation(summary = "Create a new course", description = "Creates a new course with its chapters, lessons and resources")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Course successfully created"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data")
+    })
     @PostMapping
     public ResponseEntity<ResponseCourseFullViewDto> createCourse(@RequestBody CreateCourseDto courseDto) {
-        ResponseCourseFullViewDto savedCourse = courseService.createCourse(courseDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(courseService.createCourse(courseDto));
     }
 
+    @Operation(summary = "Get all courses", description = "Returns all published and public courses for students, or all courses created by the instructor")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Courses successfully returned")
+    })
     @GetMapping
     public ResponseEntity<List<CourseDtoGet>> getAllCourses() {
         String role = "STUDENT";
         UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
-
         List<Course> courses = courseService.getCourses(role, userId);
-        List<CourseDtoGet> responseList = courses.stream()
-                .map(this::mapToDtoGet)
-                .toList();
-        return ResponseEntity.ok(responseList);
+        return ResponseEntity.ok(courses.stream().map(this::mapToDtoGet).toList());
     }
 
+    @Operation(summary = "Update a course", description = "Fully updates a course given by its ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Course successfully updated"),
+            @ApiResponse(responseCode = "404", description = "Course not found")
+    })
     @PutMapping("/{id}")
     public ResponseEntity<CourseDtoGet> updateCourse(@PathVariable UUID id, @RequestBody CourseDto courseDto) {
-        Course updatedCourse = courseService.updateCourse(id, courseDto);
-        return ResponseEntity.ok(mapToDtoGet(updatedCourse));
+        return ResponseEntity.ok(mapToDtoGet(courseService.updateCourse(id, courseDto)));
     }
 
+    @Operation(summary = "Partially update a course", description = "Partially updates a course given by its ID, modifying only non-null fields")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Course successfully patched"),
+            @ApiResponse(responseCode = "404", description = "Course not found")
+    })
     @PatchMapping("/{id}")
     public ResponseEntity<CourseDtoGet> patchCourse(@PathVariable UUID id, @RequestBody CourseDto courseDto) {
-        Course patchedCourse = courseService.patchCourse(id, courseDto);
-        return ResponseEntity.ok(mapToDtoGet(patchedCourse));
+        return ResponseEntity.ok(mapToDtoGet(courseService.patchCourse(id, courseDto)));
     }
 
+    @Operation(summary = "Delete a course", description = "Deletes a course given by its ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Course successfully deleted"),
+            @ApiResponse(responseCode = "404", description = "Course not found")
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCourse(@PathVariable UUID id) {
         courseService.deleteCourse(id);
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Get full course view", description = "Returns a course with all its chapters, lessons and resources given by its ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Course successfully returned"),
+            @ApiResponse(responseCode = "404", description = "Course not found")
+    })
     @GetMapping("/{courseId}/full-view")
     public ResponseEntity<ResponseCourseFullViewDto> getCourseFullView(@PathVariable UUID courseId) {
         return ResponseEntity.ok(courseService.getCourseFullView(courseId));

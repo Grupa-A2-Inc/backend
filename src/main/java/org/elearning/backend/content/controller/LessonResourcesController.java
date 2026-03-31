@@ -3,6 +3,7 @@ package org.elearning.backend.content.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.elearning.backend.content.dto.ResponseLessonResourceDto;
 import org.elearning.backend.content.dto.UpdateLessonResourceDto;
 import org.elearning.backend.content.dto.CreateLessonResourceDto;
@@ -14,10 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * The LessonResourcesController class is a REST controller responsible for handling HTTP requests related to lesson resources.
- * It provides endpoints for creating, retrieving, and deleting lesson resources associated with specific lessons.
- */
+@Tag(name = "Lesson Resources", description = "Lesson resource administration")
 @RestController
 public class LessonResourcesController {
     private final LessonResourceService lessonResourceService;
@@ -26,91 +24,51 @@ public class LessonResourcesController {
         this.lessonResourceService = lessonResourceService;
     }
 
-    /**
-     * POST /api/lessons/{lessonId}/resources Entrypoint
-     * @RequestBody - a JSON file with multiple fields for each lesson resource content
-     * @PathVariable - extracts dynamic value directly from the URI
-     * Creates a new lesson resource associated with a specific lesson ID.
-     * Returns HTTP 201 if successfully created, along with the created LessonResource object in the response body.
-     * If no lesson with the given ID exists, returns HTTP 404 Not Found.
-     * If the title or URL of the resource is null, returns HTTP 400 Bad Request.
-     */
-    @Operation(summary = "Create a new lesson resource",
-            description = "Creates a new lesson resource associated with a specific lesson ID.")
+    @Operation(summary = "Create a new lesson resource", description = "Creates a new resource associated with a lesson given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Lesson resource created successfully"),
-            @ApiResponse(responseCode = "404", description = "Lesson not found"),
-            @ApiResponse(responseCode = "400", description = "Title or URL of the resource cannot be null")
+            @ApiResponse(responseCode = "201", description = "Resource successfully created"),
+            @ApiResponse(responseCode = "400", description = "Title or URL cannot be null"),
+            @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
     @PostMapping("/api/lessons/{lessonId}/resources")
     public ResponseEntity<ResponseLessonResourceDto> createNewLessonResource(
             @RequestBody CreateLessonResourceDto newLessonResourceDTOPost,
-            @PathVariable UUID lessonId
-            ) {
-        ResponseLessonResourceDto lessonResource = lessonResourceService.createNewLessonResource(newLessonResourceDTOPost, lessonId);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(lessonResource);
+            @PathVariable UUID lessonId) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(lessonResourceService.createNewLessonResource(newLessonResourceDTOPost, lessonId));
     }
 
-    /**
-     * GET /api/lessons/{lessonId}/resources Entrypoint
-     * @PathVariable - extracts dynamic value directly from the URI
-     * Retrieves a list of lesson resources associated with a specific lesson ID.
-     * Returns HTTP 200 along with the list of LessonResource objects in the response body.
-     * If no lesson with the given ID exists, returns HTTP 404 Not Found.
-     */
-    @Operation(summary = "Get lesson resources by lesson ID",
-            description = "Retrieves a list of lesson resources associated with a specific lesson ID.")
+    @Operation(summary = "Get all lesson resources", description = "Returns all resources associated with a lesson given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lesson resources retrieved successfully"),
+            @ApiResponse(responseCode = "200", description = "Resources successfully returned"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
     @GetMapping("/api/lessons/{lessonId}/resources")
     public ResponseEntity<List<ResponseLessonResourceDto>> getResourcesByLessonId(@PathVariable UUID lessonId) {
-        List<ResponseLessonResourceDto> resources = lessonResourceService.getResourcesByLessonId(lessonId);
-
-        return ResponseEntity.ok(resources);
+        return ResponseEntity.ok(lessonResourceService.getResourcesByLessonId(lessonId));
     }
 
-    /** DELETE /api/lessons/{lessonId}/resources/{resourceId} Entrypoint
-     * @PathVariable - extracts dynamic value directly from the URI
-     * Deletes a specific lesson resource associated with a specific lesson ID.
-     * Returns HTTP 204 No Content if the deletion was successful.
-     * If no resource with the given ID exists or if the resource does not belong to the specified lesson, returns HTTP 404 Not Found.
-     */
-    @Operation(summary = "Delete a lesson resource",
-            description = "Deletes a specific lesson resource associated with a specific lesson ID.")
+    @Operation(summary = "Delete a lesson resource", description = "Deletes a resource given by its ID from a lesson given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Lesson resource deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "Lesson resource not found or does not belong to the specified lesson")
+            @ApiResponse(responseCode = "204", description = "Resource successfully deleted"),
+            @ApiResponse(responseCode = "404", description = "Resource not found or does not belong to the specified lesson")
     })
     @DeleteMapping("/api/lessons/{lessonId}/resources/{resourceId}")
     public ResponseEntity<Void> deleteLessonResource(@PathVariable UUID resourceId, @PathVariable UUID lessonId) {
         lessonResourceService.deleteLessonResource(resourceId, lessonId);
-
         return ResponseEntity.noContent().build();
     }
 
-    /** PATCH /api/lessons/{lessonId}/resources/{resourceId} Entrypoint
-     * @PathVariable - extracts dynamic value directly from the URI
-     * @RequestBody - a JSON file with multiple fields for each lesson resource content
-     * Updates the title and/or URL of a specific lesson resource associated with a specific lesson ID.
-     * Returns HTTP 200 along with the updated LessonResource object in the response body if the update was successful.
-     * If no resource with the given ID exists, if the resource does not belong to the specified lesson, or if no lesson with the given ID exists, returns HTTP 404 Not Found.
-     */
-    @Operation(summary = "Update a lesson resource",
-            description = "Updates the title and/or URL of a specific lesson resource associated with a specific) lesson ID.")
+    @Operation(summary = "Update a lesson resource", description = "Updates the title and/or URL of a resource given by its ID from a lesson given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lesson resource updated successfully"),
-            @ApiResponse(responseCode = "404", description = "Lesson resource not found, does not belong to the specified lesson, or lesson not found")
+            @ApiResponse(responseCode = "200", description = "Resource successfully updated"),
+            @ApiResponse(responseCode = "404", description = "Resource not found, does not belong to the specified lesson, or lesson not found")
     })
     @PatchMapping("/api/lessons/{lessonId}/resources/{resourceId}")
     public ResponseEntity<ResponseLessonResourceDto> updateLessonMetadata(
             @PathVariable UUID lessonId,
             @PathVariable UUID resourceId,
-            @RequestBody UpdateLessonResourceDto lessonResourceDTOPatch){
-        ResponseLessonResourceDto updatedResource = lessonResourceService.updateLessonResource(lessonId, resourceId, lessonResourceDTOPatch);
-
-        return ResponseEntity.ok(updatedResource);
+            @RequestBody UpdateLessonResourceDto lessonResourceDTOPatch) {
+        return ResponseEntity.ok(lessonResourceService.updateLessonResource(lessonId, resourceId, lessonResourceDTOPatch));
     }
 }
