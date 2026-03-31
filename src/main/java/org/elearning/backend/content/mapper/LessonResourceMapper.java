@@ -1,8 +1,8 @@
 package org.elearning.backend.content.mapper;
 
-import org.elearning.backend.content.dto.LessonResourceDtoGet;
-import org.elearning.backend.content.dto.LessonResourceDtoPatch;
-import org.elearning.backend.content.dto.LessonResourceDtoPost;
+import org.elearning.backend.content.dto.ResponseLessonResourceDto;
+import org.elearning.backend.content.dto.UpdateLessonResourceDto;
+import org.elearning.backend.content.dto.CreateLessonResourceDto;
 import org.elearning.backend.content.model.LessonResource;
 import org.mapstruct.*;
 
@@ -28,7 +28,7 @@ public interface LessonResourceMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "lesson", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
-    void updateLessonResourceFromDto(LessonResourceDtoPatch dto, @MappingTarget LessonResource entity);
+    void updateLessonResourceFromDto(UpdateLessonResourceDto dto, @MappingTarget LessonResource entity);
 
     /**
      * Converts a LessonResource entity to a LessonResourceDTOGet DTO.
@@ -38,7 +38,7 @@ public interface LessonResourceMapper {
      * @return A LessonResourceDTOGet containing the mapped properties from the entity.
      */
     @Mapping(source = "lesson.id", target = "lessonId")
-    LessonResourceDtoGet toLessonResourceDTOGet(LessonResource lessonResource);
+    ResponseLessonResourceDto toLessonResourceDTOGet(LessonResource lessonResource);
 
     /**
      * Converts a list of LessonResource entities to a list of LessonResourceDTOGet DTOs.
@@ -46,7 +46,7 @@ public interface LessonResourceMapper {
      * @param resources The list of LessonResource entities to be converted.
      * @return A list of LessonResourceDTOGet containing the mapped properties from the entities.
      */
-    List<LessonResourceDtoGet> toLessonResourcesDTOGetList(List<LessonResource> resources);
+    List<ResponseLessonResourceDto> toLessonResourcesDTOGetList(List<LessonResource> resources);
 
     /**
      * Converts a LessonResourceDTOPost DTO to a LessonResource entity.
@@ -58,5 +58,5 @@ public interface LessonResourceMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "lesson", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
-    LessonResource toLessonResource(LessonResourceDtoPost lessonResourceDTOPost);
+    LessonResource toLessonResource(CreateLessonResourceDto lessonResourceDTOPost);
 }

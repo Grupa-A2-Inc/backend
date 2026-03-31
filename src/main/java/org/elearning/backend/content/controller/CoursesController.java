@@ -3,8 +3,8 @@ package org.elearning.backend.content.controller;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.content.dto.CourseDto;
 import org.elearning.backend.content.dto.CourseDtoGet;
-import org.elearning.backend.content.dto.CourseFullViewDto;
-import org.elearning.backend.content.dto.CreateCourseDTO;
+import org.elearning.backend.content.dto.ResponseCourseFullViewDto;
+import org.elearning.backend.content.dto.CreateCourseDto;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.service.CourseService;
 import org.springframework.http.HttpStatus;
@@ -22,8 +22,8 @@ public class CoursesController {
     private final CourseService courseService;
 
     @PostMapping
-    public ResponseEntity<CourseFullViewDto> createCourse(@RequestBody CreateCourseDTO courseDto) {
-        CourseFullViewDto savedCourse = courseService.createCourse(courseDto);
+    public ResponseEntity<ResponseCourseFullViewDto> createCourse(@RequestBody CreateCourseDto courseDto) {
+        ResponseCourseFullViewDto savedCourse = courseService.createCourse(courseDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse);
     }
 
@@ -58,7 +58,7 @@ public class CoursesController {
     }
 
     @GetMapping("/{courseId}/full-view")
-    public ResponseEntity<CourseFullViewDto> getCourseFullView(@PathVariable UUID courseId) {
+    public ResponseEntity<ResponseCourseFullViewDto> getCourseFullView(@PathVariable UUID courseId) {
         return ResponseEntity.ok(courseService.getCourseFullView(courseId));
     }
 

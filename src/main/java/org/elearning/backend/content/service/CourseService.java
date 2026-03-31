@@ -27,7 +27,7 @@ public class CourseService {
     private final CourseMapper courseMapper;
 
     @Transactional
-    public CourseFullViewDto createCourse(CreateCourseDTO dto) {
+    public ResponseCourseFullViewDto createCourse(CreateCourseDto dto) {
         setDefaultCourseProperties(dto);
 
         Course course = courseMapper.toCourse(dto);
@@ -38,7 +38,7 @@ public class CourseService {
         return courseFullViewMapper.toCourseFullViewDTO(course);
     }
 
-    private void setDefaultCourseProperties(CreateCourseDTO dto) {
+    private void setDefaultCourseProperties(CreateCourseDto dto) {
         if (dto.getVisibility() == null) {
             dto.setVisibility(CourseVisibility.PRIVATE);
         }
@@ -93,7 +93,7 @@ public class CourseService {
     @Transactional
     public Course updateCourse(UUID id, CourseDto dto) {
         Course course = courseRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cursul nu a fost gasit."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "The course with the provided ID was not found!"));
 
         course.setTitle(dto.getTitle());
         course.setDescription(dto.getDescription());
@@ -122,7 +122,7 @@ public class CourseService {
     }
     public void deleteCourse(UUID id) {
         if (!courseRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cursul cu acest ID nu a fost gasit!");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "The course with the provided ID was not found!");
         }
         courseRepository.deleteById(id);
     }
@@ -135,15 +135,18 @@ public class CourseService {
      * @throws ResponseStatusException NOT_FOUND if no course is found with the provided ID.
      */
     @Transactional(readOnly = true)
-    public CourseFullViewDto getCourseFullView(UUID courseId) {
-        // Query 1 — cursul cu capitole
+    public ResponseCourseFullViewDto getCourseFullView(UUID courseId) {
+        // Query 1: Fetch the course with its basic details. \
+        // This query is necessary to ensure that the course exists and to load it into the first level cache.
         Course course = courseRepository.findCourseWithChapters(courseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Course with ID " + courseId + " not found."));
 
-        // Query 2 si 3 trebuie sa fie in ACEEASI tranzactie cu Query 1
-        // ca Hibernate sa poata asocia rezultatele in primul nivel cache
+        // Query 2: Fetch the chapters associated with the course.
+        // This query is necessary to load the chapters into the first level cache, which allows us to access them without triggering additional queries later.
         chapterRepository.findChaptersWithLessonsByCourseId(courseId);
+
+        // Query 3: Fetch the lessons along with their resources for the chapters of the course.
         lessonRepository.findLessonsWithResourcesByCourseId(courseId);
 
         return courseFullViewMapper.toCourseFullViewDTO(course);

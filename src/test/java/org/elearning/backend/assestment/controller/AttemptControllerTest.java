@@ -9,6 +9,7 @@ import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.Locale;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -356,7 +357,7 @@ class AttemptControllerTest {
     }
 
     private String buildSubmitBody(int questionId, int optionId, double timeSpent) {
-        return """
+        return String.format(Locale.US, """
                 {
                     "answers": [
                         {
@@ -366,7 +367,7 @@ class AttemptControllerTest {
                         }
                     ]
                 }
-                """.formatted(questionId, optionId, timeSpent);
+                """, questionId, optionId, timeSpent);
     }
 
     private HttpHeaders jsonHeaders() {
