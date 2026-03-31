@@ -9,6 +9,7 @@ import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.Locale;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -193,12 +194,14 @@ class AttemptControllerTest {
         UUID attemptId = insertAttempt(testId, STUDENT_ID, "IN_PROGRESS");
         String submitBody = buildSubmitBody(qId, optionId, 3.0);
 
-        restTemplate.exchange(
+        var response = restTemplate.exchange(
                 "/api/attempts/" + attemptId + "/submit",
                 HttpMethod.POST,
                 new HttpEntity<>(submitBody, jsonHeaders()),
                 String.class
         );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         String status = jdbcTemplate.queryForObject(
                 "SELECT status FROM test_attempts WHERE id = '" + attemptId + "'",
@@ -356,17 +359,17 @@ class AttemptControllerTest {
     }
 
     private String buildSubmitBody(int questionId, int optionId, double timeSpent) {
-        return """
-                {
-                    "answers": [
-                        {
-                            "questionId": %d,
-                            "selectedOptionIds": [%d],
-                            "timeSpent": %.1f
-                        }
-                    ]
-                }
-                """.formatted(questionId, optionId, timeSpent);
+        return String.format(Locale.US, """
+            {
+                "answers": [
+                    {
+                        "questionId": %d,
+                        "selectedOptionIds": [%d],
+                        "timeSpent": %.1f
+                    }
+                ]
+            }
+            """, questionId, optionId, timeSpent);
     }
 
     private HttpHeaders jsonHeaders() {
