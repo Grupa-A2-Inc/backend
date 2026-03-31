@@ -27,7 +27,6 @@ class TestResultControllerTest {
 
     // This matches the hardcoded UUID in your controller right now
     private static final UUID STUDENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
-    private static final UUID ANOTHER_STUDENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
 
     private UUID lessonId;
     private UUID instructorId;
@@ -114,7 +113,32 @@ class TestResultControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.GONE);
     }
 
+    @Test
+    void shouldReturnTestResultWithQuestionsAndOptions() {
+        UUID testId = insertTest(lessonId, instructorId, "PUBLISHED", 300);
 
+        int questionId = insertQuestionAndReturnId(testId, "SINGLE_CHOICE", "What is Java?");
+        insertOption(questionId, "A programming language", 1, true);
+        insertOption(questionId, "A type of coffee", 2, false);
+
+        UUID attemptId = insertAttempt(testId, STUDENT_ID, "DONE");
+        insertTestResult(attemptId, STUDENT_ID, testId, 8.5, 85.5, true);
+
+        insertAttemptAnswer(attemptId, questionId, "[1]", true);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/attempts/" + attemptId + "/result",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String body = response.getBody();
+
+        assertThat(body)
+                .isNotNull()
+                .contains("What is Java?")
+                .contains("SINGLE_CHOICE");
+    }
 
 
     private UUID insertTest(UUID lessonId, UUID createdBy, String status, int timeLimitSec) {
@@ -140,6 +164,31 @@ class TestResultControllerTest {
         jdbcTemplate.execute(
                 "INSERT INTO test_results (attempt_id, student_id, test_id, score, score_percent, passed, completed_at) " +
                         "VALUES ('" + attemptId + "', '" + studentId + "', '" + testId + "', " + score + ", " + scorePercent + ", " + passed + ", NOW())"
+        );
+    }
+
+    private int insertQuestionAndReturnId(UUID testId, String type, String content) {
+        return jdbcTemplate.queryForObject(
+                "INSERT INTO questions (test_id, question_type, content) " +
+                        "VALUES (?::uuid, ?::question_type, ?) RETURNING id",
+                Integer.class,
+                testId.toString(), type, content
+        );
+    }
+
+    private void insertOption(int questionId, String text, int order, boolean isCorrect) {
+        jdbcTemplate.execute(
+                "INSERT INTO question_options (question_id, text, display_order, is_correct) " +
+                        "VALUES (" + questionId + ", '" + text + "', " + order + ", " + isCorrect + ")"
+        );
+    }
+
+    private void insertAttemptAnswer(UUID attemptId, int questionId, String selectedOptionIdsJson, boolean isCorrect) {
+        UUID answerId = UUID.randomUUID();
+        // Uses ::jsonb to ensure PostgreSQL parses the string array correctly
+        jdbcTemplate.execute(
+                "INSERT INTO attempt_answers (id, attempt_id, question_id, selected_option_ids, is_correct, time_spent, answered_at) " +
+                        "VALUES ('" + answerId + "', '" + attemptId + "', " + questionId + ", '" + selectedOptionIdsJson + "'::jsonb, " + isCorrect + ", 10.5, NOW())"
         );
     }
 }
