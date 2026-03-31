@@ -77,7 +77,7 @@ public class AuthService {
                 savedUser.getEmail(),
                 RoleName.ORGANIZATION_ADMIN,
                 savedUser.getStatus(),
-                savedOrganization.getName()
+                savedOrganization.getId()
         );
 
         return new AuthResponse("User registered successfully", accessToken, refreshToken, userData);
@@ -101,7 +101,7 @@ public class AuthService {
                 user.getEmail(),
                 user.getRole().getName(),
                 user.getStatus(),
-                user.getOrganization() != null ? user.getOrganization().getName() : null
+                user.getOrganization() != null ? user.getOrganization().getId() : null
         );
 
         return new AuthResponse("Login successful", accessToken, refreshToken, userData);
