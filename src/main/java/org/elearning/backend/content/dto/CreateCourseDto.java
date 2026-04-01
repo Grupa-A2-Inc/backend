@@ -12,12 +12,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateCourseDto {
-    private UUID createdBy;
     private String title;
     private String description;
     private String category;
     private CourseStatus status;
-    private CourseVisibility visibility;
 
     private List<CreateChapterDTO> chapters;
 

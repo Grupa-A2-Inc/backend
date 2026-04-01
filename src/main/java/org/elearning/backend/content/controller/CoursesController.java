@@ -23,6 +23,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CoursesController {
 
+
+    private static final UUID HARDCODED_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
     private final CourseService courseService;
 
     @Operation(summary = "Create a new course", description = "Creates a new course with its chapters, lessons and resources")
@@ -32,19 +34,27 @@ public class CoursesController {
     })
     @PostMapping
     public ResponseEntity<ResponseCourseFullViewDto> createCourse(@RequestBody CreateCourseDto courseDto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(courseService.createCourse(courseDto));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(courseService.createCourse(courseDto, HARDCODED_USER_ID));
     }
 
-    @Operation(summary = "Get all courses", description = "Returns all published and public courses for students, or all courses created by the instructor")
+
+    @Operation(summary = "Get public courses", description = "Returns all published and public courses")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Courses successfully returned")
     })
-    @GetMapping
-    public ResponseEntity<List<ResponseCourseDto>> getAllCourses() {
-        String role = "STUDENT";
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+    @GetMapping("/public")
+    public ResponseEntity<List<ResponseCourseDto>> getPublicCourses() {
+        return ResponseEntity.ok(courseService.getPublicCourses());
+    }
 
-        return ResponseEntity.ok(courseService.getCourses(role, userId));
+    @Operation(summary = "Get my courses", description = "Returns all courses created by the current user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Courses successfully returned")
+    })
+    @GetMapping("/my-courses")
+    public ResponseEntity<List<ResponseCourseDto>> getMyCourses() {
+        return ResponseEntity.ok(courseService.getMyCourses(HARDCODED_USER_ID));
     }
 
     @Operation(summary = "Update a course", description = "Fully updates a course given by its ID")

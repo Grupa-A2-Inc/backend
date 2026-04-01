@@ -33,26 +33,25 @@ public class CourseService {
      * @return the created course in full view format
      */
     @Transactional
-    public ResponseCourseFullViewDto createCourse(CreateCourseDto createCourseDto) {
+    public ResponseCourseFullViewDto createCourse(CreateCourseDto createCourseDto, UUID createdBy) {
         setDefaultCourseProperties(createCourseDto);
         Course course = courseMapper.toCourse(createCourseDto);
 
+        course.setCreatedBy(createdBy);
+        course.setVisibility(CourseVisibility.PRIVATE);
+        
         linkChaptersToCourse(course);
         course = courseRepository.saveAndFlush(course);
-
         return courseFullViewMapper.toCourseFullViewDTO(course);
     }
 
     /**
      * Sets default values for course properties if they are not provided in the DTO.
-     * If visibility is null, it will be set to PRIVATE. If status is null, it will be set to DRAFT.
+     * If status is null, it will be set to DRAFT.
      *
      * @param createCourseDto the CreateCourseDto containing the course data
      */
     private void setDefaultCourseProperties(CreateCourseDto createCourseDto) {
-        if (createCourseDto.getVisibility() == null) {
-            createCourseDto.setVisibility(CourseVisibility.PRIVATE);
-        }
         if (createCourseDto.getStatus() == null) {
             createCourseDto.setStatus(CourseStatus.DRAFT);
         }
@@ -104,24 +103,26 @@ public class CourseService {
     }
 
     /**
-     * Retrieves a list of courses based on the user's role and ID.
-     * Instructors will receive a list of courses they have created, while other users will receive a list of published and public courses.
+     * Retrieves all published and public courses.
      *
-     * @param role the role of the user (e.g., "INSTRUCTOR")
-     * @param userId the ID of the user
-     * @return a list of courses in DTO format
+     * @return a list of published and public courses in DTO format
      */
-    public List<ResponseCourseDto> getCourses(String role, UUID userId) {
-        List<Course> courses;
-        if ("INSTRUCTOR".equals(role)) {
-            courses = courseRepository.findByCreatedBy(userId);
-        } else {
-            courses = courseRepository.findByStatusAndVisibility(
-                    CourseStatus.PUBLISHED,
-                    CourseVisibility.PUBLIC
-            );
-        }
+    public List<ResponseCourseDto> getPublicCourses() {
+        List<Course> courses = courseRepository.findByStatusAndVisibility(
+                CourseStatus.PUBLISHED,
+                CourseVisibility.PUBLIC
+        );
+        return courseMapper.toCourseDtoGetList(courses);
+    }
 
+    /**
+     * Retrieves all courses created by the given user.
+     *
+     * @param userId the ID of the user
+     * @return a list of courses created by the user in DTO format
+     */
+    public List<ResponseCourseDto> getMyCourses(UUID userId) {
+        List<Course> courses = courseRepository.findByCreatedBy(userId);
         return courseMapper.toCourseDtoGetList(courses);
     }
 
