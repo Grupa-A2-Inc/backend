@@ -2,10 +2,8 @@ package org.elearning.backend.content.dto;
 
 import lombok.*;
 import org.elearning.backend.content.model.CourseStatus;
-import org.elearning.backend.content.model.CourseVisibility;
 
 import java.util.List;
-import java.util.UUID;
 
 @Getter
 @Data
