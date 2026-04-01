@@ -5,9 +5,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Un răspuns din body-ul de submit */
 @Getter @Setter
-public class SubmitAnswerDTO {
+public class SubmitAnswerDto {
     private Long questionId;
     private List<Long> selectedOptionIds;
     private BigDecimal timeSpent;

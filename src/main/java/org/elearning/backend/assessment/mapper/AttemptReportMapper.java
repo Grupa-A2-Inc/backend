@@ -2,7 +2,7 @@ package org.elearning.backend.assessment.mapper;
 
 import org.elearning.backend.assessment.dto.AttemptReportDTO;
 import org.elearning.backend.assessment.dto.QuestionForAttemptReportDTO;
-import org.elearning.backend.assessment.dto.TestResultDTO;
+import org.elearning.backend.assessment.dto.TestResultDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -22,5 +22,5 @@ public interface AttemptReportMapper {
     @Mapping(target = "passed", source = "resultDTO.passed")
     @Mapping(target = "completedAt", source = "resultDTO.completedAt")
     @Mapping(target = "question", source = "questions")
-    AttemptReportDTO toAttemptReportDTO(TestResultDTO resultDTO, List<QuestionForAttemptReportDTO> questions);
+    AttemptReportDTO toAttemptReportDTO(TestResultDto resultDTO, List<QuestionForAttemptReportDTO> questions);
 }

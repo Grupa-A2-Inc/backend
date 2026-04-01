@@ -2,9 +2,7 @@ package org.elearning.backend.assessment.service;
 
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.dto.*;
-import org.elearning.backend.assessment.exception.AttemptAlreadySubmittedException;
-import org.elearning.backend.assessment.exception.TestNotPublishedException;
-import org.elearning.backend.assessment.exception.TimerExpiredException;
+import org.elearning.backend.assessment.exception.*;
 import org.elearning.backend.assessment.mapper.AttemptMapper;
 import org.elearning.backend.assessment.mapper.QuestionMapper;
 import org.elearning.backend.assessment.model.*;
@@ -32,11 +30,22 @@ public class AttemptService {
     private final AttemptMapper attemptMapper;
     private final QuestionMapper questionMapper;
 
+    private static final String DOES_NOT_EXIST_MSG = "The %s with id %s does not exist";
+
+    /**
+     * Starts a new test attempt for a given test and student.
+     *
+     * @param testId    The ID of the test to be attempted.
+     * @param studentId The ID of the student attempting the test.
+     * @return A StartAttemptResponseDTO containing details about the started attempt, including the test information and questions.
+     * @throws DoesNotExistException   If the test with the given ID does not exist.
+     * @throws TestNotPublishedException If the test is not published yet.
+     */
     @Transactional
-    public StartAttemptResponseDTO startAttempt(UUID testId, UUID studentId) {
+    public StartAttemptResponseDto startAttempt(UUID testId, UUID studentId) {
         Test test = testRepository.findById(testId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "The test with id " + testId + " does not exist"));
+                .orElseThrow(() -> new DoesNotExistException(
+                        String.format(DOES_NOT_EXIST_MSG, "test", testId)));
 
         if (test.getStatus() != TestStatus.PUBLISHED) {
             throw new TestNotPublishedException(
@@ -56,17 +65,28 @@ public class AttemptService {
 
         List<Question> questionsFromDb = questionRepository.findByTestIdWithOptions(testId);
 
-        List<QuestionForStudentDTO> questions = questionMapper.toQuestionForStudentDTOList(questionsFromDb);
+        List<QuestionForStudentDto> questions = questionMapper.toQuestionForStudentDTOList(questionsFromDb);
 
         return attemptMapper.toStartAttemptResponseDTO(saved, test, questions);
     }
 
+    /**
+     * Submits a test attempt with the student's answers, calculates the score, and saves the result.
+     *
+     * @param attemptId The ID of the attempt being submitted.
+     * @param studentId The ID of the student submitting the attempt.
+     * @param request   A SubmitRequestDTO containing the student's answers and time spent on each question.
+     * @return A TestResultDTO containing the results of the submitted attempt, including score and pass/fail status.
+     * @throws DoesNotExistException            If the attempt with the given ID does not exist.
+     * @throws AttemptAlreadySubmittedException If the attempt has already been submitted.
+     * @throws TimerExpiredException            If the time limit for the attempt has expired.
+     */
     @Transactional
-    public TestResultDTO submitAttempt(UUID attemptId, UUID studentId,
-                                       SubmitRequestDTO request) {
+    public TestResultDto submitAttempt(UUID attemptId, UUID studentId,
+                                       SubmitRequestDto request) {
         TestAttempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Attempt with id " + attemptId + " does not exist"));
+                .orElseThrow(() -> new DoesNotExistException(
+                        String.format(DOES_NOT_EXIST_MSG, "attempt", attemptId)));
 
         if (attempt.getStatus() == AttemptStatus.DONE) {
             throw new AttemptAlreadySubmittedException("The attempt has already been submitted");
@@ -74,30 +94,29 @@ public class AttemptService {
         if (attempt.getStatus() == AttemptStatus.EXPIRED) {
             throw new TimerExpiredException("The attempt has expired and cannot be submitted");
         }
-        /*if (!attempt.getStudentId().equals(studentId)) {
-            throw new SecurityException(
-                    "Nu ai permisiunea să submit-ezi acest attempt");
-        }*/
+        if (!attempt.getStudentId().equals(studentId)) {
+            throw new InvalidAttemptUserException(
+                    "The attempt with id " + attemptId + " does not belong to the student with id " + studentId);
+        }
 
         Test test = attempt.getTest();
-        /*testRepository.findById(attempt.getTest().getId())
-                .orElseThrow(() -> new IllegalArgumentException("The test with id " + attempt.getTest().getId() + " does not exist"));
-*/
+
         LocalDateTime expireTime = attempt.getStartedAt().plusSeconds(test.getTimeLimitSec());
         if (LocalDateTime.now().isAfter(expireTime)) {
             attempt.setStatus(AttemptStatus.EXPIRED);
             attempt.setEndedAt(LocalDateTime.now());
             attemptRepository.save(attempt);
+
             throw new TimerExpiredException("The time limit for this attempt has expired");
         }
 
         int correctCount = 0;
         int totalCount = request.getAnswers().size();
 
-        for (SubmitAnswerDTO answerDTO : request.getAnswers()) {
+        for (SubmitAnswerDto answerDTO : request.getAnswers()) {
             Question question = questionRepository.findById(answerDTO.getQuestionId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Question with id " + answerDTO.getQuestionId() + " does not exist"));
+                    .orElseThrow(() -> new DoesNotExistException(
+                            String.format(DOES_NOT_EXIST_MSG, "question", answerDTO.getQuestionId())));
 
             Set<Long> correctOptionIds = optionRepository
                     .findByQuestionIdAndIsCorrectTrue(answerDTO.getQuestionId())
