@@ -263,6 +263,149 @@ class CourseControllerTest {
     }
 
     /**
+     * POST /api/courses
+     * Tests that if status is provided, it is preserved on create.
+     */
+    @Test
+    void shouldCreateCourseWithProvidedStatus() {
+        String title = "Published Course " + UUID.randomUUID();
+        String body = """
+                {
+                    "title": "%s",
+                    "status": "PUBLISHED"
+                }
+                """.formatted(title);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/courses",
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM courses WHERE title = '" + title + "'",
+                String.class
+        );
+        assertThat(status).isEqualTo("PUBLISHED");
+    }
+
+    /**
+     * POST /api/courses
+     * Tests that nested chapters, lessons and resources are saved and linked correctly.
+     */
+    @Test
+    void shouldLinkChaptersLessonsAndResourcesOnCreate() {
+        String title = "Nested Course " + UUID.randomUUID();
+        String body = """
+                {
+                    "title": "%s",
+                    "description": "Course with nested content",
+                    "category": "Programming",
+                    "chapters": [
+                        {
+                            "title": "Chapter One",
+                            "orderIndex": 1,
+                            "lessons": [
+                                {
+                                    "title": "Lesson One",
+                                    "contentMarkdown": "# Intro",
+                                    "orderIndex": 1,
+                                    "lessonResources": [
+                                        {
+                                            "title": "Slides",
+                                            "url": "https://example.com/slides"
+                                        },
+                                        {
+                                            "title": "Video",
+                                            "url": "https://example.com/video"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Chapter Two",
+                            "orderIndex": 2,
+                            "lessons": [
+                                {
+                                    "title": "Lesson Two",
+                                    "contentMarkdown": "# Deep dive",
+                                    "orderIndex": 1
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Chapter Three",
+                            "orderIndex": 3
+                        }
+                    ]
+                }
+                """.formatted(title);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/courses",
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).contains("Chapter One");
+        assertThat(response.getBody()).contains("Lesson One");
+        assertThat(response.getBody()).contains("Slides");
+
+        Integer chapterCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM chapters c JOIN courses co ON c.course_id = co.id WHERE co.title = '" + title + "'",
+                Integer.class
+        );
+        Integer lessonCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lessons l JOIN chapters c ON l.chapter_id = c.id JOIN courses co ON c.course_id = co.id WHERE co.title = '" + title + "'",
+                Integer.class
+        );
+        Integer resourceCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lesson_resources lr JOIN lessons l ON lr.lesson_id = l.id JOIN chapters c ON l.chapter_id = c.id JOIN courses co ON c.course_id = co.id WHERE co.title = '" + title + "'",
+                Integer.class
+        );
+
+        assertThat(chapterCount).isEqualTo(3);
+        assertThat(lessonCount).isEqualTo(2);
+        assertThat(resourceCount).isEqualTo(2);
+    }
+
+    /**
+     * POST /api/courses
+     * Tests that createdBy from request body is ignored and the hardcoded user is persisted.
+     */
+    @Test
+    void shouldUseHardcodedUserForCourseCreation() {
+        String title = "CreatedBy Check " + UUID.randomUUID();
+        UUID fakeCreatedBy = UUID.randomUUID();
+        String body = """
+                {
+                    "title": "%s",
+                    "createdBy": "%s"
+                }
+                """.formatted(title, fakeCreatedBy);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/courses",
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        String createdByInDb = jdbcTemplate.queryForObject(
+                "SELECT created_by::text FROM courses WHERE title = '" + title + "'",
+                String.class
+        );
+        assertThat(createdByInDb)
+                        .isEqualTo("00000000-0000-0000-0000-000000000000")
+                        .isNotEqualTo(fakeCreatedBy.toString());
+    }
+
+    /**
      * GET /api/courses?role=INSTRUCTOR&userId={id}
      * Tests that an instructor can retrieve only their own courses.
      */
