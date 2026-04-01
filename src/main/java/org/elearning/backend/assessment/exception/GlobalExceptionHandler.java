@@ -42,7 +42,11 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(exception, HttpStatus.BAD_REQUEST);
     }
 
-
+    // Prindem cerere Result cu Attempt-ul IN_PROGRESS (403)
+    @ExceptionHandler(AttemptInProgressException.class)
+    public ResponseEntity<Map<String, Object>> handleInProgress(AttemptInProgressException exception){
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
 
     // Prindem Attempt-ul deja trimis (409)
     @ExceptionHandler(AttemptAlreadySubmittedException.class)
