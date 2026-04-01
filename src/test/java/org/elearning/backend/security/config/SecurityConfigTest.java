@@ -1,6 +1,7 @@
 package org.elearning.backend.security.config;
 
 import org.elearning.backend.security.auth.CustomUserDetailsService;
+import org.elearning.backend.security.handler.JwtAuthenticationEntryPoint;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,7 @@ class SecurityConfigTest {
             MockMvc mockMvc = buildMockMvc(context);
 
             var result = mockMvc.perform(get("/api/secure/ping"))
-                    .andExpect(status().isForbidden())
+                    .andExpect(status().isUnauthorized())
                     .andReturn();
 
             assertThat(result.getRequest().getSession(false)).isNull();
@@ -82,6 +83,11 @@ class SecurityConfigTest {
         @Bean
         JwtAuthenticationFilter jwtAuthenticationFilter(CustomUserDetailsService customUserDetailsService) {
             return new JwtAuthenticationFilter(new NoopJwtUtil(), customUserDetailsService);
+        }
+
+        @Bean
+        JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint() {
+            return new JwtAuthenticationEntryPoint();
         }
     }
 
