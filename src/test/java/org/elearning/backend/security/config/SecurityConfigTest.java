@@ -1,5 +1,6 @@
 package org.elearning.backend.security.config;
 
+import org.elearning.backend.security.auth.CustomUserDetailsService;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ class SecurityConfigTest {
         try (AnnotationConfigWebApplicationContext context = createContext()) {
             MockMvc mockMvc = buildMockMvc(context);
 
-            var result = mockMvc.perform(get("/auth/ping"))
+            var result = mockMvc.perform(get("/api/auth/ping"))
                     .andExpect(status().isOk())
                     .andReturn();
 
@@ -43,7 +44,7 @@ class SecurityConfigTest {
         try (AnnotationConfigWebApplicationContext context = createContext()) {
             MockMvc mockMvc = buildMockMvc(context);
 
-            var result = mockMvc.perform(get("/secure/ping"))
+            var result = mockMvc.perform(get("/api/secure/ping"))
                     .andExpect(status().isForbidden())
                     .andReturn();
 
@@ -74,20 +75,25 @@ class SecurityConfigTest {
     static class TestWebSecurityConfig {
 
         @Bean
-        JwtAuthenticationFilter jwtAuthenticationFilter() {
-            return new JwtAuthenticationFilter(new NoopJwtUtil());
+        CustomUserDetailsService customUserDetailsService() {
+            return new NoopCustomUserDetailsService();
+        }
+
+        @Bean
+        JwtAuthenticationFilter jwtAuthenticationFilter(CustomUserDetailsService customUserDetailsService) {
+            return new JwtAuthenticationFilter(new NoopJwtUtil(), customUserDetailsService);
         }
     }
 
     @RestController
     static class TestSecurityController {
 
-        @GetMapping("/auth/ping")
+        @GetMapping("/api/auth/ping")
         public ResponseEntity<String> authPing() {
             return ResponseEntity.ok("auth-ok");
         }
 
-        @GetMapping("/secure/ping")
+        @GetMapping("/api/secure/ping")
         public ResponseEntity<String> securePing() {
             return ResponseEntity.ok("secure-ok");
         }
@@ -103,6 +109,13 @@ class SecurityConfigTest {
         @Override
         public org.elearning.backend.role.entity.RoleName extractRole(String token) {
             throw new UnsupportedOperationException("JWT parsing is not used in this MVC config test");
+        }
+    }
+
+    static class NoopCustomUserDetailsService extends CustomUserDetailsService {
+
+        NoopCustomUserDetailsService() {
+            super(null);
         }
     }
 }

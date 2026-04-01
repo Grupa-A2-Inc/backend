@@ -2,7 +2,12 @@ package org.elearning.backend.security.jwt;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.ServletException;
+import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.security.auth.CustomUserDetails;
+import org.elearning.backend.security.auth.CustomUserDetailsService;
+import org.elearning.backend.user.entity.User;
+import org.elearning.backend.user.entity.UserStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -18,7 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class JwtAuthenticationFilterTest {
 
     private final StubJwtUtil jwtUtil = new StubJwtUtil();
-    private final JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil);
+    private final StubCustomUserDetailsService customUserDetailsService = new StubCustomUserDetailsService();
+    private final JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil, customUserDetailsService);
 
     @AfterEach
     void tearDown() {
@@ -28,7 +34,7 @@ class JwtAuthenticationFilterTest {
     @Test
     void shouldNotFilter_returnsTrueForAuthEndpoints() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setServletPath("/auth/login");
+        request.setServletPath("/api/auth/login");
 
         assertThat(jwtAuthenticationFilter.shouldNotFilter(request)).isTrue();
     }
@@ -77,13 +83,14 @@ class JwtAuthenticationFilterTest {
         TrackingFilterChain filterChain = new TrackingFilterChain();
 
         jwtUtil.userId = UUID.randomUUID();
-        jwtUtil.role = RoleName.ADMIN;
+        customUserDetailsService.user = makeUser(jwtUtil.userId, "test@test.com", RoleName.ADMIN);
 
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         assertThat(authentication).isNotNull();
-        assertThat(authentication.getPrincipal()).isEqualTo(jwtUtil.userId.toString());
+        assertThat(authentication.getPrincipal()).isInstanceOf(CustomUserDetails.class);
+        assertThat(((CustomUserDetails) authentication.getPrincipal()).getUserId()).isEqualTo(jwtUtil.userId);
         assertThat(authentication.getAuthorities())
                 .extracting("authority")
                 .containsExactly("ROLE_ADMIN");
@@ -112,6 +119,33 @@ class JwtAuthenticationFilterTest {
         assertThat(filterChain.wasInvoked()).isTrue();
     }
 
+    @Test
+    void doFilterInternal_withMissingUser_clearsExistingAuthentication() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setServletPath("/api/users");
+        request.addHeader("Authorization", "Bearer valid-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        TrackingFilterChain filterChain = new TrackingFilterChain();
+
+        jwtUtil.userId = UUID.randomUUID();
+        customUserDetailsService.throwUserNotFound = true;
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(filterChain.wasInvoked()).isTrue();
+    }
+
+    private User makeUser(UUID id, String email, RoleName roleName) {
+        User user = new User();
+        user.setId(id);
+        user.setEmail(email);
+        user.setPasswordHash("hashed");
+        user.setRole(new Role(roleName));
+        user.setStatus(UserStatus.ACTIVE);
+        return user;
+    }
+
     private static final class TrackingFilterChain implements jakarta.servlet.FilterChain {
 
         private boolean invoked;
@@ -129,7 +163,6 @@ class JwtAuthenticationFilterTest {
     private static final class StubJwtUtil extends JwtUtil {
 
         private UUID userId;
-        private RoleName role;
         private boolean throwJwtException;
 
         @Override
@@ -140,12 +173,23 @@ class JwtAuthenticationFilterTest {
             return userId;
         }
 
+    }
+
+    private static final class StubCustomUserDetailsService extends CustomUserDetailsService {
+
+        private User user;
+        private boolean throwUserNotFound;
+
+        private StubCustomUserDetailsService() {
+            super(null);
+        }
+
         @Override
-        public RoleName extractRole(String token) {
-            if (throwJwtException) {
-                throw new JwtException("bad token");
+        public CustomUserDetails loadUserById(UUID userId) {
+            if (throwUserNotFound) {
+                throw new org.springframework.security.core.userdetails.UsernameNotFoundException("missing");
             }
-            return role;
+            return new CustomUserDetails(user);
         }
     }
 }

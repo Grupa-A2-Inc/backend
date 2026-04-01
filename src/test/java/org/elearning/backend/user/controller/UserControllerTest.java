@@ -2,6 +2,7 @@ package org.elearning.backend.user.controller;
 
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
+import org.elearning.backend.user.dto.request.UpdateUserRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.service.UserService;
@@ -12,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -76,6 +78,57 @@ class UserControllerTest {
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertEquals(id, response.getBody().getId());
+    }
+
+    @Test
+    void getAllUsers_returns200Ok() {
+        List<UserResponse> responseBody = List.of(
+                new UserResponse(
+                        UUID.randomUUID(),
+                        "ana@example.com",
+                        "Ana",
+                        "Pop",
+                        RoleName.STUDENT,
+                        null,
+                        UserStatus.ACTIVE
+                )
+        );
+
+        when(userService.getAllUsers()).thenReturn(responseBody);
+
+        ResponseEntity<List<UserResponse>> response = userController.getAllUsers();
+
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+    }
+
+    @Test
+    void updateUser_returns200Ok() {
+        UUID id = UUID.randomUUID();
+        UpdateUserRequest request = UpdateUserRequest.builder()
+                .email("ana.updated@example.com")
+                .firstName("Ana")
+                .lastName("Updated")
+                .build();
+
+        UserResponse responseBody = new UserResponse(
+                id,
+                "ana.updated@example.com",
+                "Ana",
+                "Updated",
+                RoleName.STUDENT,
+                null,
+                UserStatus.ACTIVE
+        );
+
+        when(userService.updateUser(id, request)).thenReturn(responseBody);
+
+        ResponseEntity<UserResponse> response = userController.updateUser(id, request);
+
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals("ana.updated@example.com", response.getBody().getEmail());
     }
 
     @Test

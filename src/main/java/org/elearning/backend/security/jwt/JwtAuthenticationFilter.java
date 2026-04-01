@@ -1,32 +1,31 @@
 package org.elearning.backend.security.jwt;
 
-import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.security.auth.CustomUserDetails;
+import org.elearning.backend.security.auth.CustomUserDetailsService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.http.HttpHeaders;
 import java.io.IOException;
-import java.util.List;
-
-import org.elearning.backend.role.entity.RoleName;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return request
                 .getServletPath()
-                .startsWith("/auth/");
+                .startsWith("/api/auth/");
     }
 
     @Override
@@ -37,14 +36,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(7);
 
             try {
-                String userId = jwtUtil.extractId(token).toString();
-                RoleName role = jwtUtil.extractRole(token);
-
-                var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
-                var authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
+                CustomUserDetails userDetails = customUserDetailsService.loadUserById(jwtUtil.extractId(token));
+                var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-            } catch (JwtException e) {
+            } catch (RuntimeException e) {
                 SecurityContextHolder.clearContext();
             }
         }

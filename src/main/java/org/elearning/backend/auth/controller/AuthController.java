@@ -16,7 +16,7 @@ import java.time.Duration;
 
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -41,7 +41,7 @@ public class AuthController {
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", response.getRefreshToken())
                 .httpOnly(true)
                 .secure(secureCookies)
-                .path("/auth")
+                .path("/api/auth")
                 .maxAge(Duration.ofDays(7))
                 .build();
 
