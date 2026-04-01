@@ -6,9 +6,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/** Rezultatul returnat elevului după submit */
-@Getter @Setter @Builder
-public class TestResultDTO {
+@Getter @Setter
+public class TestResultDto {
     private UUID attemptId;
     private BigDecimal score;
     private BigDecimal scorePercent;

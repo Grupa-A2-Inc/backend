@@ -1,8 +1,8 @@
 package org.elearning.backend.assessment.mapper;
 
-import org.elearning.backend.assessment.dto.QuestionForStudentDTO;
-import org.elearning.backend.assessment.dto.StartAttemptResponseDTO;
-import org.elearning.backend.assessment.dto.TestResultDTO;
+import org.elearning.backend.assessment.dto.QuestionForStudentDto;
+import org.elearning.backend.assessment.dto.StartAttemptResponseDto;
+import org.elearning.backend.assessment.dto.TestResultDto;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.model.TestAttempt;
 import org.elearning.backend.assessment.model.TestResult;
@@ -23,7 +23,7 @@ public interface AttemptMapper {
      * @param result The TestResult entity to be mapped to a TestResultDTO.
      * @return A TestResultDTO containing the mapped data from the TestResult entity.
      */
-    TestResultDTO toTestResultDTO(TestResult result);
+    TestResultDto toTestResultDTO(TestResult result);
 
     /**
      * Map the TestAttempt entity, along with the associated Test and a list of QuestionForStudentDTO, to a StartAttemptResponseDTO.
@@ -34,5 +34,7 @@ public interface AttemptMapper {
      */
     @Mapping(target = "timeLimitSec", source = "test.timeLimitSec")
     @Mapping(target = "questions", source = "questionsList")
-    StartAttemptResponseDTO toStartAttemptResponseDTO(TestAttempt attempt, Test test, List<QuestionForStudentDTO> questionsList);
+    StartAttemptResponseDto toStartAttemptResponseDTO(TestAttempt attempt, Test test, List<QuestionForStudentDto> questionsList);
+
+    StartAttemptResponseDto.TestInfoForAttemptDto toTestInfoForAttemptDTO(Test test);
 }

@@ -5,11 +5,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.content.dto.CourseDto;
-import org.elearning.backend.content.dto.CourseDtoGet;
+import org.elearning.backend.content.dto.UpdateCourseDto;
+import org.elearning.backend.content.dto.ResponseCourseDto;
 import org.elearning.backend.content.dto.ResponseCourseFullViewDto;
 import org.elearning.backend.content.dto.CreateCourseDto;
-import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.service.CourseService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,11 +40,11 @@ public class CoursesController {
             @ApiResponse(responseCode = "200", description = "Courses successfully returned")
     })
     @GetMapping
-    public ResponseEntity<List<CourseDtoGet>> getAllCourses() {
+    public ResponseEntity<List<ResponseCourseDto>> getAllCourses() {
         String role = "STUDENT";
         UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
-        List<Course> courses = courseService.getCourses(role, userId);
-        return ResponseEntity.ok(courses.stream().map(this::mapToDtoGet).toList());
+
+        return ResponseEntity.ok(courseService.getCourses(role, userId));
     }
 
     @Operation(summary = "Update a course", description = "Fully updates a course given by its ID")
@@ -54,8 +53,8 @@ public class CoursesController {
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<CourseDtoGet> updateCourse(@PathVariable UUID id, @RequestBody CourseDto courseDto) {
-        return ResponseEntity.ok(mapToDtoGet(courseService.updateCourse(id, courseDto)));
+    public ResponseEntity<ResponseCourseDto> updateCourse(@PathVariable UUID id, @RequestBody UpdateCourseDto updateCourseDto) {
+        return ResponseEntity.ok(courseService.updateCourse(id, updateCourseDto));
     }
 
     @Operation(summary = "Partially update a course", description = "Partially updates a course given by its ID, modifying only non-null fields")
@@ -64,8 +63,8 @@ public class CoursesController {
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @PatchMapping("/{id}")
-    public ResponseEntity<CourseDtoGet> patchCourse(@PathVariable UUID id, @RequestBody CourseDto courseDto) {
-        return ResponseEntity.ok(mapToDtoGet(courseService.patchCourse(id, courseDto)));
+    public ResponseEntity<ResponseCourseDto> patchCourse(@PathVariable UUID id, @RequestBody UpdateCourseDto updateCourseDto) {
+        return ResponseEntity.ok(courseService.patchCourse(id, updateCourseDto));
     }
 
     @Operation(summary = "Delete a course", description = "Deletes a course given by its ID")
@@ -87,17 +86,5 @@ public class CoursesController {
     @GetMapping("/{courseId}/full-view")
     public ResponseEntity<ResponseCourseFullViewDto> getCourseFullView(@PathVariable UUID courseId) {
         return ResponseEntity.ok(courseService.getCourseFullView(courseId));
-    }
-
-    private CourseDtoGet mapToDtoGet(Course c) {
-        CourseDtoGet dto = new CourseDtoGet();
-        dto.setId(c.getId());
-        dto.setTitle(c.getTitle());
-        dto.setDescription(c.getDescription());
-        dto.setCategory(c.getCategory());
-        dto.setStatus(c.getStatus());
-        dto.setVisibility(c.getVisibility());
-        dto.setCreatedBy(c.getCreatedBy());
-        return dto;
     }
 }

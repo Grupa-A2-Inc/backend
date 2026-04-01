@@ -1,7 +1,7 @@
 package org.elearning.backend.assessment.mapper;
 
-import org.elearning.backend.assessment.dto.OptionForStudentDTO;
-import org.elearning.backend.assessment.dto.QuestionForStudentDTO;
+import org.elearning.backend.assessment.dto.OptionForStudentDto;
+import org.elearning.backend.assessment.dto.QuestionForStudentDto;
 import org.elearning.backend.assessment.model.Question;
 import org.elearning.backend.assessment.model.QuestionOption;
 import org.mapstruct.Mapper;
@@ -18,14 +18,14 @@ public interface QuestionMapper {
      */
     @Mapping(target = "questionId", source = "id")
     //@Mapping(target = "questionType", source = "questionType")
-    QuestionForStudentDTO toQuestionForStudentDTO(Question question);
+    QuestionForStudentDto toQuestionForStudentDTO(Question question);
 
-    List<QuestionForStudentDTO> toQuestionForStudentDTOList(List<Question> questions);
+    List<QuestionForStudentDto> toQuestionForStudentDTOList(List<Question> questions);
 
     /**
      * Mapează QuestionOption → OptionForStudentDTO.
      * is_correct e ignorat intenționat — nu se trimite elevului.
      */
     @Mapping(target = "optionId", source = "id")
-    OptionForStudentDTO toOptionForStudentDTO(QuestionOption option);
+    OptionForStudentDto toOptionForStudentDTO(QuestionOption option);
 }

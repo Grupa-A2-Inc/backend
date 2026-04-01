@@ -3,7 +3,7 @@ package org.elearning.backend.assessment.service;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.dto.AttemptReportDTO;
 import org.elearning.backend.assessment.dto.QuestionForAttemptReportDTO;
-import org.elearning.backend.assessment.dto.TestResultDTO;
+import org.elearning.backend.assessment.dto.TestResultDto;
 import org.elearning.backend.assessment.exception.AttemptInProgressException;
 import org.elearning.backend.assessment.exception.TimerExpiredException;
 import org.elearning.backend.assessment.mapper.AttemptMapper;
@@ -45,7 +45,7 @@ public class TestResultService {
 
         TestResult result = testResultRepository.findById(attemptId)
                 .orElseThrow(() -> new IllegalArgumentException("Attempt with id " + attemptId + "does not have results"));
-        TestResultDTO resultDTO = attemptMapper.toTestResultDTO(result);
+        TestResultDto resultDTO = attemptMapper.toTestResultDTO(result);
 
         List<QuestionForAttemptReportDTO> questionResults = buildQuestionResults(attemptId);
 
