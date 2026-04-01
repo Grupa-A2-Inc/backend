@@ -10,10 +10,14 @@ import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -50,6 +54,9 @@ class AuthServiceTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private AuthenticationManager authenticationManager;
+
     @InjectMocks
     private AuthService authService;
 
@@ -58,6 +65,11 @@ class AuthServiceTest {
             user.setId(UUID.randomUUID());
         }
         return user;
+    }
+
+    private UsernamePasswordAuthenticationToken authenticatedUser(User user) {
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
 
     // REGISTER
@@ -229,8 +241,8 @@ class AuthServiceTest {
         user.setPasswordHash("hashed_parola");
         user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
 
-        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("parola123", "hashed_parola")).thenReturn(true);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken(user.getId())).thenReturn("refresh-token");
 
@@ -245,7 +257,8 @@ class AuthServiceTest {
         request.setEmail("inexistent@test.com");
         request.setPassword("parola123");
 
-        when(userRepository.findByEmail("inexistent@test.com")).thenReturn(Optional.empty());
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new BadCredentialsException("Bad credentials"));
 
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(InvalidCredentials.class)
@@ -258,12 +271,8 @@ class AuthServiceTest {
         request.setEmail("test@test.com");
         request.setPassword("parolaGresita");
 
-        User user = new User();
-        user.setEmail("test@test.com");
-        user.setPasswordHash("hashed_parola");
-
-        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("parolaGresita", "hashed_parola")).thenReturn(false);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new BadCredentialsException("Bad credentials"));
 
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(InvalidCredentials.class)
@@ -282,8 +291,8 @@ class AuthServiceTest {
         user.setPasswordHash("hashed_parola");
         user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
 
-        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("parola123", "hashed_parola")).thenReturn(true);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken(user.getId())).thenReturn("refresh-token");
 
@@ -314,8 +323,8 @@ class AuthServiceTest {
         org.setId(organizationId);
         user.setOrganization(org);
 
-        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("parola123", "hashed_parola")).thenReturn(true);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken(user.getId())).thenReturn("refresh-token");
 

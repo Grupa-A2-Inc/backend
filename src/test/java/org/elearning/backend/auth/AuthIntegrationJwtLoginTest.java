@@ -49,6 +49,8 @@ class AuthIntegrationJwtLoginTest {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private AuthResponse mockAuthResponse() {
+        UUID organizationId = UUID.randomUUID();
+
         UserDataResponse mockUser = new UserDataResponse(
                 UUID.randomUUID(),
                 "Test",
@@ -56,7 +58,7 @@ class AuthIntegrationJwtLoginTest {
                 "test@test.com",
                 RoleName.STUDENT,
                 UserStatus.ACTIVE,
-                "Test Organization"
+                organizationId
         );
 
         return new AuthResponse(
@@ -78,7 +80,7 @@ class AuthIntegrationJwtLoginTest {
     void login_success_returnsAccessToken() throws Exception {
         when(authService.login(any(LoginRequest.class))).thenReturn(mockAuthResponse());
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(mockLoginRequest())))
                 .andExpect(status().isOk())
@@ -89,7 +91,7 @@ class AuthIntegrationJwtLoginTest {
     void login_success_setsRefreshTokenCookie() throws Exception {
         when(authService.login(any(LoginRequest.class))).thenReturn(mockAuthResponse());
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(mockLoginRequest())))
                 .andExpect(status().isOk())
@@ -101,7 +103,7 @@ class AuthIntegrationJwtLoginTest {
     void login_success_accessTokenIsValidJwtFormat() throws Exception {
         when(authService.login(any(LoginRequest.class))).thenReturn(mockAuthResponse());
 
-        String response = mockMvc.perform(post("/auth/login")
+        String response = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(mockLoginRequest())))
                 .andExpect(status().isOk())

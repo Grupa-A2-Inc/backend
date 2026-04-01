@@ -13,10 +13,14 @@ import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +34,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final OrganizationRepository organizationRepository;
     private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -84,26 +89,29 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new InvalidCredentials("Invalid credentials"));
+        try {
+            var authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            User user = userDetails.getUser();
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().getName());
+            String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+
+            UserDataResponse userData = new UserDataResponse(
+                    user.getId(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getEmail(),
+                    user.getRole().getName(),
+                    user.getStatus(),
+                    user.getOrganization() != null ? user.getOrganization().getId() : null
+            );
+
+            return new AuthResponse("Login successful", accessToken, refreshToken, userData);
+        } catch (AuthenticationException ex) {
             throw new InvalidCredentials("Invalid credentials");
         }
-
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().getName());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
-
-        UserDataResponse userData = new UserDataResponse(
-                user.getId(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail(),
-                user.getRole().getName(),
-                user.getStatus(),
-                user.getOrganization() != null ? user.getOrganization().getId() : null
-        );
-
-        return new AuthResponse("Login successful", accessToken, refreshToken, userData);
     }
 }

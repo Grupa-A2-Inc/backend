@@ -84,6 +84,7 @@ class AuthIntegrationTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
+        request.setOrganizationName("Scoala Ion");
         request.setCountry("Romania");
         request.setCity("Bucharest");
         request.setOrganizationType("School");
@@ -91,7 +92,7 @@ class AuthIntegrationTest {
         when(authService.register(any(RegisterRequest.class)))
                 .thenReturn(new AuthResponse("User registered successfully", "access-token", "refresh-token", null));
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -105,6 +106,7 @@ class AuthIntegrationTest {
         request.setPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
+        request.setOrganizationName("Scoala Ion");
         request.setCountry("Romania");
         request.setCity("Bucharest");
         request.setOrganizationType("School");
@@ -112,7 +114,7 @@ class AuthIntegrationTest {
         when(authService.register(any(RegisterRequest.class)))
                 .thenReturn(new AuthResponse("User registered successfully", "access-token", "refresh-token", null));
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -130,6 +132,7 @@ class AuthIntegrationTest {
         request.setCountry("Romania");
         request.setCity("Bucharest");
         request.setOrganizationType("School");
+        request.setOrganizationName("Scoala Ion");
 
         when(authService.register(any(RegisterRequest.class)))
                 .thenThrow(new DuplicateResourceException("Email already in use: dup@test.com"));
@@ -142,8 +145,9 @@ class AuthIntegrationTest {
         request2.setCountry("Romania");
         request2.setCity("Bucharest");
         request2.setOrganizationType("School");
+        request2.setOrganizationName("Scoala Ion");
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request2)))
                 .andExpect(status().isConflict());
@@ -169,11 +173,12 @@ class AuthIntegrationTest {
         request2.setPassword("parola123");
         request2.setFirstName("Ana");
         request2.setLastName("Pop");
+        request2.setOrganizationName("Scoala Noua");
         request2.setCountry("Romania");
         request2.setCity("Bucharest");
         request2.setOrganizationType("School");
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request2)))
                 .andExpect(status().isConflict());
@@ -186,7 +191,7 @@ class AuthIntegrationTest {
         request.setFirstName("Ion");
         request.setLastName("Popescu");
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
@@ -203,7 +208,7 @@ class AuthIntegrationTest {
         when(authService.login(any(LoginRequest.class)))
                 .thenReturn(new AuthResponse("Login successful", "access-token", "refresh-token", null));
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
@@ -219,7 +224,7 @@ class AuthIntegrationTest {
         when(authService.login(any(LoginRequest.class)))
                 .thenThrow(new org.elearning.backend.common.exception.InvalidCredentials("Invalid credentials"));
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isUnauthorized());
@@ -234,7 +239,7 @@ class AuthIntegrationTest {
         when(authService.login(any(LoginRequest.class)))
                 .thenThrow(new org.elearning.backend.common.exception.InvalidCredentials("Invalid credentials"));
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isUnauthorized());
@@ -245,7 +250,7 @@ class AuthIntegrationTest {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setPassword("parola123");
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isBadRequest());
@@ -253,11 +258,12 @@ class AuthIntegrationTest {
 
     @Test
     void login_success_returnsUserData() throws Exception {
-        when(authService.login(any(LoginRequest.class))).thenReturn(mockAuthResponse());
+        AuthResponse response = mockAuthResponse();
+        when(authService.login(any(LoginRequest.class))).thenReturn(response);
 
-        UUID expectedOrganizationId = mockAuthResponse().getUser().getOrganizationId();
+        UUID expectedOrganizationId = response.getUser().getOrganizationId();
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(mockLoginRequest())))
                 .andExpect(status().isOk())
