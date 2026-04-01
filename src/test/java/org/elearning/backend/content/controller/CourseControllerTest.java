@@ -32,13 +32,176 @@ class CourseControllerTest {
         instructorId = UUID.randomUUID();
     }
 
+    private UUID insertCourseWithTitleAndDescription(String title, String description, UUID createdBy) {
+        UUID courseId = UUID.randomUUID();
+        jdbcTemplate.execute(
+                "INSERT INTO courses (id, title, description, created_by, status, visibility) " +
+                        "VALUES ('" + courseId + "', '" + title + "', '" + description + "', '" + createdBy + "', 'DRAFT', 'PRIVATE')"
+        );
+        return courseId;
+    }
     @AfterEach
     void tearDown() {
         jdbcTemplate.execute("DELETE FROM lessons");
         jdbcTemplate.execute("DELETE FROM chapters");
         jdbcTemplate.execute("DELETE FROM courses");
     }
+    /**
+     * GET /api/courses/public
+     * Tests that only published and public courses are returned.
+     */
+    @Test
+    void shouldGetOnlyPublicAndPublishedCourses() {
+        insertCourseWithStatusAndVisibility("Public Course", UUID.randomUUID(), "PUBLISHED", "PUBLIC");
+        insertCourseWithStatusAndVisibility("Draft Private Course", UUID.randomUUID(), "DRAFT", "PRIVATE");
+        insertCourseWithStatusAndVisibility("Published Private Course", UUID.randomUUID(), "PUBLISHED", "PRIVATE");
 
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/courses/public",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Public Course");
+        assertThat(response.getBody()).doesNotContain("Draft Private Course");
+        assertThat(response.getBody()).doesNotContain("Published Private Course");
+    }
+
+    /**
+     * GET /api/courses/public
+     * Tests that an empty list is returned when there are no public courses.
+     */
+    @Test
+    void shouldReturnEmptyListWhenNoPublicCourses() {
+        insertCourseWithStatusAndVisibility("Draft Course", UUID.randomUUID(), "DRAFT", "PRIVATE");
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/courses/public",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("[]");
+    }
+
+    /**
+     * GET /api/courses/my-courses
+     * Tests that only courses created by the hardcoded user are returned.
+     */
+    @Test
+    void shouldGetOnlyMyCoursesForHardcodedUser() {
+        UUID hardcodedUserId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+
+        insertCourse("My Course", hardcodedUserId);
+        insertCourse("Other Course", UUID.randomUUID());
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/courses/my-courses",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("My Course");
+        assertThat(response.getBody()).doesNotContain("Other Course");
+    }
+
+    /**
+     * GET /api/courses/my-courses
+     * Tests that an empty list is returned when the hardcoded user has no courses.
+     */
+    @Test
+    void shouldReturnEmptyListWhenUserHasNoCourses() {
+        insertCourse("Other Course", UUID.randomUUID());
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/courses/my-courses",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("[]");
+    }
+
+    /**
+     * PATCH /api/courses/{id}
+     * Tests that patching only the title leaves other fields unchanged.
+     */
+    @Test
+    void shouldPatchOnlyTitle() {
+        UUID courseId = insertCourse("Original Title", instructorId);
+
+        String body = """
+            {
+                "title": "Patched Title"
+            }
+            """;
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/courses/" + courseId,
+                HttpMethod.PATCH,
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Patched Title");
+
+        String titleInDb = jdbcTemplate.queryForObject(
+                "SELECT title FROM courses WHERE id = '" + courseId + "'",
+                String.class
+        );
+        assertThat(titleInDb).isEqualTo("Patched Title");
+    }
+
+    /**
+     * PATCH /api/courses/{id}
+     * Tests that null fields in the request body do not overwrite existing values.
+     */
+    @Test
+    void shouldNotOverwriteFieldsWithNullOnPatch() {
+        UUID courseId = insertCourseWithTitleAndDescription("Original Title", "Original Description", instructorId);
+
+        String body = """
+            {
+                "title": "Patched Title"
+            }
+            """;
+
+        restTemplate.exchange(
+                "/api/courses/" + courseId,
+                HttpMethod.PATCH,
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        String descriptionInDb = jdbcTemplate.queryForObject(
+                "SELECT description FROM courses WHERE id = '" + courseId + "'",
+                String.class
+        );
+        assertThat(descriptionInDb).isEqualTo("Original Description");
+    }
+
+    /**
+     * PATCH /api/courses/{id}
+     * Tests that patching a non-existent course returns 404.
+     */
+    @Test
+    void shouldReturnNotFoundWhenPatchingInvalidCourse() {
+        String body = """
+            {
+                "title": "Doesn't Matter"
+            }
+            """;
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/courses/" + UUID.randomUUID(),
+                HttpMethod.PATCH,
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
     /**
      * POST /api/courses
      * Tests that creating a new course with valid data returns a 201 Created status

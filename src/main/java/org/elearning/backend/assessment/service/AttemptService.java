@@ -15,6 +15,8 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -81,6 +83,7 @@ public class AttemptService {
      * @throws AttemptAlreadySubmittedException If the attempt has already been submitted.
      * @throws TimerExpiredException            If the time limit for the attempt has expired.
      */
+    private static final Logger log = LoggerFactory.getLogger(AttemptService.class);
     @Transactional
     public TestResultDto submitAttempt(UUID attemptId, UUID studentId,
                                        SubmitRequestDto request) {
@@ -165,7 +168,7 @@ public class AttemptService {
         attemptRepository.save(attempt);
 
         if (test.getAiEnabled()) {
-            // TODO sprint 3: sendToAiAsync(attempt, result);
+            log.debug("TODO: implement sprint3 logic");
         }
 
         return attemptMapper.toTestResultDTO(result);

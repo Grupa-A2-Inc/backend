@@ -39,7 +39,7 @@ public class CourseService {
 
         course.setCreatedBy(createdBy);
         course.setVisibility(CourseVisibility.PRIVATE);
-        
+
         linkChaptersToCourse(course);
         course = courseRepository.saveAndFlush(course);
         return courseFullViewMapper.toCourseFullViewDTO(course);
@@ -163,11 +163,6 @@ public class CourseService {
     public ResponseCourseDto patchCourse(UUID id, UpdateCourseDto updateCourseDto) {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new CourseNotFoundException(id));
-
-        /*if (dto.getTitle() != null) course.setTitle(dto.getTitle());
-        if (dto.getDescription() != null) course.setDescription(dto.getDescription());
-        if (dto.getCategory() != null) course.setCategory(dto.getCategory());
-        if (dto.getStatus() != null) course.setStatus(dto.getStatus());*/
         courseMapper.updateCourseFromDto(updateCourseDto, course);
 
         return courseMapper.toCourseDtoGet(courseRepository.save(course));
