@@ -19,3 +19,7 @@ spring:
       ddl-auto: none
   flyway:
     enabled: true
+
+  logging:
+    file:
+      name: logs/security.log
