@@ -104,7 +104,7 @@ class UserControllerTest {
     }
 
     @Test
-    void updateUser_returns200Ok() {
+    void updateUser_returns204NoContent() {
         UUID id = UUID.randomUUID();
         UpdateUserRequest request = UpdateUserRequest.builder()
                 .email("ana.updated@example.com")
@@ -112,23 +112,10 @@ class UserControllerTest {
                 .lastName("Updated")
                 .build();
 
-        UserResponse responseBody = new UserResponse(
-                id,
-                "ana.updated@example.com",
-                "Ana",
-                "Updated",
-                RoleName.STUDENT,
-                null,
-                UserStatus.ACTIVE
-        );
+        ResponseEntity<Void> response = userController.updateUser(id, request);
 
-        when(userService.updateUser(id, request)).thenReturn(responseBody);
-
-        ResponseEntity<UserResponse> response = userController.updateUser(id, request);
-
-        assertEquals(200, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertEquals("ana.updated@example.com", response.getBody().getEmail());
+        assertEquals(204, response.getStatusCode().value());
+        assertNull(response.getBody());
     }
 
     @Test

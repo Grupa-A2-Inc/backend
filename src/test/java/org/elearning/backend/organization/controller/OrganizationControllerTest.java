@@ -63,16 +63,14 @@ class OrganizationControllerTest {
     }
 
     @Test
-    void updateOrganization_returns200Ok() {
+    void updateOrganization_returns204NoContent() {
         UUID id = UUID.randomUUID();
         UpdateOrganizationRequest request = UpdateOrganizationRequest.builder().name("Updated").build();
-        OrganizationResponse responseBody = makeResponse();
-        when(organizationService.updateOrganization(id, request)).thenReturn(responseBody);
 
-        ResponseEntity<OrganizationResponse> response = organizationController.updateOrganization(id, request);
+        ResponseEntity<Void> response = organizationController.updateOrganization(id, request);
 
-        assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).isSameAs(responseBody);
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(response.getBody()).isNull();
     }
 
     @Test
