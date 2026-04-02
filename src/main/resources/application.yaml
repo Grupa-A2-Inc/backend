@@ -1,12 +1,33 @@
 spring:
+  config:
+    import: optional:file:.env
   application:
     name: backend
+#  autoconfigure:
+#   exclude:
+#      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+#      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
+#      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration
+#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration
+#      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
+#      - org.springframework.boot.actuate.autoconfigure.security.reactive.ReactiveManagementWebSecurityAutoConfiguration
   datasource:
     url: jdbc:postgresql://localhost:5432/adaptive_tutor
     username: user
     password: password
   flyway:
     enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
 
 server:
   port: 8067
+
+logging:
+  file:
+    name: app.log
+  level:
+    root: INFO

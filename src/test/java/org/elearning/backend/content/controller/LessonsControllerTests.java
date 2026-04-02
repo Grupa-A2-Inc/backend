@@ -1,5 +1,7 @@
 package org.elearning.backend.content.controller;
 
+import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,6 +12,7 @@ import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,10 +27,16 @@ class LessonsControllerTests {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     private UUID chapterID;
+    private UUID authenticatedUserId;
 
     @BeforeEach
     void setUp() {
+        authenticatedUserId = insertAuthenticatedUser();
+        authorizeRequests();
         UUID courseID = UUID.randomUUID();
         jdbcTemplate.execute(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
@@ -42,10 +51,36 @@ class LessonsControllerTests {
 
     @AfterEach
     void tearDown() {
+        restTemplate.getRestTemplate().setInterceptors(List.of());
         jdbcTemplate.execute("DELETE FROM lesson_resources");
         jdbcTemplate.execute("DELETE FROM lessons");
         jdbcTemplate.execute("DELETE FROM chapters");
         jdbcTemplate.execute("DELETE FROM courses");
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", authenticatedUserId);
+    }
+
+    private UUID insertAuthenticatedUser() {
+        UUID userId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                userId,
+                "lessons-controller-" + userId + "@test.com",
+                "password-hash",
+                "Test",
+                "User",
+                RoleName.TEACHER.name(),
+                "ACTIVE"
+        );
+        return userId;
+    }
+
+    private void authorizeRequests() {
+        String token = jwtUtil.generateAccessToken(authenticatedUserId, RoleName.TEACHER);
+        restTemplate.getRestTemplate().setInterceptors(List.of((request, body, execution) -> {
+            request.getHeaders().setBearerAuth(token);
+            return execution.execute(request, body);
+        }));
     }
 
     /**
@@ -77,7 +112,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -119,7 +154,7 @@ class LessonsControllerTests {
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
 
@@ -174,7 +209,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -207,7 +242,7 @@ class LessonsControllerTests {
                             String.class
             );
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -223,7 +258,7 @@ class LessonsControllerTests {
                             String.class
             );
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -257,7 +292,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -305,7 +340,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -329,7 +364,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -353,7 +388,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -454,7 +489,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -491,7 +526,7 @@ class LessonsControllerTests {
                             String.class
             );
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**

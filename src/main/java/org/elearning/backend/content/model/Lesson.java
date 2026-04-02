@@ -65,7 +65,7 @@ public class Lesson {
     @Column(name="updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 
-    @OneToMany(mappedBy = "lesson")
+    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LessonResource> lessonResources;
 
 
