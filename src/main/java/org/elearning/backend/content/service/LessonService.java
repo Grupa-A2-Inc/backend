@@ -4,6 +4,9 @@ import jakarta.transaction.Transactional;
 import org.elearning.backend.content.dto.LessonDtoEntity;
 import org.elearning.backend.content.dto.LessonDtoMetadata;
 import org.elearning.backend.content.dto.LessonDtoPost;
+import org.elearning.backend.content.exception.ChapterNotFoundException;
+import org.elearning.backend.content.exception.InvalidOrderIndexException;
+import org.elearning.backend.content.exception.LessonNotFoundException;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.ChapterRepository;
@@ -19,67 +22,64 @@ import java.util.UUID;
 @Service
 public class LessonService {
 
-    //Equivalent expression: @Autowired. IntelliJ says it's safer to implement it this way, however.
-    //JPA makes sure to create the repository automatically
-
     private final LessonRepository lessonRepository;
     private final ChapterRepository chapterRepository;
-    private static final String LESSON_NOT_FOUND = "Lesson not found";
-    private static final String CHAPTER_NOT_FOUND = "Chapter not found";
-    private static final String ORDER_INDEX_NOT_FOUND = "Order Index not found";
 
     public LessonService(LessonRepository lessonRepository, ChapterRepository chapterRepository) {
-
         this.lessonRepository = lessonRepository;
         this.chapterRepository = chapterRepository;
-
     }
 
-
-    //Returns every lesson from a given chapter
-
-    public List<LessonDtoEntity> getAllLessonsFromChapter(UUID chapterID){
-        if(!chapterRepository.existsById(chapterID)){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND);
+    /**
+     * Returns every lesson from a given chapter
+     * @param chapterID the specified chapter's id
+     * @return a list of lessons in DTO format
+     */
+    public List<LessonDtoEntity> getAllLessonsFromChapter(UUID chapterID) {
+        if (!chapterRepository.existsById(chapterID)) {
+            throw new ChapterNotFoundException(chapterID);
         }
         List<Lesson> allLessonsFromChapter = lessonRepository.findLessonOrderByIndex(chapterID);
-
         List<LessonDtoEntity> allLessonsFromChapterDTO = new ArrayList<>();
 
-        for( Lesson eachLesson : allLessonsFromChapter){
+        for (Lesson eachLesson : allLessonsFromChapter) {
             allLessonsFromChapterDTO.add(new LessonDtoEntity(eachLesson));
         }
-
 
         return allLessonsFromChapterDTO;
     }
 
-
-    //Returns the content markdown of a lesson
-    //Throws exception if the lesson does not exist.
-
-    public String getLessonContent(UUID lessonID){
-        if(!lessonRepository.existsById(lessonID)){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND);
+    /**
+     * Returns the content of a lesson.
+     * If the lesson doesn't exist, it will throw an exception instead.
+     *
+     * @param lessonID the specified lesson's id
+     * @return a string representing the content of the lesson
+     */
+    public String getLessonContent(UUID lessonID) {
+        if (!lessonRepository.existsById(lessonID)) {
+            throw new LessonNotFoundException(lessonID);
         }
         return lessonRepository.findContentMarkdown(lessonID)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found"));
     }
 
-    //Creates a new Lesson, with a mandatory associated chapter.
-    //The order will be the biggest inside the lesson table
-    //We return the saved Lesson for the ResponseEntity class inside LessonController
-    //It makes sure to send the HTTP status and the update information
-
-    public LessonDtoEntity createNewLesson(LessonDtoPost modifiableLessonData, UUID chapterID){
+    /**
+     * Creates a new lesson inside a chapter. If the chapter doesn't exist, it will throw an exception instead.
+     *
+     * @param modifiableLessonData the data for the new lesson
+     * @param chapterID           the specified chapter's id
+     * @return the created lesson in DTO format
+     */
+    public LessonDtoEntity createNewLesson(LessonDtoPost modifiableLessonData, UUID chapterID) {
         Chapter chapter = chapterRepository.findById(chapterID)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND));
-        Lesson newLesson = new Lesson();
+                .orElseThrow(() -> new ChapterNotFoundException(chapterID));
 
-        if(modifiableLessonData.getTitle()==null){
+        if (modifiableLessonData.getTitle() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title cannot be null");
         }
 
+        Lesson newLesson = new Lesson();
         newLesson.setTitle(modifiableLessonData.getTitle());
         newLesson.setContentMarkdown(modifiableLessonData.getContentMarkdown());
         newLesson.setChapter(chapter);
@@ -89,117 +89,99 @@ public class LessonService {
         return new LessonDtoEntity(newLesson);
     }
 
-    //Every single update and deletion has a "@Transactional" Tag
-    //Updates the information of the content markdown inside a lesson, if it exists.
-    //We return the saved Lesson for the ResponseEntity class inside LessonController
-    //It makes sure to send the HTTP status and the update information
-
-
+    /**
+     * Updates the content of a lesson. If the lesson doesn't exist, it will throw an exception instead.
+     *
+     * @param lessonID        the specified lesson's id
+     * @param markdownContent the new content for the lesson
+     * @return the updated lesson in DTO format
+     */
     @Transactional
-    public LessonDtoEntity updateLessonMarkdownContent(UUID lessonID, String markdownContent){
-        if(!lessonRepository.existsById(lessonID)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND);
+    public LessonDtoEntity updateLessonMarkdownContent(UUID lessonID, String markdownContent) {
+        if (!lessonRepository.existsById(lessonID)) {
+            throw new LessonNotFoundException(lessonID);
         }
         lessonRepository.updateLessonContentMarkdown(lessonID, markdownContent);
         return new LessonDtoEntity(lessonRepository.findById(lessonID)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND)));
+                .orElseThrow(() -> new LessonNotFoundException(lessonID)));
     }
 
-    //Every single update and deletion has a "@Transactional" Tag
-    //Updates the title of a lesson, if it exists. Otherwise, it throws an exception
-
-
-    private void updateLessonTitle(UUID lessonID, String newTitle){
+    private void updateLessonTitle(UUID lessonID, String newTitle) {
         lessonRepository.updateLessonTitle(lessonID, newTitle);
-
     }
 
-    // Every single update and deletion has a "@Transactional" Tag
-    // Updates the order index of a lesson if:
-    // * The lesson exists
-    // * The lesson exists in a valid chapter
-    // * The new index doesn't go out of bounds
-    // If either condition isn't respected, we throw an exception
-    // We make sure to repair the index order inside the repository. We have two cases:
-    // 1. The previous index is bigger than the newer. In that case, we increment the order index of each element between them
-    // 2. The previous index is small than the newer. In that case, we decrement the order index of each element between them
-
-
-
-    private void updateLessonOrder(UUID lessonID, int newOrderIndex){
-
+    /**
+     * Updates the order index of a lesson. If the lesson doesn't exist or the newOrderIndex is invalid it will throw an exception instead.
+     *
+     * @param lessonID      the specified lesson's id
+     * @param newOrderIndex the new order index for the lesson
+     */
+    private void updateLessonOrder(UUID lessonID, int newOrderIndex) {
         UUID chapterID = lessonRepository.findChapterIdFromID(lessonID)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND));
-
+                .orElseThrow(() -> new ChapterNotFoundException(lessonID));
 
         int lastOrderIndex = lessonRepository.findLastOrderIndex(chapterID).orElse(1);
         int previousOrderIndex = lessonRepository.findOrderIndexFromID(lessonID)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ORDER_INDEX_NOT_FOUND));
+                .orElseThrow(() -> new InvalidOrderIndexException("Order index not found for lesson ID: " + lessonID));
 
-        if(newOrderIndex > lastOrderIndex || newOrderIndex <= 0){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order index out of range");
+        if (newOrderIndex > lastOrderIndex || newOrderIndex <= 0) {
+            throw new InvalidOrderIndexException("Order index out of range");
         }
 
         lessonRepository.updateLessonOrderIndex(lessonID, newOrderIndex, chapterID);
-        if(previousOrderIndex==newOrderIndex){
+        if (previousOrderIndex == newOrderIndex) {
             return;
         }
-        if(previousOrderIndex>newOrderIndex) {
+
+        if (previousOrderIndex > newOrderIndex) {
             lessonRepository.repairLessonOrderIndexAfterOrderChangeBigger(previousOrderIndex, newOrderIndex, chapterID, lessonID);
-        }
-        else {
+        } else {
             lessonRepository.repairLessonOrderIndexAfterOrderChangeSmaller(previousOrderIndex, newOrderIndex, chapterID, lessonID);
         }
-
     }
 
-    // Every single update and deletion has a "@Transactional" Tag
-    // Updates lesson metadata that can be modified, that being the title and the order index
-    // Will only update if the non-null parameters
-    //We return the saved Lesson for the ResponseEntity class inside LessonController
-    //It makes sure to send the HTTP status and the update information
-
+    /**
+     * Partially updates the metadata of a lesson. Only non-null fields in the LessonDtoMetadata will be updated.
+     * If the lesson doesn't exist or the new order index is invalid, it will throw an exception instead.
+     *
+     * @param lessonID         the specified lesson's id
+     * @param lessonDTOMetadata the data for partially updating the lesson's metadata
+     * @return the updated lesson in DTO format
+     */
     @Transactional
-    public LessonDtoEntity updateLessonMetadata(UUID lessonID, LessonDtoMetadata lessonDTOMetadata){
-
-        if(!lessonRepository.existsById(lessonID)){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND);
+    public LessonDtoEntity updateLessonMetadata(UUID lessonID, LessonDtoMetadata lessonDTOMetadata) {
+        if (!lessonRepository.existsById(lessonID)) {
+            throw new LessonNotFoundException(lessonID);
         }
-
-        if(lessonDTOMetadata.getOrderIndex()!=null){
+        if (lessonDTOMetadata.getOrderIndex() != null) {
             updateLessonOrder(lessonID, lessonDTOMetadata.getOrderIndex());
         }
-        if(lessonDTOMetadata.getTitle()!=null){
+        if (lessonDTOMetadata.getTitle() != null) {
             updateLessonTitle(lessonID, lessonDTOMetadata.getTitle());
         }
         lessonRepository.flush();
         return new LessonDtoEntity(lessonRepository.findById(lessonID)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND)));
+                .orElseThrow(() -> new LessonNotFoundException(lessonID)));
     }
 
-    // Every single update and deletion has a "@Transactional" Tag.
-    // Deletes a lesson from the table if it exists, otherwise it throws and error.
-    // It will also throw an exception if, for whatever reason, the lesson didn't have a valid chapterID or order index.
-    // Once we delete the lesson, the method makes sure to repair the order of each element inside the table.
-    // To do that, it increments every order index value situated after the previous deleted.
-    // We return the saved Lesson for the ResponseEntity class inside LessonController
-    // It makes sure to send the HTTP status and the update information
-
+    /**
+     * Deletes a lesson. If the lesson doesn't exist or the new order index is invalid, it will throw an exception instead.
+     *
+     * @param lessonID the specified lesson's id
+     */
     @Transactional
-    public void deleteLesson(UUID lessonID){
-        if(!lessonRepository.existsById(lessonID)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, LESSON_NOT_FOUND);
+    public void deleteLesson(UUID lessonID) {
+        if (!lessonRepository.existsById(lessonID)) {
+            throw new LessonNotFoundException(lessonID);
         }
 
         UUID chapterID = lessonRepository.findChapterIdFromID(lessonID)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CHAPTER_NOT_FOUND));
+                .orElseThrow(() -> new ChapterNotFoundException(lessonID));
 
         Integer orderIndex = lessonRepository.findOrderIndexFromID(lessonID)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ORDER_INDEX_NOT_FOUND));
+                .orElseThrow(() -> new InvalidOrderIndexException("Order index not found for lesson ID: " + lessonID));
 
         lessonRepository.repairLessonOrderIndexAfterDeletion(orderIndex, chapterID);
         lessonRepository.deleteLesson(lessonID);
-
     }
-
 }

@@ -1,0 +1,27 @@
+JWT_SECRET: your-secret-here-at-least-32-bites
+
+spring:
+#  autoconfigure:
+#    exclude:
+#      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+#      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
+#      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration
+#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration
+#      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
+#      - org.springframework.boot.actuate.autoconfigure.security.reactive.ReactiveManagementWebSecurityAutoConfiguration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/adaptive_tutor
+    username: user
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+
+logging:
+  file:
+    name: app.log
+  level:
+    root: INFO
