@@ -1,5 +1,6 @@
 package org.elearning.backend.auth.dto.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.elearning.backend.role.entity.RoleName;
@@ -9,6 +10,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
+@AllArgsConstructor
 public class UserDataResponse {
 
     private UUID id;
@@ -18,16 +20,10 @@ public class UserDataResponse {
     private RoleName role;
     private UserStatus status;
     private UUID organizationId;
-
-    public UserDataResponse(UUID id, String firstName, String lastName,
-                            String email, RoleName role, UserStatus status,
-                            UUID organizationId) {
-        this.id = id;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
-        this.role = role;
-        this.status = status;
-        this.organizationId = organizationId;
-    }
+    private String organizationName;
+    private String organizationType;
+    private String country;
+    private String city;
+    private String organizationPhoneNumber;
+    private String organizationAddress;
 }

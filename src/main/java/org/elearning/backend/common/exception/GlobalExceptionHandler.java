@@ -17,6 +17,17 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler
 {
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<MyErrorBody> handleBadRequestException(BadRequestException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        MyErrorBody errorBody = new MyErrorBody(
+                status.value(),
+                ex.getMessage()
+        );
+
+        return new ResponseEntity<>(errorBody, status);
+    }
+
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<MyErrorBody> handleDuplicateResource(DuplicateResourceException ex){
 

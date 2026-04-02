@@ -20,6 +20,7 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService customUserDetailsService;
+    private static final int LENGTH_OF_BEARER_WORD = 7;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -33,7 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
+            String token = header.substring(LENGTH_OF_BEARER_WORD);
 
             try {
                 CustomUserDetails userDetails = customUserDetailsService.loadUserById(jwtUtil.extractId(token));

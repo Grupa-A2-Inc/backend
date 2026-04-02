@@ -3,6 +3,7 @@ package org.elearning.backend.auth.service;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.request.LoginRequest;
+import org.elearning.backend.common.exception.BadRequestException;
 import org.elearning.backend.common.exception.DuplicateResourceException;
 import org.elearning.backend.common.exception.InvalidCredentials;
 import org.elearning.backend.organization.entity.Organization;
@@ -72,16 +73,26 @@ class AuthServiceTest {
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
 
+    private RegisterRequest validRegisterRequest() {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("test@test.com");
+        request.setPassword("parola123");
+        request.setConfirmPassword("parola123");
+        request.setFirstName("Ion");
+        request.setLastName("Popescu");
+        request.setOrganizationName("Scoala Ion");
+        request.setCountry("Romania");
+        request.setCity("Bucharest");
+        request.setOrganizationType("School");
+        return request;
+    }
+
     // REGISTER
 
     @Test
     void register_emailAlreadyExists_throwsException() {
-        RegisterRequest request = new RegisterRequest();
+        RegisterRequest request = validRegisterRequest();
         request.setEmail("existent@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
 
         when(userRepository.existsByEmail("existent@test.com")).thenReturn(true);
 
@@ -94,12 +105,7 @@ class AuthServiceTest {
 
     @Test
     void register_passwordIsHashed() {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("test@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
+        RegisterRequest request = validRegisterRequest();
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
 
@@ -121,12 +127,8 @@ class AuthServiceTest {
 
     @Test
     void register_organizationAdmin_createsOrganization() {
-        RegisterRequest request = new RegisterRequest();
+        RegisterRequest request = validRegisterRequest();
         request.setEmail("admin@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
 
@@ -147,12 +149,8 @@ class AuthServiceTest {
 
     @Test
     void register_organizationAdmin_duplicateOrgName_throwsException() {
-        RegisterRequest request = new RegisterRequest();
+        RegisterRequest request = validRegisterRequest();
         request.setEmail("admin@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
 
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(organizationRepository.existsByName("Scoala Ion")).thenReturn(true);
@@ -165,13 +163,25 @@ class AuthServiceTest {
     }
 
     @Test
+    void register_passwordConfirmationMismatch_throwsBadRequestException() {
+        RegisterRequest request = validRegisterRequest();
+        request.setConfirmPassword("altaParola123");
+
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(organizationRepository.existsByName(any())).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Passwords do not match");
+
+        verify(roleRepository, never()).findByName(any());
+        verify(userRepository, never()).save(any());
+        verify(organizationRepository, never()).save(any());
+    }
+
+    @Test
     void register_success_returnsAccessToken() {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("test@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
+        RegisterRequest request = validRegisterRequest();
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
 
@@ -192,11 +202,7 @@ class AuthServiceTest {
 
     @Test
     void register_success_returnsUserData() {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("test@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
+        RegisterRequest request = validRegisterRequest();
 
         Role role = new Role(RoleName.ORGANIZATION_ADMIN);
 

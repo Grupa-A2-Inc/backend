@@ -5,6 +5,7 @@ import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.response.UserDataResponse;
+import org.elearning.backend.common.exception.BadRequestException;
 import org.elearning.backend.common.exception.DuplicateResourceException;
 import org.elearning.backend.common.exception.InvalidCredentials;
 import org.elearning.backend.common.exception.ResourceNotFoundException;
@@ -25,6 +26,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -44,6 +47,10 @@ public class AuthService {
 
         if (organizationRepository.existsByName(request.getOrganizationName())) {
             throw new DuplicateResourceException("Organization name already exists: " + request.getOrganizationName());
+        }
+
+        if (!Objects.equals(request.getConfirmPassword(), request.getPassword())) {
+            throw new BadRequestException("Passwords do not match");
         }
 
         Role role = roleRepository.findByName(RoleName.ORGANIZATION_ADMIN)
@@ -82,7 +89,13 @@ public class AuthService {
                 savedUser.getEmail(),
                 RoleName.ORGANIZATION_ADMIN,
                 savedUser.getStatus(),
-                savedOrganization.getId()
+                savedOrganization.getId(),
+                savedOrganization.getName(),
+                savedOrganization.getOrganizationType(),
+                savedOrganization.getCountry(),
+                savedOrganization.getCity(),
+                savedOrganization.getPhoneNumber(),
+                savedOrganization.getAddress()
         );
 
         return new AuthResponse("User registered successfully", accessToken, refreshToken, userData);
@@ -106,7 +119,13 @@ public class AuthService {
                     user.getEmail(),
                     user.getRole().getName(),
                     user.getStatus(),
-                    user.getOrganization() != null ? user.getOrganization().getId() : null
+                    user.getOrganization() != null ? user.getOrganization().getId() : null,
+                    user.getOrganization() != null ? user.getOrganization().getName() : null,
+                    user.getOrganization() != null ? user.getOrganization().getOrganizationType() : null,
+                    user.getOrganization() != null ? user.getOrganization().getCountry() : null,
+                    user.getOrganization() != null ? user.getOrganization().getCity() : null,
+                    user.getOrganization() != null ? user.getOrganization().getPhoneNumber() : null,
+                    user.getOrganization() != null ? user.getOrganization().getAddress() : null
             );
 
             return new AuthResponse("Login successful", accessToken, refreshToken, userData);

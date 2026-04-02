@@ -58,7 +58,13 @@ class AuthIntegrationJwtLoginTest {
                 "test@test.com",
                 RoleName.STUDENT,
                 UserStatus.ACTIVE,
-                organizationId
+                organizationId,
+                "Test Academy",
+                "School",
+                "Romania",
+                "Bucharest",
+                "0712345678",
+                "Test Street 1"
         );
 
         return new AuthResponse(

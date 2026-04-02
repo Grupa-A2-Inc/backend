@@ -15,6 +15,7 @@ import java.util.UUID;
 
 @Component
 public class JwtUtil {
+
     @Value("${JWT_SECRET}")
     private String secret;
 
