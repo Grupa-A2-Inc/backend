@@ -11,6 +11,18 @@ class GlobalExceptionHandlerTest {
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     @Test
+    void handleBadRequestException_returns400() {
+        BadRequestException ex = new BadRequestException("Passwords do not match");
+
+        ResponseEntity<MyErrorBody> response = handler.handleBadRequestException(ex);
+
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(400, response.getBody().getStatus());
+        assertEquals("Passwords do not match", response.getBody().getMessage());
+    }
+
+    @Test
     void handleDuplicateResource_returns409() {
         DuplicateResourceException ex =
                 new DuplicateResourceException("Email already exists: ana@example.com");

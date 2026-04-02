@@ -19,7 +19,13 @@ class AuthResponseTest {
                 "ana@example.com",
                 RoleName.STUDENT,
                 UserStatus.ACTIVE,
-                UUID.randomUUID()
+                UUID.randomUUID(),
+                "Example Academy",
+                "School",
+                "Romania",
+                "Cluj-Napoca",
+                "0711111111",
+                "Example Street 10"
         );
 
         AuthResponse response = new AuthResponse("Login successful", "access-token", "refresh-token", user);

@@ -20,6 +20,8 @@ spring:
   flyway:
     enabled: true
 
-  logging:
-    file:
-      name: logs/security.log
+logging:
+  file:
+    name: app.log
+  level:
+    root: INFO

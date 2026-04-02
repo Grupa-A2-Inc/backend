@@ -18,15 +18,18 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,7 +60,13 @@ class AuthIntegrationTest {
                 "test@test.com",
                 RoleName.STUDENT,
                 UserStatus.ACTIVE,
-                organizationId
+                organizationId,
+                "Test Academy",
+                "School",
+                "Romania",
+                "Bucharest",
+                "0712345678",
+                "Test Street 1"
         );
 
         return new AuthResponse(
@@ -75,19 +84,25 @@ class AuthIntegrationTest {
         return loginRequest;
     }
 
-    // REGISTER
-
-    @Test
-    void register_organizationAdmin_success_returns200() throws Exception {
+    private RegisterRequest validRegisterRequest() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("admin@test.com");
         request.setPassword("parola123");
+        request.setConfirmPassword("parola123");
         request.setFirstName("Ion");
         request.setLastName("Popescu");
         request.setOrganizationName("Scoala Ion");
         request.setCountry("Romania");
         request.setCity("Bucharest");
         request.setOrganizationType("School");
+        return request;
+    }
+
+    // REGISTER
+
+    @Test
+    void register_organizationAdmin_success_returns200() throws Exception {
+        RegisterRequest request = validRegisterRequest();
 
         when(authService.register(any(RegisterRequest.class)))
                 .thenReturn(new AuthResponse("User registered successfully", "access-token", "refresh-token", null));
@@ -101,15 +116,7 @@ class AuthIntegrationTest {
 
     @Test
     void register_organizationAdmin_delegatesToAuthService() throws Exception {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("admin@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
-        request.setCountry("Romania");
-        request.setCity("Bucharest");
-        request.setOrganizationType("School");
+        RegisterRequest request = validRegisterRequest();
 
         when(authService.register(any(RegisterRequest.class)))
                 .thenReturn(new AuthResponse("User registered successfully", "access-token", "refresh-token", null));
@@ -124,28 +131,14 @@ class AuthIntegrationTest {
 
     @Test
     void register_duplicateEmail_returns409() throws Exception {
-        RegisterRequest request = new RegisterRequest();
+        RegisterRequest request = validRegisterRequest();
         request.setEmail("dup@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setCountry("Romania");
-        request.setCity("Bucharest");
-        request.setOrganizationType("School");
-        request.setOrganizationName("Scoala Ion");
 
         when(authService.register(any(RegisterRequest.class)))
                 .thenThrow(new DuplicateResourceException("Email already in use: dup@test.com"));
 
-        RegisterRequest request2 = new RegisterRequest();
+        RegisterRequest request2 = validRegisterRequest();
         request2.setEmail("dup@test.com");
-        request2.setPassword("parola123");
-        request2.setFirstName("Ion");
-        request2.setLastName("Popescu");
-        request2.setCountry("Romania");
-        request2.setCity("Bucharest");
-        request2.setOrganizationType("School");
-        request2.setOrganizationName("Scoala Ion");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -155,28 +148,15 @@ class AuthIntegrationTest {
 
     @Test
     void register_duplicateOrgName_returns409() throws Exception {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("admin@test.com");
-        request.setPassword("parola123");
-        request.setFirstName("Ion");
-        request.setLastName("Popescu");
-        request.setOrganizationName("Scoala Ion");
-        request.setCountry("Romania");
-        request.setCity("Bucharest");
-        request.setOrganizationType("School");
 
         when(authService.register(any(RegisterRequest.class)))
                 .thenThrow(new DuplicateResourceException("Organization name already exists: Scoala Ion"));
 
-        RegisterRequest request2 = new RegisterRequest();
+        RegisterRequest request2 = validRegisterRequest();
         request2.setEmail("admin2@test.com");
-        request2.setPassword("parola123");
         request2.setFirstName("Ana");
         request2.setLastName("Pop");
         request2.setOrganizationName("Scoala Noua");
-        request2.setCountry("Romania");
-        request2.setCity("Bucharest");
-        request2.setOrganizationType("School");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -212,7 +192,9 @@ class AuthIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Login successful"));
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("refresh_token=refresh-token")))
+                .andExpect(jsonPath("$.message").value("Login successful"))
+                .andExpect(jsonPath("$.refreshToken").isEmpty());
     }
 
     @Test
@@ -272,6 +254,12 @@ class AuthIntegrationTest {
                 .andExpect(jsonPath("$.user.lastName").value("User"))
                 .andExpect(jsonPath("$.user.role").value("STUDENT"))
                 .andExpect(jsonPath("$.user.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.user.organizationId").value(expectedOrganizationId.toString()));
+                .andExpect(jsonPath("$.user.organizationId").value(expectedOrganizationId.toString()))
+                .andExpect(jsonPath("$.user.organizationName").value("Test Academy"))
+                .andExpect(jsonPath("$.user.organizationType").value("School"))
+                .andExpect(jsonPath("$.user.country").value("Romania"))
+                .andExpect(jsonPath("$.user.city").value("Bucharest"))
+                .andExpect(jsonPath("$.user.organizationPhoneNumber").value("0712345678"))
+                .andExpect(jsonPath("$.user.organizationAddress").value("Test Street 1"));
     }
 }
