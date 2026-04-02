@@ -35,9 +35,10 @@ public class OrganizationController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OrganizationResponse> updateOrganization(@PathVariable UUID id,
-                                                                   @RequestBody UpdateOrganizationRequest request) {
-        return ResponseEntity.ok(organizationService.updateOrganization(id, request));
+    public ResponseEntity<Void> updateOrganization(@PathVariable UUID id,
+                                                   @RequestBody UpdateOrganizationRequest request) {
+        organizationService.updateOrganization(id, request);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     @DeleteMapping("/{id}")
