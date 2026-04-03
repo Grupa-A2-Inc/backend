@@ -209,7 +209,7 @@ public class TestService {
             Might be modified by the scrum masters if they don't think this is a good way to handle it
              */
 
-            if(!testRepository.existsByIdAndByCreatedBy(testId,userId)){
+            if(!testRepository.existsByIdAndCreatedBy(testId,userId)){
                 throw new UserHasNoPermissionException("Only the test's author can access this field");
             }
             return professorGetListOfQuestions(testId);
