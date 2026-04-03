@@ -1,7 +1,6 @@
 package org.elearning.backend.assessment.mapper;
 
-import org.elearning.backend.assessment.dto.OptionForStudentDto;
-import org.elearning.backend.assessment.dto.QuestionForStudentDto;
+import org.elearning.backend.assessment.dto.*;
 import org.elearning.backend.assessment.model.Question;
 import org.elearning.backend.assessment.model.QuestionOption;
 import org.mapstruct.Mapper;
@@ -28,4 +27,14 @@ public interface QuestionMapper {
      */
     @Mapping(target = "optionId", source = "id")
     OptionForStudentDto toOptionForStudentDTO(QuestionOption option);
+
+    Question toEntity(QuestionRequestDto dto);
+
+    QuestionOption toOptionEntity(OptionRequestDto dto);
+
+    @Mapping(target = "questionId", source = "id")
+    QuestionResponseDto toResponseDto(Question question);
+
+    @Mapping(target = "optionId", source = "id")
+    OptionResponseDto toOptionResponseDto(QuestionOption option);
 }
