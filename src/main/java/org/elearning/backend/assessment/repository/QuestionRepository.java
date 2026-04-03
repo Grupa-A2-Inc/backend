@@ -14,4 +14,6 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
     List<Question> findByTestIdWithOptions(@Param("testId") UUID testId);
 
     List<Question> findByTestIdAndIsActiveTrue(UUID testId);
+
+    List<Question> findByTestId(UUID testId);
 }
