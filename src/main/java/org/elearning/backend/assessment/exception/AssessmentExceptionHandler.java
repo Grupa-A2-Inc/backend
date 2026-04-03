@@ -42,7 +42,7 @@ public class AssessmentExceptionHandler extends GlobalExceptionHandler {
     }
 
     @ExceptionHandler(LessonAlreadyHasTestException.class)
-    public ResponseEntity<Map<String, Object>> handleAlreadySubmitted(LessonAlreadyHasTestException exception) {
+    public ResponseEntity<Map<String, Object>> handleAlreadyHasTest(LessonAlreadyHasTestException exception) {
         return buildErrorResponse(exception, HttpStatus.CONFLICT);
     }
 
@@ -53,6 +53,11 @@ public class AssessmentExceptionHandler extends GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidAttemptUserException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidAttemptUser(InvalidAttemptUserException exception) {
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(UserHasNoPermissionException.class)
+    public ResponseEntity<Map<String, Object>> handleNoPermission(UserHasNoPermissionException exception) {
         return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
     }
 

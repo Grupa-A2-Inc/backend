@@ -31,6 +31,8 @@ public interface TestRepository extends JpaRepository<Test, UUID> {
     @Query("SELECT COUNT(*) FROM Test t WHERE t.lessonId = :lessonId")
     Integer lessonHasTest(@Param("lessonId") UUID lessonId);
 
+    boolean existsByIdAndByCreatedBy(UUID testId, UUID createdBy);
+
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Test t SET t.status=:status WHERE t.id = :testId")
     void updateTestStatus(@Param("status")TestStatus status,
