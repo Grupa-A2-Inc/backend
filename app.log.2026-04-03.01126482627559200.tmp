@@ -1,0 +1,629 @@
+2026-04-03T15:48:25.959+03:00  INFO 2280 --- [backend] [main] o.elearning.backend.BackendApplication   : Starting BackendApplication using Java 17.0.18 with PID 2280 (E:\PROIECT BACKEND A2\backend\target\classes started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T15:48:25.962+03:00  INFO 2280 --- [backend] [main] o.elearning.backend.BackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-04-03T15:48:27.676+03:00  INFO 2280 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-03T15:48:27.822+03:00  INFO 2280 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 131 ms. Found 13 JPA repository interfaces.
+2026-04-03T15:48:28.998+03:00  INFO 2280 --- [backend] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8067 (http)
+2026-04-03T15:48:29.015+03:00  INFO 2280 --- [backend] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-03T15:48:29.016+03:00  INFO 2280 --- [backend] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.36]
+2026-04-03T15:48:29.106+03:00  INFO 2280 --- [backend] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-03T15:48:29.106+03:00  INFO 2280 --- [backend] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3078 ms
+2026-04-03T15:48:29.335+03:00 ERROR 2280 --- [backend] [main] o.s.b.web.embedded.tomcat.TomcatStarter  : Error starting Tomcat context. Exception: org.springframework.beans.factory.UnsatisfiedDependencyException. Message: Error creating bean with name 'jwtAuthenticationFilter' defined in file [E:\PROIECT BACKEND A2\backend\target\classes\org\elearning\backend\security\jwt\JwtAuthenticationFilter.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'jwtUtil': Injection of autowired dependencies failed
+2026-04-03T15:48:29.374+03:00  INFO 2280 --- [backend] [main] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+2026-04-03T15:48:29.389+03:00  WARN 2280 --- [backend] [main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Unable to start web server
+2026-04-03T15:48:29.409+03:00  INFO 2280 --- [backend] [main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-04-03T15:48:29.429+03:00 ERROR 2280 --- [backend] [main] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.context.ApplicationContextException: Unable to start web server
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:170) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:621) ~[spring-context-6.2.3.jar:6.2.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.elearning.backend.BackendApplication.main(BackendApplication.java:10) ~[classes/:na]
+Caused by: org.springframework.boot.web.server.WebServerException: Unable to start embedded Tomcat
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:147) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.<init>(TomcatWebServer.java:107) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getTomcatWebServer(TomcatServletWebServerFactory.java:520) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getWebServer(TomcatServletWebServerFactory.java:222) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.createWebServer(ServletWebServerApplicationContext.java:193) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:167) ~[spring-boot-3.4.3.jar:3.4.3]
+	... 8 common frames omitted
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'jwtAuthenticationFilter' defined in file [E:\PROIECT BACKEND A2\backend\target\classes\org\elearning\backend\security\jwt\JwtAuthenticationFilter.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'jwtUtil': Injection of autowired dependencies failed
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:240) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1381) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1218) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:563) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:346) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:207) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.getOrderedBeansOfType(ServletContextInitializerBeans.java:211) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:174) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:169) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAdaptableBeans(ServletContextInitializerBeans.java:154) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.<init>(ServletContextInitializerBeans.java:87) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.getServletContextInitializerBeans(ServletWebServerApplicationContext.java:271) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.selfInitialize(ServletWebServerApplicationContext.java:245) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatStarter.onStartup(TomcatStarter.java:52) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.apache.catalina.core.StandardContext.startInternal(StandardContext.java:4467) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1203) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1193) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:75) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:749) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardHost.startInternal(StandardHost.java:772) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1203) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1193) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:75) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:749) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardEngine.startInternal(StandardEngine.java:203) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardService.startInternal(StandardService.java:415) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardServer.startInternal(StandardServer.java:870) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.startup.Tomcat.start(Tomcat.java:437) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:128) ~[spring-boot-3.4.3.jar:3.4.3]
+	... 13 common frames omitted
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'jwtUtil': Injection of autowired dependencies failed
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:515) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1445) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:600) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:346) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1606) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1552) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791) ~[spring-beans-6.2.3.jar:6.2.3]
+	... 54 common frames omitted
+Caused by: org.springframework.util.PlaceholderResolutionException: Could not resolve placeholder 'JWT_SECRET' in value "${JWT_SECRET}"
+	at org.springframework.util.PlaceholderResolutionException.withValue(PlaceholderResolutionException.java:81) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PlaceholderParser$ParsedValue.resolve(PlaceholderParser.java:423) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PlaceholderParser.replacePlaceholders(PlaceholderParser.java:128) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PropertyPlaceholderHelper.parseStringValue(PropertyPlaceholderHelper.java:118) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PropertyPlaceholderHelper.replacePlaceholders(PropertyPlaceholderHelper.java:114) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.core.env.AbstractPropertyResolver.doResolvePlaceholders(AbstractPropertyResolver.java:255) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.core.env.AbstractPropertyResolver.resolveRequiredPlaceholders(AbstractPropertyResolver.java:226) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.context.support.PropertySourcesPlaceholderConfigurer.lambda$processProperties$0(PropertySourcesPlaceholderConfigurer.java:201) ~[spring-context-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.resolveEmbeddedValue(AbstractBeanFactory.java:971) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1574) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1552) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:785) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:768) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:146) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:509) ~[spring-beans-6.2.3.jar:6.2.3]
+	... 65 common frames omitted
+
+2026-04-03T15:54:54.198+03:00  INFO 31256 --- [backend] [main] o.elearning.backend.BackendApplication   : Starting BackendApplication using Java 17.0.18 with PID 31256 (E:\PROIECT BACKEND A2\backend\target\classes started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T15:54:54.201+03:00  INFO 31256 --- [backend] [main] o.elearning.backend.BackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-04-03T15:54:55.701+03:00  INFO 31256 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-03T15:54:55.842+03:00  INFO 31256 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 128 ms. Found 13 JPA repository interfaces.
+2026-04-03T15:54:56.847+03:00  INFO 31256 --- [backend] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8067 (http)
+2026-04-03T15:54:56.860+03:00  INFO 31256 --- [backend] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-03T15:54:56.861+03:00  INFO 31256 --- [backend] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.36]
+2026-04-03T15:54:56.940+03:00  INFO 31256 --- [backend] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-03T15:54:56.941+03:00  INFO 31256 --- [backend] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2689 ms
+2026-04-03T15:54:57.166+03:00 ERROR 31256 --- [backend] [main] o.s.b.web.embedded.tomcat.TomcatStarter  : Error starting Tomcat context. Exception: org.springframework.beans.factory.UnsatisfiedDependencyException. Message: Error creating bean with name 'jwtAuthenticationFilter' defined in file [E:\PROIECT BACKEND A2\backend\target\classes\org\elearning\backend\security\jwt\JwtAuthenticationFilter.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'jwtUtil': Injection of autowired dependencies failed
+2026-04-03T15:54:57.193+03:00  INFO 31256 --- [backend] [main] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+2026-04-03T15:54:57.203+03:00  WARN 31256 --- [backend] [main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Unable to start web server
+2026-04-03T15:54:57.221+03:00  INFO 31256 --- [backend] [main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-04-03T15:54:57.236+03:00 ERROR 31256 --- [backend] [main] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.context.ApplicationContextException: Unable to start web server
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:170) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:621) ~[spring-context-6.2.3.jar:6.2.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.elearning.backend.BackendApplication.main(BackendApplication.java:10) ~[classes/:na]
+Caused by: org.springframework.boot.web.server.WebServerException: Unable to start embedded Tomcat
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:147) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.<init>(TomcatWebServer.java:107) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getTomcatWebServer(TomcatServletWebServerFactory.java:520) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getWebServer(TomcatServletWebServerFactory.java:222) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.createWebServer(ServletWebServerApplicationContext.java:193) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:167) ~[spring-boot-3.4.3.jar:3.4.3]
+	... 8 common frames omitted
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'jwtAuthenticationFilter' defined in file [E:\PROIECT BACKEND A2\backend\target\classes\org\elearning\backend\security\jwt\JwtAuthenticationFilter.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'jwtUtil': Injection of autowired dependencies failed
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:240) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1381) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1218) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:563) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:346) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:207) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.getOrderedBeansOfType(ServletContextInitializerBeans.java:211) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:174) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:169) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAdaptableBeans(ServletContextInitializerBeans.java:154) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.<init>(ServletContextInitializerBeans.java:87) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.getServletContextInitializerBeans(ServletWebServerApplicationContext.java:271) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.selfInitialize(ServletWebServerApplicationContext.java:245) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatStarter.onStartup(TomcatStarter.java:52) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.apache.catalina.core.StandardContext.startInternal(StandardContext.java:4467) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1203) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1193) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:75) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:749) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardHost.startInternal(StandardHost.java:772) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1203) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1193) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:75) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:749) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardEngine.startInternal(StandardEngine.java:203) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardService.startInternal(StandardService.java:415) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardServer.startInternal(StandardServer.java:870) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.startup.Tomcat.start(Tomcat.java:437) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:128) ~[spring-boot-3.4.3.jar:3.4.3]
+	... 13 common frames omitted
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'jwtUtil': Injection of autowired dependencies failed
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:515) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1445) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:600) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:346) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1606) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1552) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791) ~[spring-beans-6.2.3.jar:6.2.3]
+	... 54 common frames omitted
+Caused by: org.springframework.util.PlaceholderResolutionException: Could not resolve placeholder 'JWT_SECRET' in value "${JWT_SECRET}"
+	at org.springframework.util.PlaceholderResolutionException.withValue(PlaceholderResolutionException.java:81) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PlaceholderParser$ParsedValue.resolve(PlaceholderParser.java:423) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PlaceholderParser.replacePlaceholders(PlaceholderParser.java:128) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PropertyPlaceholderHelper.parseStringValue(PropertyPlaceholderHelper.java:118) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PropertyPlaceholderHelper.replacePlaceholders(PropertyPlaceholderHelper.java:114) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.core.env.AbstractPropertyResolver.doResolvePlaceholders(AbstractPropertyResolver.java:255) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.core.env.AbstractPropertyResolver.resolveRequiredPlaceholders(AbstractPropertyResolver.java:226) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.context.support.PropertySourcesPlaceholderConfigurer.lambda$processProperties$0(PropertySourcesPlaceholderConfigurer.java:201) ~[spring-context-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.resolveEmbeddedValue(AbstractBeanFactory.java:971) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1574) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1552) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:785) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:768) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:146) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:509) ~[spring-beans-6.2.3.jar:6.2.3]
+	... 65 common frames omitted
+
+2026-04-03T16:05:16.691+03:00  INFO 15448 --- [backend] [main] o.elearning.backend.BackendApplication   : Starting BackendApplication using Java 17.0.18 with PID 15448 (E:\PROIECT BACKEND A2\backend\target\classes started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T16:05:16.694+03:00  INFO 15448 --- [backend] [main] o.elearning.backend.BackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-04-03T16:05:18.119+03:00  INFO 15448 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-03T16:05:18.258+03:00  INFO 15448 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 127 ms. Found 13 JPA repository interfaces.
+2026-04-03T16:05:19.268+03:00  INFO 15448 --- [backend] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8067 (http)
+2026-04-03T16:05:19.280+03:00  INFO 15448 --- [backend] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-03T16:05:19.280+03:00  INFO 15448 --- [backend] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.36]
+2026-04-03T16:05:19.351+03:00  INFO 15448 --- [backend] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-03T16:05:19.352+03:00  INFO 15448 --- [backend] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2591 ms
+2026-04-03T16:05:19.573+03:00 ERROR 15448 --- [backend] [main] o.s.b.web.embedded.tomcat.TomcatStarter  : Error starting Tomcat context. Exception: org.springframework.beans.factory.UnsatisfiedDependencyException. Message: Error creating bean with name 'jwtAuthenticationFilter' defined in file [E:\PROIECT BACKEND A2\backend\target\classes\org\elearning\backend\security\jwt\JwtAuthenticationFilter.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'jwtUtil': Injection of autowired dependencies failed
+2026-04-03T16:05:19.601+03:00  INFO 15448 --- [backend] [main] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+2026-04-03T16:05:19.611+03:00  WARN 15448 --- [backend] [main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Unable to start web server
+2026-04-03T16:05:19.632+03:00  INFO 15448 --- [backend] [main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-04-03T16:05:19.647+03:00 ERROR 15448 --- [backend] [main] o.s.boot.SpringApplication               : Application run failed
+
+org.springframework.context.ApplicationContextException: Unable to start web server
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:170) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:621) ~[spring-context-6.2.3.jar:6.2.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.elearning.backend.BackendApplication.main(BackendApplication.java:10) ~[classes/:na]
+Caused by: org.springframework.boot.web.server.WebServerException: Unable to start embedded Tomcat
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:147) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.<init>(TomcatWebServer.java:107) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getTomcatWebServer(TomcatServletWebServerFactory.java:520) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getWebServer(TomcatServletWebServerFactory.java:222) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.createWebServer(ServletWebServerApplicationContext.java:193) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:167) ~[spring-boot-3.4.3.jar:3.4.3]
+	... 8 common frames omitted
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'jwtAuthenticationFilter' defined in file [E:\PROIECT BACKEND A2\backend\target\classes\org\elearning\backend\security\jwt\JwtAuthenticationFilter.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'jwtUtil': Injection of autowired dependencies failed
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:804) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:240) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1381) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1218) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:563) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:346) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:207) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.getOrderedBeansOfType(ServletContextInitializerBeans.java:211) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:174) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:169) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAdaptableBeans(ServletContextInitializerBeans.java:154) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.<init>(ServletContextInitializerBeans.java:87) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.getServletContextInitializerBeans(ServletWebServerApplicationContext.java:271) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.selfInitialize(ServletWebServerApplicationContext.java:245) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.springframework.boot.web.embedded.tomcat.TomcatStarter.onStartup(TomcatStarter.java:52) ~[spring-boot-3.4.3.jar:3.4.3]
+	at org.apache.catalina.core.StandardContext.startInternal(StandardContext.java:4467) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1203) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1193) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:75) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:749) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardHost.startInternal(StandardHost.java:772) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1203) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1193) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:75) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:749) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardEngine.startInternal(StandardEngine.java:203) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardService.startInternal(StandardService.java:415) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.core.StandardServer.startInternal(StandardServer.java:870) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.apache.catalina.startup.Tomcat.start(Tomcat.java:437) ~[tomcat-embed-core-10.1.36.jar:10.1.36]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:128) ~[spring-boot-3.4.3.jar:3.4.3]
+	... 13 common frames omitted
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'jwtUtil': Injection of autowired dependencies failed
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:515) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1445) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:600) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:346) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1606) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1552) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791) ~[spring-beans-6.2.3.jar:6.2.3]
+	... 54 common frames omitted
+Caused by: org.springframework.util.PlaceholderResolutionException: Could not resolve placeholder 'JWT_SECRET' in value "${JWT_SECRET}"
+	at org.springframework.util.PlaceholderResolutionException.withValue(PlaceholderResolutionException.java:81) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PlaceholderParser$ParsedValue.resolve(PlaceholderParser.java:423) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PlaceholderParser.replacePlaceholders(PlaceholderParser.java:128) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PropertyPlaceholderHelper.parseStringValue(PropertyPlaceholderHelper.java:118) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.util.PropertyPlaceholderHelper.replacePlaceholders(PropertyPlaceholderHelper.java:114) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.core.env.AbstractPropertyResolver.doResolvePlaceholders(AbstractPropertyResolver.java:255) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.core.env.AbstractPropertyResolver.resolveRequiredPlaceholders(AbstractPropertyResolver.java:226) ~[spring-core-6.2.3.jar:6.2.3]
+	at org.springframework.context.support.PropertySourcesPlaceholderConfigurer.lambda$processProperties$0(PropertySourcesPlaceholderConfigurer.java:201) ~[spring-context-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.resolveEmbeddedValue(AbstractBeanFactory.java:971) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1574) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1552) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:785) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:768) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:146) ~[spring-beans-6.2.3.jar:6.2.3]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:509) ~[spring-beans-6.2.3.jar:6.2.3]
+	... 65 common frames omitted
+
+2026-04-03T16:15:22.952+03:00  INFO 26760 --- [backend] [main] o.elearning.backend.BackendApplication   : Starting BackendApplication using Java 17.0.18 with PID 26760 (E:\PROIECT BACKEND A2\backend\target\classes started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T16:15:22.956+03:00  INFO 26760 --- [backend] [main] o.elearning.backend.BackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-04-03T16:15:24.395+03:00  INFO 26760 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-03T16:15:24.536+03:00  INFO 26760 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 131 ms. Found 13 JPA repository interfaces.
+2026-04-03T16:15:25.575+03:00  INFO 26760 --- [backend] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8067 (http)
+2026-04-03T16:15:25.588+03:00  INFO 26760 --- [backend] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-03T16:15:25.588+03:00  INFO 26760 --- [backend] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.36]
+2026-04-03T16:15:25.667+03:00  INFO 26760 --- [backend] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-03T16:15:25.668+03:00  INFO 26760 --- [backend] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2652 ms
+2026-04-03T16:15:26.258+03:00  INFO 26760 --- [backend] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-03T16:15:26.536+03:00  INFO 26760 --- [backend] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6f4adaab
+2026-04-03T16:15:26.538+03:00  INFO 26760 --- [backend] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-03T16:15:26.582+03:00  INFO 26760 --- [backend] [main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/adaptive_tutor (PostgreSQL 15.17)
+2026-04-03T16:15:26.707+03:00  INFO 26760 --- [backend] [main] o.f.core.internal.command.DbValidate     : Successfully validated 4 migrations (execution time 00:00.071s)
+2026-04-03T16:15:26.750+03:00  INFO 26760 --- [backend] [main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 1
+2026-04-03T16:15:26.795+03:00  INFO 26760 --- [backend] [main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "2 - create user tables"
+2026-04-03T16:15:26.969+03:00  INFO 26760 --- [backend] [main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "3 - create organizations tables"
+2026-04-03T16:15:27.060+03:00  INFO 26760 --- [backend] [main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "4 - create assestment tables"
+2026-04-03T16:15:27.308+03:00  INFO 26760 --- [backend] [main] o.f.core.internal.command.DbMigrate      : Successfully applied 3 migrations to schema "public", now at version v4 (execution time 00:00.415s)
+2026-04-03T16:15:27.467+03:00  INFO 26760 --- [backend] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-03T16:15:27.620+03:00  INFO 26760 --- [backend] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.8.Final
+2026-04-03T16:15:27.692+03:00  INFO 26760 --- [backend] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-03T16:15:28.151+03:00  INFO 26760 --- [backend] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-03T16:15:28.280+03:00  INFO 26760 --- [backend] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.17
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-03T16:15:30.169+03:00  INFO 26760 --- [backend] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-03T16:15:30.287+03:00  INFO 26760 --- [backend] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T16:15:31.106+03:00  INFO 26760 --- [backend] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-03T16:15:32.695+03:00  WARN 26760 --- [backend] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-03T16:15:32.758+03:00  INFO 26760 --- [backend] [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-04-03T16:15:32.759+03:00  WARN 26760 --- [backend] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-04-03T16:15:33.405+03:00  INFO 26760 --- [backend] [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-04-03T16:15:34.402+03:00  INFO 26760 --- [backend] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8067 (http) with context path '/'
+2026-04-03T16:15:34.423+03:00  INFO 26760 --- [backend] [main] o.elearning.backend.BackendApplication   : Started BackendApplication in 12.205 seconds (process running for 12.834)
+2026-04-03T16:34:06.965+03:00  INFO 26760 --- [backend] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-03T16:34:07.372+03:00  INFO 26760 --- [backend] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-04-03T16:34:07.382+03:00  INFO 26760 --- [backend] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T16:34:07.386+03:00  INFO 26760 --- [backend] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-04-03T16:34:07.394+03:00  INFO 26760 --- [backend] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-04-03T18:48:07.064+03:00  INFO 21312 --- [backend] [main] o.elearning.backend.BackendApplication   : Starting BackendApplication using Java 17.0.18 with PID 21312 (E:\PROIECT BACKEND A2\backend\target\classes started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T18:48:07.070+03:00  INFO 21312 --- [backend] [main] o.elearning.backend.BackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-04-03T18:48:08.755+03:00  INFO 21312 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-03T18:48:08.887+03:00  INFO 21312 --- [backend] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 120 ms. Found 13 JPA repository interfaces.
+2026-04-03T18:48:09.730+03:00  INFO 21312 --- [backend] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8067 (http)
+2026-04-03T18:48:09.742+03:00  INFO 21312 --- [backend] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-03T18:48:09.742+03:00  INFO 21312 --- [backend] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.36]
+2026-04-03T18:48:09.808+03:00  INFO 21312 --- [backend] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-03T18:48:09.809+03:00  INFO 21312 --- [backend] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2682 ms
+2026-04-03T18:48:10.191+03:00  INFO 21312 --- [backend] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-03T18:48:10.361+03:00  INFO 21312 --- [backend] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@54687fd0
+2026-04-03T18:48:10.363+03:00  INFO 21312 --- [backend] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-03T18:48:10.400+03:00  INFO 21312 --- [backend] [main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/adaptive_tutor (PostgreSQL 15.17)
+2026-04-03T18:48:10.514+03:00  INFO 21312 --- [backend] [main] o.f.core.internal.command.DbValidate     : Successfully validated 4 migrations (execution time 00:00.057s)
+2026-04-03T18:48:10.552+03:00  INFO 21312 --- [backend] [main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 4
+2026-04-03T18:48:10.557+03:00  INFO 21312 --- [backend] [main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-04-03T18:48:10.669+03:00  INFO 21312 --- [backend] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-03T18:48:10.716+03:00  INFO 21312 --- [backend] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.8.Final
+2026-04-03T18:48:10.749+03:00  INFO 21312 --- [backend] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-03T18:48:11.092+03:00  INFO 21312 --- [backend] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-03T18:48:11.210+03:00  INFO 21312 --- [backend] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.17
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-03T18:48:12.527+03:00  INFO 21312 --- [backend] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-03T18:48:12.618+03:00  INFO 21312 --- [backend] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T18:48:13.115+03:00  INFO 21312 --- [backend] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-03T18:48:14.272+03:00  WARN 21312 --- [backend] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-03T18:48:14.318+03:00  INFO 21312 --- [backend] [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-04-03T18:48:14.319+03:00  WARN 21312 --- [backend] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-04-03T18:48:14.761+03:00  INFO 21312 --- [backend] [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-04-03T18:48:15.410+03:00  INFO 21312 --- [backend] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8067 (http) with context path '/'
+2026-04-03T18:48:15.424+03:00  INFO 21312 --- [backend] [main] o.elearning.backend.BackendApplication   : Started BackendApplication in 8.953 seconds (process running for 10.604)
+2026-04-03T18:52:27.408+03:00  INFO 21312 --- [backend] [http-nio-8067-exec-7] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-03T18:52:27.408+03:00  INFO 21312 --- [backend] [http-nio-8067-exec-7] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-04-03T18:52:27.410+03:00  INFO 21312 --- [backend] [http-nio-8067-exec-7] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-04-03T19:15:23.427+03:00  INFO 21312 --- [backend] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-03T19:15:23.741+03:00  INFO 21312 --- [backend] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-04-03T19:15:23.749+03:00  INFO 21312 --- [backend] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T19:15:23.751+03:00  INFO 21312 --- [backend] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-04-03T19:15:23.755+03:00  INFO 21312 --- [backend] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-04-03T20:05:17.589+03:00  INFO 29676 --- [main] o.e.backend.auth.AuthIntegrationTest     : Starting AuthIntegrationTest using Java 17.0.18 with PID 29676 (started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T20:05:17.593+03:00  INFO 29676 --- [main] o.e.backend.auth.AuthIntegrationTest     : No active profile set, falling back to 1 default profile: "default"
+2026-04-03T20:05:19.591+03:00  WARN 29676 --- [main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 8f0233cc-d396-49c4-82bb-258466c4d877
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-04-03T20:05:19.595+03:00  INFO 29676 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-04-03T20:05:19.796+03:00  INFO 29676 --- [main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-04-03T20:05:19.797+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-04-03T20:05:19.801+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 3 ms
+2026-04-03T20:05:19.875+03:00  INFO 29676 --- [main] o.e.backend.auth.AuthIntegrationTest     : Started AuthIntegrationTest in 2.796 seconds (process running for 6.948)
+2026-04-03T20:05:20.568+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.security.ProtectedEndpointTest]: ProtectedEndpointTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:20.608+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.security.ProtectedEndpointTest
+2026-04-03T20:05:20.665+03:00  INFO 29676 --- [main] o.e.b.security.ProtectedEndpointTest     : Starting ProtectedEndpointTest using Java 17.0.18 with PID 29676 (started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T20:05:20.666+03:00  INFO 29676 --- [main] o.e.b.security.ProtectedEndpointTest     : No active profile set, falling back to 1 default profile: "default"
+2026-04-03T20:05:21.246+03:00  WARN 29676 --- [main] r$InitializeUserDetailsManagerConfigurer : Found 2 UserDetailsService beans, with names [inMemoryUserDetailsManager, org.elearning.backend.security.auth.CustomUserDetailsService#0]. Global Authentication Manager will not use a UserDetailsService for username/password login. Consider publishing a single UserDetailsService bean.
+2026-04-03T20:05:21.566+03:00  WARN 29676 --- [main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: a60c28e9-b007-4997-9bed-a3d813e65d2c
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-04-03T20:05:21.602+03:00  INFO 29676 --- [main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-04-03T20:05:21.602+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-04-03T20:05:21.605+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 3 ms
+2026-04-03T20:05:21.627+03:00  INFO 29676 --- [main] o.e.b.security.ProtectedEndpointTest     : Started ProtectedEndpointTest in 1.013 seconds (process running for 8.701)
+2026-04-03T20:05:22.665+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.UserSchemaTest]: UserSchemaTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:22.689+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.UserSchemaTest
+2026-04-03T20:05:22.738+03:00  INFO 29676 --- [main] org.elearning.backend.UserSchemaTest     : Starting UserSchemaTest using Java 17.0.18 with PID 29676 (started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T20:05:22.738+03:00  INFO 29676 --- [main] org.elearning.backend.UserSchemaTest     : No active profile set, falling back to 1 default profile: "default"
+2026-04-03T20:05:24.369+03:00  INFO 29676 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-03T20:05:24.610+03:00  INFO 29676 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 209 ms. Found 13 JPA repository interfaces.
+2026-04-03T20:05:25.633+03:00  INFO 29676 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-03T20:05:25.915+03:00  INFO 29676 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5453b15d
+2026-04-03T20:05:25.918+03:00  INFO 29676 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-03T20:05:25.982+03:00  INFO 29676 --- [main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/adaptive_tutor (PostgreSQL 15.17)
+2026-04-03T20:05:26.137+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbValidate     : Successfully validated 4 migrations (execution time 00:00.079s)
+2026-04-03T20:05:26.186+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 4
+2026-04-03T20:05:26.192+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-04-03T20:05:26.430+03:00  INFO 29676 --- [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-03T20:05:26.526+03:00  INFO 29676 --- [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.8.Final
+2026-04-03T20:05:26.573+03:00  INFO 29676 --- [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-03T20:05:26.763+03:00  INFO 29676 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-03T20:05:26.885+03:00  INFO 29676 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 15.17
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-03T20:05:28.116+03:00  INFO 29676 --- [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-03T20:05:28.120+03:00  INFO 29676 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T20:05:28.722+03:00  INFO 29676 --- [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-04-03T20:05:30.779+03:00  WARN 29676 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-03T20:05:30.820+03:00  INFO 29676 --- [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-04-03T20:05:30.820+03:00  WARN 29676 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-04-03T20:05:31.359+03:00  INFO 29676 --- [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-04-03T20:05:32.129+03:00  INFO 29676 --- [main] org.elearning.backend.UserSchemaTest     : Started UserSchemaTest in 9.428 seconds (process running for 19.201)
+2026-04-03T20:05:32.506+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.content.controller.ChapterControllerTest]: ChapterControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:32.528+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.content.controller.ChapterControllerTest
+2026-04-03T20:05:32.618+03:00  INFO 29676 --- [main] o.e.b.c.c.ChapterControllerTest          : Starting ChapterControllerTest using Java 17.0.18 with PID 29676 (started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T20:05:32.619+03:00  INFO 29676 --- [main] o.e.b.c.c.ChapterControllerTest          : The following 1 profile is active: "test"
+2026-04-03T20:05:33.106+03:00  INFO 29676 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-03T20:05:33.177+03:00  INFO 29676 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 69 ms. Found 13 JPA repository interfaces.
+2026-04-03T20:05:33.587+03:00  INFO 29676 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2026-04-03T20:05:33.604+03:00  INFO 29676 --- [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-03T20:05:33.605+03:00  INFO 29676 --- [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.36]
+2026-04-03T20:05:33.680+03:00  INFO 29676 --- [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-03T20:05:33.680+03:00  INFO 29676 --- [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1059 ms
+2026-04-03T20:05:33.823+03:00  INFO 29676 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2026-04-03T20:05:33.849+03:00  INFO 29676 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Added connection org.postgresql.jdbc.PgConnection@3ba31af9
+2026-04-03T20:05:33.850+03:00  INFO 29676 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+2026-04-03T20:05:33.853+03:00  INFO 29676 --- [main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/adaptive_tutor (PostgreSQL 15.17)
+2026-04-03T20:05:33.897+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbValidate     : Successfully validated 4 migrations (execution time 00:00.017s)
+2026-04-03T20:05:33.944+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 4
+2026-04-03T20:05:33.946+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-04-03T20:05:33.990+03:00  INFO 29676 --- [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-03T20:05:33.994+03:00  INFO 29676 --- [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-03T20:05:34.004+03:00  INFO 29676 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-03T20:05:34.019+03:00  INFO 29676 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-2)']
+	Database driver: undefined/unknown
+	Database version: 15.17
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-03T20:05:34.379+03:00  INFO 29676 --- [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-03T20:05:34.380+03:00  INFO 29676 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T20:05:34.886+03:00  WARN 29676 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-03T20:05:34.904+03:00  INFO 29676 --- [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-04-03T20:05:34.905+03:00  WARN 29676 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-04-03T20:05:35.139+03:00  INFO 29676 --- [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-04-03T20:05:35.859+03:00  INFO 29676 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 50468 (http) with context path '/'
+2026-04-03T20:05:35.865+03:00  INFO 29676 --- [main] o.e.b.c.c.ChapterControllerTest          : Started ChapterControllerTest in 3.301 seconds (process running for 22.941)
+2026-04-03T20:05:36.198+03:00  INFO 29676 --- [http-nio-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-03T20:05:36.199+03:00  INFO 29676 --- [http-nio-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-04-03T20:05:36.200+03:00  INFO 29676 --- [http-nio-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2026-04-03T20:05:37.945+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.content.controller.LessonResourceControllerTests]: LessonResourceControllerTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:37.947+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.content.controller.LessonResourceControllerTests
+2026-04-03T20:05:39.565+03:00  INFO 29676 --- [main] o.elearning.backend.BackendApplication   : Starting BackendApplication using Java 17.0.18 with PID 29676 (started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T20:05:39.565+03:00  INFO 29676 --- [main] o.elearning.backend.BackendApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-04-03T20:05:39.955+03:00  INFO 29676 --- [main] o.elearning.backend.BackendApplication   : Started BackendApplication in 0.415 seconds (process running for 27.031)
+2026-04-03T20:05:40.043+03:00  INFO 29676 --- [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-04-03T20:05:40.043+03:00  WARN 29676 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-04-03T20:05:40.064+03:00  INFO 29676 --- [main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-04-03T20:05:40.064+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-04-03T20:05:40.064+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-04-03T20:05:40.123+03:00  INFO 29676 --- [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-04-03T20:05:40.123+03:00  WARN 29676 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-04-03T20:05:40.149+03:00  INFO 29676 --- [main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-04-03T20:05:40.149+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-04-03T20:05:40.150+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-04-03T20:05:40.157+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.content.controller.LessonsControllerTests]: LessonsControllerTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:40.160+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.content.controller.LessonsControllerTests
+2026-04-03T20:05:41.770+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.content.ContentEndToEndTest]: ContentEndToEndTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:41.785+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.content.ContentEndToEndTest
+2026-04-03T20:05:41.807+03:00  INFO 29676 --- [main] o.e.backend.content.ContentEndToEndTest  : Starting ContentEndToEndTest using Java 17.0.18 with PID 29676 (started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T20:05:41.808+03:00  INFO 29676 --- [main] o.e.backend.content.ContentEndToEndTest  : The following 1 profile is active: "test"
+2026-04-03T20:05:42.340+03:00  INFO 29676 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-03T20:05:42.382+03:00  INFO 29676 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 41 ms. Found 13 JPA repository interfaces.
+2026-04-03T20:05:42.507+03:00  INFO 29676 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Starting...
+2026-04-03T20:05:42.532+03:00  INFO 29676 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Added connection org.postgresql.jdbc.PgConnection@75c73a5f
+2026-04-03T20:05:42.532+03:00  INFO 29676 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Start completed.
+2026-04-03T20:05:42.536+03:00  INFO 29676 --- [main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/adaptive_tutor (PostgreSQL 15.17)
+2026-04-03T20:05:42.586+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbValidate     : Successfully validated 4 migrations (execution time 00:00.017s)
+2026-04-03T20:05:42.641+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 4
+2026-04-03T20:05:42.643+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-04-03T20:05:42.695+03:00  INFO 29676 --- [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-03T20:05:42.698+03:00  INFO 29676 --- [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-03T20:05:42.708+03:00  INFO 29676 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-03T20:05:42.722+03:00  INFO 29676 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-3)']
+	Database driver: undefined/unknown
+	Database version: 15.17
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-03T20:05:42.972+03:00  INFO 29676 --- [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-03T20:05:42.973+03:00  INFO 29676 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T20:05:43.473+03:00  WARN 29676 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-03T20:05:43.493+03:00  INFO 29676 --- [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-04-03T20:05:43.493+03:00  WARN 29676 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-04-03T20:05:43.726+03:00  INFO 29676 --- [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-04-03T20:05:43.980+03:00  INFO 29676 --- [main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-04-03T20:05:43.980+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-04-03T20:05:43.981+03:00  INFO 29676 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-04-03T20:05:44.004+03:00  INFO 29676 --- [main] o.e.backend.content.ContentEndToEndTest  : Started ContentEndToEndTest in 2.215 seconds (process running for 31.08)
+2026-04-03T20:05:47.467+03:00  INFO 29676 --- [main] o.e.backend.security.listener.Listener   : Authentication failed! user=alexia@example.com, timestamp=1775235947467
+2026-04-03T20:05:47.471+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.organization.OrganizationSchemaTest]: OrganizationSchemaTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:47.484+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.organization.OrganizationSchemaTest
+2026-04-03T20:05:47.585+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.content.controller.CourseControllerTest]: CourseControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:47.588+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.content.controller.CourseControllerTest
+2026-04-03T20:05:48.567+03:00  INFO 29676 --- [main] o.e.backend.security.listener.Listener   : Authentication failed! user=alexia@example.com, timestamp=1775235948566
+2026-04-03T20:05:48.569+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.ContentSchemaTest]: ContentSchemaTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:48.572+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.ContentSchemaTest
+2026-04-03T20:05:48.593+03:00  INFO 29676 --- [main] o.elearning.backend.ContentSchemaTest    : Starting ContentSchemaTest using Java 17.0.18 with PID 29676 (started by TeoNr in E:\PROIECT BACKEND A2\backend)
+2026-04-03T20:05:48.593+03:00  INFO 29676 --- [main] o.elearning.backend.ContentSchemaTest    : The following 1 profile is active: "test"
+2026-04-03T20:05:48.930+03:00  INFO 29676 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-03T20:05:48.968+03:00  INFO 29676 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 35 ms. Found 13 JPA repository interfaces.
+2026-04-03T20:05:49.079+03:00  INFO 29676 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Starting...
+2026-04-03T20:05:49.103+03:00  INFO 29676 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-4 - Added connection org.postgresql.jdbc.PgConnection@30db3244
+2026-04-03T20:05:49.104+03:00  INFO 29676 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Start completed.
+2026-04-03T20:05:49.106+03:00  INFO 29676 --- [main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/adaptive_tutor (PostgreSQL 15.17)
+2026-04-03T20:05:49.147+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbValidate     : Successfully validated 4 migrations (execution time 00:00.016s)
+2026-04-03T20:05:49.202+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 4
+2026-04-03T20:05:49.204+03:00  INFO 29676 --- [main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-04-03T20:05:49.244+03:00  INFO 29676 --- [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-03T20:05:49.247+03:00  INFO 29676 --- [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-03T20:05:49.254+03:00  INFO 29676 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-03T20:05:49.268+03:00  INFO 29676 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-4)']
+	Database driver: undefined/unknown
+	Database version: 15.17
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-04-03T20:05:49.493+03:00  INFO 29676 --- [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-03T20:05:49.494+03:00  INFO 29676 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T20:05:49.864+03:00  WARN 29676 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-03T20:05:49.881+03:00  INFO 29676 --- [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-04-03T20:05:49.882+03:00  WARN 29676 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-04-03T20:05:50.035+03:00  INFO 29676 --- [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-04-03T20:05:50.351+03:00  INFO 29676 --- [main] o.elearning.backend.ContentSchemaTest    : Started ContentSchemaTest in 1.777 seconds (process running for 37.427)
+2026-04-03T20:05:50.462+03:00  INFO 29676 --- [main] o.e.backend.security.listener.Listener   : Authentication failed! user=alexia@example.com, timestamp=1775235950462
+2026-04-03T20:05:50.468+03:00  INFO 29676 --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.elearning.backend.auth.AuthIntegrationJwtLoginTest]: AuthIntegrationJwtLoginTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-04-03T20:05:50.475+03:00  INFO 29676 --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.elearning.backend.BackendApplication for test class org.elearning.backend.auth.AuthIntegrationJwtLoginTest
+2026-04-03T20:05:50.562+03:00  INFO 29676 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T20:05:50.563+03:00  INFO 29676 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-04-03T20:05:50.567+03:00  INFO 29676 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-04-03T20:05:50.572+03:00  INFO 29676 --- [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-03T20:05:50.901+03:00  INFO 29676 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-04-03T20:05:50.906+03:00  INFO 29676 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T20:05:50.907+03:00  INFO 29676 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown initiated...
+2026-04-03T20:05:50.909+03:00  INFO 29676 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown completed.
+2026-04-03T20:05:50.922+03:00  INFO 29676 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T20:05:50.923+03:00  INFO 29676 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown initiated...
+2026-04-03T20:05:50.926+03:00  INFO 29676 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown completed.
+2026-04-03T20:05:50.931+03:00  INFO 29676 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-03T20:05:50.933+03:00  INFO 29676 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Shutdown initiated...
+2026-04-03T20:05:50.935+03:00  INFO 29676 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Shutdown completed.
