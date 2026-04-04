@@ -69,10 +69,4 @@ public class AttemptAnswer {
      */
     @Column(name = "answered_at", nullable = false)
     private LocalDateTime answeredAt;
-
-    /**
-     * Bidirectional relationship with TestAttempt entity.
-     * An attempt can have multiple answers, and if an attempt is deleted, all associated answers will also be deleted (cascade = CascadeType.ALL).
-     * orphanRemoval = true ensures that if an answer is removed from the attempt's list of answers, it will also be deleted from the database.
-     */
 }

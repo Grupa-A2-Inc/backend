@@ -26,7 +26,7 @@ public interface QuestionMapper {
      * is_correct e ignorat intenționat — nu se trimite elevului.
      */
     @Mapping(target = "optionId", source = "id")
-    OptionForStudentDto toOptionForStudentDTO(QuestionOption option);
+    QuestionForStudentDto.OptionForStudentDto toOptionForStudentDTO(QuestionOption option);
 
     Question toEntity(QuestionRequestDto dto);
 

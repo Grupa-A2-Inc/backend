@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@AllArgsConstructor @NoArgsConstructor
 @Getter @Setter
 public class StartAttemptResponseDto {
     private UUID attemptId;
@@ -15,6 +16,7 @@ public class StartAttemptResponseDto {
     private TestInfoForAttemptDto test;
     private List<QuestionForStudentDto> questions;
 
+    @AllArgsConstructor @NoArgsConstructor
     @Getter
     @Setter
     public static class TestInfoForAttemptDto {

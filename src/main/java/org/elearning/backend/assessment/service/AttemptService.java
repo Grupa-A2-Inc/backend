@@ -115,8 +115,12 @@ public class AttemptService {
 
         int correctCount = 0;
         int totalCount = request.getAnswers().size();
+        List<TestResultDto.TestResultQuestionDto> resultQuestions = new ArrayList<>();
 
         for (SubmitAnswerDto answerDTO : request.getAnswers()) {
+            TestResultDto.TestResultQuestionDto resultQuestion = new TestResultDto.TestResultQuestionDto();
+            resultQuestion.setQuestionId(answerDTO.getQuestionId());
+
             Question question = questionRepository.findById(answerDTO.getQuestionId())
                     .orElseThrow(() -> new DoesNotExistException(
                             String.format(DOES_NOT_EXIST_MSG, "question", answerDTO.getQuestionId())));
@@ -131,7 +135,15 @@ public class AttemptService {
             boolean isCorrect = selectedIds.equals(correctOptionIds);
             if (isCorrect) {
                 correctCount++;
+                resultQuestion.setCorrect(true);
             }
+            else
+                resultQuestion.setCorrect(false);
+
+            resultQuestion.setSelectedOptionIds(answerDTO.getSelectedOptionIds());
+            resultQuestion.setCorrectOptionIds(new ArrayList<>(correctOptionIds));
+
+            resultQuestions.add(resultQuestion);
 
             AttemptAnswer answer = new AttemptAnswer();
             answer.setAttempt(attempt);
@@ -167,10 +179,13 @@ public class AttemptService {
         attempt.setEndedAt(LocalDateTime.now());
         attemptRepository.save(attempt);
 
-        if (test.getAiEnabled()) {
+        if (Boolean.TRUE.equals(test.getAiEnabled())) {
             log.debug("TODO: implement sprint3 logic");
         }
 
-        return attemptMapper.toTestResultDTO(result);
+        TestResultDto testResultDto = attemptMapper.toTestResultDTO(result);
+        testResultDto.setQuestions(resultQuestions);
+
+        return testResultDto;
     }
 }
