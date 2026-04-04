@@ -1,5 +1,5 @@
 // dto/SubmitAnswerDTO.java
-package org.elearning.backend.assessment.dto;
+package org.elearning.backend.assessment.dto.test_dto;
 
 import lombok.*;
 import java.math.BigDecimal;

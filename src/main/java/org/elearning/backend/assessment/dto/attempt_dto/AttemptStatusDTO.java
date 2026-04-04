@@ -1,4 +1,4 @@
-package org.elearning.backend.assessment.dto;
+package org.elearning.backend.assessment.dto.attempt_dto;
 
 import lombok.Builder;
 import lombok.Getter;

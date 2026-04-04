@@ -1,8 +1,8 @@
 package org.elearning.backend.assessment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.elearning.backend.assessment.dto.AttemptReportDTO;
-import org.elearning.backend.assessment.dto.AttemptStatusDTO;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptReportDTO;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptStatusDTO;
 import org.elearning.backend.assessment.model.AttemptStatus;
 import org.elearning.backend.assessment.service.TestResultService;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -61,7 +60,7 @@ class TestResultControllerTest {
                 .andExpect(jsonPath("$.scorePercent").value(85.0))
                 .andExpect(jsonPath("$.passed").value(true));
 
-        verify(testResultService).getTestResult(eq(attemptId), eq(studentId));
+        verify(testResultService).getTestResult(attemptId, studentId);
     }
 
     @Test
@@ -97,7 +96,7 @@ class TestResultControllerTest {
                 .andExpect(jsonPath("$[0].attemptNumber").value(1))
                 .andExpect(jsonPath("$[1].attemptNumber").value(2));
 
-        verify(testResultService).getTestAttempts(eq(testId), eq(studentId));
+        verify(testResultService).getTestAttempts(testId, studentId);
     }
 
     @Test
@@ -120,7 +119,7 @@ class TestResultControllerTest {
                 .andExpect(jsonPath("$.scorePercent").value(95.0))
                 .andExpect(jsonPath("$.passed").value(true));
 
-        verify(testResultService).getBestTestAttempt(eq(testId), eq(studentId));
+        verify(testResultService).getBestTestAttempt(testId, studentId);
     }
 
     // Additional tests for edge cases with no completed attempts
@@ -134,7 +133,7 @@ class TestResultControllerTest {
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        verify(testResultService).getTestAttempts(eq(testId), eq(studentId));
+        verify(testResultService).getTestAttempts(testId, studentId);
     }
 
     @Test
@@ -147,7 +146,7 @@ class TestResultControllerTest {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("No finished attempts found for student " + studentId + " on test " + testId));
 
-        verify(testResultService).getBestTestAttempt(eq(testId), eq(studentId));
+        verify(testResultService).getBestTestAttempt(testId, studentId);
     }
 
     @Test
@@ -160,7 +159,7 @@ class TestResultControllerTest {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("Attempt with id " + attemptId + " does not exist"));
 
-        verify(testResultService).getTestResult(eq(attemptId), eq(studentId));
+        verify(testResultService).getTestResult(attemptId,studentId);
     }
 
     @Test
@@ -173,7 +172,7 @@ class TestResultControllerTest {
                 .andExpect(jsonPath("$.status").value(410))
                 .andExpect(jsonPath("$.message").value("The attempt expired before being submitted"));
 
-        verify(testResultService).getTestResult(eq(attemptId), eq(studentId));
+        verify(testResultService).getTestResult(attemptId, studentId);
     }
 
     @Test
@@ -186,7 +185,7 @@ class TestResultControllerTest {
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.message").value("The attempt is still in progress"));
 
-        verify(testResultService).getTestResult(eq(attemptId), eq(studentId));
+        verify(testResultService).getTestResult(attemptId, studentId);
     }
 }
 

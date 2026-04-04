@@ -1,4 +1,4 @@
-package org.elearning.backend.assessment.dto;
+package org.elearning.backend.assessment.dto.question_dto;
 
 
 import lombok.Getter;

@@ -3,8 +3,8 @@ package org.elearning.backend.assessment.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.assessment.dto.AttemptReportDTO;
-import org.elearning.backend.assessment.dto.AttemptStatusDTO;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptReportDTO;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptStatusDTO;
 import org.elearning.backend.assessment.service.TestResultService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +18,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TestResultController {
     private final TestResultService testResultService;
-
+    private static String hardcodedId = "00000000-0000-0000-0000-000000000001";
     @Operation(summary = "Get the result of a test attempt, including score and question details")
     @ApiResponse(responseCode = "200", description = "Result retrieved successfully")
     @ApiResponse(responseCode = "403", description = "The attempt is still in progress")
@@ -26,7 +26,7 @@ public class TestResultController {
     @GetMapping("/api/v1/attempts/{attemptId}/result")
     public ResponseEntity<AttemptReportDTO> getResult(@PathVariable UUID attemptId) {
         // Placeholder for JWT - to be replaced with actual authentication logic
-        UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID studentId = UUID.fromString(hardcodedId);
 
         AttemptReportDTO response = testResultService.getTestResult(attemptId, studentId);
         return ResponseEntity.ok(response);
@@ -37,7 +37,7 @@ public class TestResultController {
     @GetMapping("/api/v1/tests/{testId}/my-attempts")
     public ResponseEntity<List<AttemptStatusDTO>> getAttempts(@PathVariable UUID testId) {
         // Placeholder for JWT - to be replaced with actual authentication logic
-        UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID studentId = UUID.fromString(hardcodedId);
 
         List<AttemptStatusDTO> response = testResultService.getTestAttempts(testId, studentId);
         return ResponseEntity.ok(response);
@@ -49,7 +49,7 @@ public class TestResultController {
     @GetMapping("/api/v1/tests/{testId}/my-best")
     public ResponseEntity<AttemptStatusDTO> getBestAttempt(@PathVariable UUID testId) {
         // Placeholder for JWT - to be replaced with actual authentication logic
-        UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID studentId = UUID.fromString(hardcodedId);
 
         AttemptStatusDTO response = testResultService.getBestTestAttempt(testId, studentId);
         return ResponseEntity.ok(response);

@@ -1,7 +1,7 @@
 package org.elearning.backend.assessment.mapper;
 
-import org.elearning.backend.assessment.dto.TestEditDto;
-import org.elearning.backend.assessment.dto.TestEntityDto;
+import org.elearning.backend.assessment.dto.assigment_dto.TestEditDto;
+import org.elearning.backend.assessment.dto.assigment_dto.TestEntityDto;
 import org.elearning.backend.assessment.model.Test;
 import org.mapstruct.Mapper;
 

@@ -1,4 +1,4 @@
-package org.elearning.backend.assessment.dto;
+package org.elearning.backend.assessment.dto.assigment_dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
