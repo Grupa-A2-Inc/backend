@@ -3,9 +3,7 @@ package org.elearning.backend.assessment.dto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.elearning.backend.assessment.mapper.QuestionOptionMapper;
 import org.elearning.backend.assessment.model.Question;
-import org.elearning.backend.assessment.model.QuestionOption;
 import org.elearning.backend.assessment.model.QuestionType;
 
 import java.math.BigDecimal;

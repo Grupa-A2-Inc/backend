@@ -113,7 +113,7 @@ public class TestsController {
             description = "Returns the list of each question associated with a given test. Includes the correct options" +
                     "if the user is a teacher (WORK IN PROGRESS)")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = CREATED, description = "Questions successfully returned"),
+            @ApiResponse(responseCode = OK, description = "Questions successfully returned"),
             @ApiResponse(responseCode = FORBIDDEN, description = "Access denied"),
             @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test")
 

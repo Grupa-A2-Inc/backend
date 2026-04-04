@@ -4,10 +4,7 @@ import jakarta.transaction.Transactional;
 import org.elearning.backend.assessment.dto.QuestionDataForUsersDto;
 import org.elearning.backend.assessment.dto.TestEditDto;
 import org.elearning.backend.assessment.dto.TestEntityDto;
-import org.elearning.backend.assessment.exception.DoesNotExistException;
-import org.elearning.backend.assessment.exception.LessonAlreadyHasTestException;
-import org.elearning.backend.assessment.exception.TestCannotBePublished;
-import org.elearning.backend.assessment.exception.UserHasNoPermissionException;
+import org.elearning.backend.assessment.exception.*;
 import org.elearning.backend.assessment.mapper.QuestionOptionMapper;
 import org.elearning.backend.assessment.mapper.TestMapper;
 import org.elearning.backend.assessment.model.Test;
@@ -71,6 +68,7 @@ public class TestService {
         return testMapper.toEntityDto(testRepository.save(newTest));
     }
 
+    @Transactional
     public TestEntityDto publishTest(UUID testId){
 
         Test entity = testRepository.findById(testId).
@@ -79,6 +77,11 @@ public class TestService {
         if(entity.getQuestions().isEmpty()){
             throw new TestCannotBePublished("The test has no questions and cannot be published");
         }
+
+        if(entity.getStatus()==TestStatus.PUBLISHED){
+            throw new AlreadyPublishedException("The test was already published");
+        }
+
 
         testRepository.updateTestStatus(TestStatus.PUBLISHED, testId);
         testRepository.flush();
