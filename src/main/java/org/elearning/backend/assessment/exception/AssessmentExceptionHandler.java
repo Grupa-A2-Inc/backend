@@ -3,6 +3,7 @@ package org.elearning.backend.assessment.exception;
 import org.elearning.backend.common.GlobalExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -28,7 +29,7 @@ public class AssessmentExceptionHandler extends GlobalExceptionHandler {
 
     @ExceptionHandler(TestCannotBePublished.class)
     public ResponseEntity<Map<String, Object>> handleNotPublished(TestCannotBePublished exception) {
-        return buildErrorResponse(exception, HttpStatus.BAD_REQUEST);
+        return buildErrorResponse(exception, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(AttemptInProgressException.class)
@@ -46,6 +47,11 @@ public class AssessmentExceptionHandler extends GlobalExceptionHandler {
         return buildErrorResponse(exception, HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(AlreadyPublishedException.class)
+    public ResponseEntity<Map<String, Object>> handlePublished(AlreadyPublishedException exception) {
+        return buildErrorResponse(exception, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(TimerExpiredException.class)
     public ResponseEntity<Map<String, Object>> handleTimerExpired(TimerExpiredException exception) {
         return buildErrorResponse(exception, HttpStatus.GONE);
@@ -59,6 +65,15 @@ public class AssessmentExceptionHandler extends GlobalExceptionHandler {
     @ExceptionHandler(UserHasNoPermissionException.class)
     public ResponseEntity<Map<String, Object>> handleNoPermission(UserHasNoPermissionException exception) {
         return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
+
+    /*
+    Makes sure to catch invalid data inside a DTO object and throw a BAD_REQUEST status code instead of 500
+     */
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<String> handleInvalidBody(HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest().body("Invalid request body: " + ex.getMessage());
     }
 
 
