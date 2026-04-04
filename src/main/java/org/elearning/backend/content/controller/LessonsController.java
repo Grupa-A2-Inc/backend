@@ -18,6 +18,7 @@ import java.util.UUID;
 
 @Tag(name = "Lessons", description = "Lesson administration")
 @RestController
+@RequestMapping("/api/v1")
 public class LessonsController {
 
     private final LessonService lessonService;
@@ -32,7 +33,7 @@ public class LessonsController {
             @ApiResponse(responseCode = "400", description = "Title cannot be null"),
             @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
-    @PostMapping("/api/chapters/{chapterID}/lessons")
+    @PostMapping("/chapters/{chapterID}/lessons")
     public ResponseEntity<LessonDtoEntity> createNewLesson(
             @RequestBody @Valid LessonDtoPost modifiableLessonContent,
             @PathVariable UUID chapterID) {
@@ -44,7 +45,7 @@ public class LessonsController {
             @ApiResponse(responseCode = "204", description = "Lesson successfully deleted"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @DeleteMapping("/api/lessons/{id}")
+    @DeleteMapping("/lessons/{id}")
     public ResponseEntity<Void> deleteLesson(@PathVariable UUID id) {
         lessonService.deleteLesson(id);
         return ResponseEntity.noContent().build();
@@ -55,7 +56,7 @@ public class LessonsController {
             @ApiResponse(responseCode = "200", description = "Lessons successfully returned"),
             @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
-    @GetMapping("/api/chapters/{chapterID}/lessons")
+    @GetMapping("/chapters/{chapterID}/lessons")
     public ResponseEntity<List<LessonDtoEntity>> getAllLessonsFromChapterID(@PathVariable UUID chapterID) {
         return ResponseEntity.ok(lessonService.getAllLessonsFromChapter(chapterID));
     }
@@ -65,7 +66,7 @@ public class LessonsController {
             @ApiResponse(responseCode = "200", description = "Content successfully returned"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @GetMapping("/api/lessons/{id}/content")
+    @GetMapping("/lessons/{id}/content")
     public ResponseEntity<String> getLessonContent(@PathVariable UUID id) {
         return ResponseEntity.ok(lessonService.getLessonContent(id));
     }
@@ -76,7 +77,7 @@ public class LessonsController {
             @ApiResponse(responseCode = "400", description = "Order index out of range"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @PatchMapping("/api/lessons/{id}/metadata")
+    @PatchMapping("/lessons/{id}/metadata")
     public ResponseEntity<LessonDtoEntity> updateLessonMetadata(
             @PathVariable UUID id,
             @RequestBody LessonDtoMetadata lessonDTOMetadata) {
@@ -88,7 +89,7 @@ public class LessonsController {
             @ApiResponse(responseCode = "200", description = "Content successfully updated"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @PatchMapping("/api/lessons/{id}/content")
+    @PatchMapping("/lessons/{id}/content")
     public ResponseEntity<LessonDtoEntity> updateLessonContent(
             @PathVariable UUID id,
             @RequestBody String markdownContent) {

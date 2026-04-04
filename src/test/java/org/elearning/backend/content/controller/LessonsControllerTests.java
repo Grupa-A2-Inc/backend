@@ -33,6 +33,8 @@ class LessonsControllerTests {
     private UUID chapterID;
     private UUID authenticatedUserId;
 
+    private static final String REQUEST_MAPPING = "/api/v1";
+
     @BeforeEach
     void setUp() {
         authenticatedUserId = insertAuthenticatedUser();
@@ -94,7 +96,7 @@ class LessonsControllerTests {
                         "VALUES ('" + UUID.randomUUID() + "', '" + chapterID + "', 'Lectia 1', 1)"
         );
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/chapters/" + chapterID + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + chapterID + "/lessons",
                 String.class
         );
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -108,7 +110,7 @@ class LessonsControllerTests {
     @Test
     void shouldReturnNotFoundWhenRequestingLessonsForInvalidChapter() {
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/chapters/" + UUID.randomUUID() + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + UUID.randomUUID() + "/lessons",
                 String.class
         );
 
@@ -129,7 +131,7 @@ class LessonsControllerTests {
                 }
                 """;
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/chapters/" + chapterID + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + chapterID + "/lessons",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -150,7 +152,7 @@ class LessonsControllerTests {
                 }
                 """;
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/chapters/" + chapterID + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + chapterID + "/lessons",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -175,7 +177,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/chapters/" + chapterID + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + chapterID + "/lessons",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -204,7 +206,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/chapters/" + UUID.randomUUID() + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + UUID.randomUUID() + "/lessons",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -224,7 +226,7 @@ class LessonsControllerTests {
                         "VALUES ('" + lessonID + "', '" + chapterID + "', 'Lectia Content', '# Continut', 1)"
         );
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + lessonID + "/content",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/content",
                 String.class
         );
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -238,7 +240,7 @@ class LessonsControllerTests {
     @Test
     void shouldReturnNotFoundWhenGettingLessonContentForMissingLesson() {
             ResponseEntity<String> response = restTemplate.getForEntity(
-                            "/api/lessons/" + UUID.randomUUID() + "/content",
+                    REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/content",
                             String.class
             );
 
@@ -254,7 +256,7 @@ class LessonsControllerTests {
             UUID lessonID = insertLesson("Lectie fara continut", 1, null);
 
             ResponseEntity<String> response = restTemplate.getForEntity(
-                            "/api/lessons/" + lessonID + "/content",
+                    REQUEST_MAPPING + "/lessons/" + lessonID + "/content",
                             String.class
             );
 
@@ -270,7 +272,7 @@ class LessonsControllerTests {
         UUID lessonID = insertLesson("Lectia", 1, null);
         String newContent = "# Continut Nou";
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lessonID + "/content",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/content",
                 HttpMethod.PATCH,
                 new HttpEntity<>(newContent, textHeaders()),
                 String.class
@@ -286,7 +288,7 @@ class LessonsControllerTests {
     @Test
     void shouldReturnNotFoundWhenUpdatingContentForMissingLesson() {
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/content",
+                REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/content",
                 HttpMethod.PATCH,
                 new HttpEntity<>("# Continut", textHeaders()),
                 String.class
@@ -312,7 +314,7 @@ class LessonsControllerTests {
                 }
                 """;
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lessonID + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -334,7 +336,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -358,7 +360,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lessonID + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -382,7 +384,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lessonID + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -408,7 +410,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lesson3 + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lesson3 + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -437,7 +439,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lesson1 + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lesson1 + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -465,7 +467,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lesson1 + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lesson1 + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -483,7 +485,7 @@ class LessonsControllerTests {
     @Test
     void shouldReturnBadRequestForInvalidMetadataPayload() {
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>("{ invalid-json }", jsonHeaders()),
                 String.class
@@ -500,7 +502,7 @@ class LessonsControllerTests {
     void shouldDeleteLesson() {
         UUID lessonID = insertLesson("Lectia de sters", 1, null);
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonID,
+                REQUEST_MAPPING + "/lessons/" + lessonID,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -520,7 +522,7 @@ class LessonsControllerTests {
     @Test
     void shouldReturnNotFoundWhenDeletingMissingLesson() {
             ResponseEntity<String> response = restTemplate.exchange(
-                            "/api/lessons/" + UUID.randomUUID(),
+                    REQUEST_MAPPING + "/lessons/" + UUID.randomUUID(),
                             HttpMethod.DELETE,
                             null,
                             String.class
@@ -540,7 +542,7 @@ class LessonsControllerTests {
             UUID lesson3 = insertLesson("L3", 3, null);
 
             ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                            "/api/lessons/" + lesson2,
+                    REQUEST_MAPPING + "/lessons/" + lesson2,
                             HttpMethod.DELETE,
                             null,
                             Void.class

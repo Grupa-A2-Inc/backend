@@ -17,6 +17,7 @@ import java.util.UUID;
 
 @Tag(name = "Lesson Resources", description = "Lesson resource administration")
 @RestController
+@RequestMapping("/api/v1")
 public class LessonResourcesController {
     private final LessonResourceService lessonResourceService;
 
@@ -30,7 +31,7 @@ public class LessonResourcesController {
             @ApiResponse(responseCode = "400", description = "Title or URL cannot be null"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @PostMapping("/api/lessons/{lessonId}/resources")
+    @PostMapping("/lessons/{lessonId}/resources")
     public ResponseEntity<ResponseLessonResourceDto> createNewLessonResource(
             @RequestBody CreateLessonResourceDto newLessonResourceDTOPost,
             @PathVariable UUID lessonId) {
@@ -43,7 +44,7 @@ public class LessonResourcesController {
             @ApiResponse(responseCode = "200", description = "Resources successfully returned"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @GetMapping("/api/lessons/{lessonId}/resources")
+    @GetMapping("/lessons/{lessonId}/resources")
     public ResponseEntity<List<ResponseLessonResourceDto>> getResourcesByLessonId(@PathVariable UUID lessonId) {
         return ResponseEntity.ok(lessonResourceService.getResourcesByLessonId(lessonId));
     }
@@ -53,7 +54,7 @@ public class LessonResourcesController {
             @ApiResponse(responseCode = "204", description = "Resource successfully deleted"),
             @ApiResponse(responseCode = "404", description = "Resource not found or does not belong to the specified lesson")
     })
-    @DeleteMapping("/api/lessons/{lessonId}/resources/{resourceId}")
+    @DeleteMapping("/lessons/{lessonId}/resources/{resourceId}")
     public ResponseEntity<Void> deleteLessonResource(@PathVariable UUID resourceId, @PathVariable UUID lessonId) {
         lessonResourceService.deleteLessonResource(resourceId, lessonId);
         return ResponseEntity.noContent().build();
@@ -64,7 +65,7 @@ public class LessonResourcesController {
             @ApiResponse(responseCode = "200", description = "Resource successfully updated"),
             @ApiResponse(responseCode = "404", description = "Resource not found, does not belong to the specified lesson, or lesson not found")
     })
-    @PatchMapping("/api/lessons/{lessonId}/resources/{resourceId}")
+    @PatchMapping("/lessons/{lessonId}/resources/{resourceId}")
     public ResponseEntity<ResponseLessonResourceDto> updateLessonMetadata(
             @PathVariable UUID lessonId,
             @PathVariable UUID resourceId,

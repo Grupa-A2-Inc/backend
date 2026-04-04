@@ -39,6 +39,8 @@ class LessonResourceControllerTests {
     private UUID chapterId;
     private UUID authenticatedUserId;
 
+    private static final String REQUEST_MAPPING = "/api/v1/lessons/";
+
     @BeforeEach
     void setUp() {
         authenticatedUserId = insertAuthenticatedUser();
@@ -107,7 +109,7 @@ class LessonResourceControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/lessons/" + lessonId + "/resources",
+                REQUEST_MAPPING + lessonId + "/resources",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -137,7 +139,7 @@ class LessonResourceControllerTests {
     })
     void shouldReturnBadRequestWhenCreatingLessonResourceWithInvalidFields(String body) {
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/lessons/" + lessonId + "/resources",
+                REQUEST_MAPPING + lessonId + "/resources",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -155,7 +157,7 @@ class LessonResourceControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/lessons/" + UUID.randomUUID() + "/resources",
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -168,7 +170,7 @@ class LessonResourceControllerTests {
         insertLessonResource("Resursa Test", "https://test.com");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + lessonId + "/resources",
+                REQUEST_MAPPING + lessonId + "/resources",
                 String.class
         );
 
@@ -183,7 +185,7 @@ class LessonResourceControllerTests {
         insertLessonResource("Resursa Test 3", "https://test3.com");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + lessonId + "/resources",
+                REQUEST_MAPPING + lessonId + "/resources",
                 String.class
         );
 
@@ -198,7 +200,7 @@ class LessonResourceControllerTests {
         insertLessonResource("Resursa Test", "https://test.com");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + UUID.randomUUID() + "/resources",
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources",
                 String.class
         );
 
@@ -208,7 +210,7 @@ class LessonResourceControllerTests {
     @Test
     void shouldReturnNotFoundWhenGettingResourcesForInvalidLesson() {
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + UUID.randomUUID() + "/resources",
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources",
                 String.class
         );
 
@@ -219,7 +221,7 @@ class LessonResourceControllerTests {
     void shouldDeleteLessonResource() {
         UUID resourceId = insertLessonResource("Resursa de sters", "https://delete.com");
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + resourceId,
+                REQUEST_MAPPING + lessonId + "/resources/" + resourceId,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -240,7 +242,7 @@ class LessonResourceControllerTests {
         insertLessonResource("Me neither", "https://stayingtoo.com");
         UUID resourceId = insertLessonResource("Resursa de sters", "https://delete.com");
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + resourceId,
+                REQUEST_MAPPING + lessonId + "/resources/" + resourceId,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -259,7 +261,7 @@ class LessonResourceControllerTests {
     void shouldReturnNotFoundWhenDeletingWithInvalidLessonId() {
         UUID resourceId = insertLessonResource("Resursa de sters", "https://delete.com");
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/resources/" + resourceId,
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources/" + resourceId,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -271,7 +273,7 @@ class LessonResourceControllerTests {
     @Test
     void shouldReturnNotFoundWhenDeletingInvalidResource() {
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + UUID.randomUUID(),
+                REQUEST_MAPPING + lessonId + "/resources/" + UUID.randomUUID(),
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -289,7 +291,7 @@ class LessonResourceControllerTests {
 
         // Act
         ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + resourceId,
+                REQUEST_MAPPING + lessonId + "/resources/" + resourceId,
                 HttpMethod.PATCH,
                 new HttpEntity<>(requestBody, jsonHeaders()),
                 String.class
@@ -352,7 +354,7 @@ class LessonResourceControllerTests {
                 }
                 """;
         ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/resources/" + resourceId,
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources/" + resourceId,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -371,7 +373,7 @@ class LessonResourceControllerTests {
                 }
                 """;
         ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + UUID.randomUUID(),
+                REQUEST_MAPPING + lessonId + "/resources/" + UUID.randomUUID(),
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -395,7 +397,7 @@ class LessonResourceControllerTests {
                 }
                 """;
         ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + unrelatedLessonId + "/resources/" + unrelatedResourceId,
+                REQUEST_MAPPING + unrelatedLessonId + "/resources/" + unrelatedResourceId,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
