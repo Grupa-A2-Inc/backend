@@ -17,6 +17,7 @@ import java.util.UUID;
 
 @Tag(name = "Chapters", description = "Chapter administration")
 @RestController
+@RequestMapping("/api/v1")
 public class ChaptersController {
     private final ChapterService chapterService;
 
@@ -29,7 +30,7 @@ public class ChaptersController {
             @ApiResponse(responseCode = "201", description = "Chapter successfully created"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
-    @PostMapping("/api/courses/{courseId}/chapters")
+    @PostMapping("/courses/{courseId}/chapters")
     public ResponseEntity<ChapterDtoResponse> createNewChapter(@PathVariable UUID courseId,
                                                                @RequestBody String newChapterTitle) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -41,7 +42,7 @@ public class ChaptersController {
             @ApiResponse(responseCode = "200", description = "Chapters successfully returned"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
-    @GetMapping("/api/courses/{courseId}/chapters")
+    @GetMapping("/courses/{courseId}/chapters")
     public ResponseEntity<List<ChapterDtoResponse>> getChaptersByCourseId(@PathVariable UUID courseId) {
         List<Chapter> chapters = chapterService.getAllChaptersFromCourse(courseId);
         return ResponseEntity.ok(chapters.stream().map(ChapterDtoResponse::new).toList());
@@ -52,7 +53,7 @@ public class ChaptersController {
             @ApiResponse(responseCode = "204", description = "Chapter successfully deleted"),
             @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
-    @DeleteMapping("/api/chapters/{id}")
+    @DeleteMapping("/chapters/{id}")
     public ResponseEntity<Void> deleteChapter(@PathVariable UUID id) {
         chapterService.deleteChapter(id);
         return ResponseEntity.noContent().build();
@@ -64,7 +65,7 @@ public class ChaptersController {
             @ApiResponse(responseCode = "400", description = "Order index out of range"),
             @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
-    @PatchMapping("/api/chapters/{id}")
+    @PatchMapping("/chapters/{id}")
     public ResponseEntity<ChapterDtoResponse> updateChapter(@PathVariable UUID id,
                                                             @RequestBody ChapterDtoPost chapterDTOPost) {
         return ResponseEntity.ok(new ChapterDtoResponse(chapterService.updateChapterMetadata(id, chapterDTOPost)));

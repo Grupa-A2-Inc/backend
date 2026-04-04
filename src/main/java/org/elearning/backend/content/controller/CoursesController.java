@@ -19,7 +19,7 @@ import java.util.UUID;
 
 @Tag(name = "Courses", description = "Course administration")
 @RestController
-@RequestMapping("/api/courses")
+@RequestMapping("/api/v1/courses")
 @RequiredArgsConstructor
 public class CoursesController {
 

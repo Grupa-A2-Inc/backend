@@ -34,6 +34,7 @@ class ChapterControllerTest {
 
     private UUID courseId;
     private UUID authenticatedUserId;
+    private static final String REQUEST_MAPPING = "/api/v1";
 
     @BeforeEach
     void setUp() {
@@ -88,7 +89,7 @@ class ChapterControllerTest {
     void shouldCreateChapter() {
         String body = "Test Chapter";
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/courses/" + courseId + "/chapters",
+                REQUEST_MAPPING + "/courses/" + courseId + "/chapters",
                 new HttpEntity<>(body, textHeaders()),
                 String.class
         );
@@ -113,7 +114,7 @@ class ChapterControllerTest {
 
         String body = "Chapter 2";
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/courses/" + courseId + "/chapters",
+                REQUEST_MAPPING + "/courses/" + courseId + "/chapters",
                 new HttpEntity<>(body, textHeaders()),
                 String.class
         );
@@ -135,7 +136,7 @@ class ChapterControllerTest {
     void shouldReturnNotFoundWhenCreatingChapterForInvalidCourse() {
         String body = "Test Chapter";
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/courses/" + UUID.randomUUID() + "/chapters",
+                REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/chapters",
                 new HttpEntity<>(body, textHeaders()),
                 String.class
         );
@@ -154,7 +155,7 @@ class ChapterControllerTest {
         insertChapter("Chapter 2", 2);
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/courses/" + courseId + "/chapters",
+                REQUEST_MAPPING + "/courses/" + courseId + "/chapters",
                 String.class
         );
 
@@ -170,7 +171,7 @@ class ChapterControllerTest {
     @Test
     void shouldReturnNotFoundWhenRequestingChaptersForInvalidCourse() {
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/courses/" + UUID.randomUUID() + "/chapters",
+                REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/chapters",
                 String.class
         );
 
@@ -186,7 +187,7 @@ class ChapterControllerTest {
         UUID chapterId = insertChapter("Chapter to Delete", 1);
 
         ResponseEntity<Void> response = restTemplate.exchange(
-                "/api/chapters/" + chapterId,
+                REQUEST_MAPPING + "/chapters/" + chapterId,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -208,7 +209,7 @@ class ChapterControllerTest {
     @Test
     void shouldReturnNotFoundWhenDeletingInvalidChapter() {
         ResponseEntity<Void> response = restTemplate.exchange(
-                "/api/chapters/" + UUID.randomUUID(),
+                REQUEST_MAPPING + "/chapters/" + UUID.randomUUID(),
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -228,7 +229,7 @@ class ChapterControllerTest {
         UUID chapter3 = insertChapter("Chapter 3", 3);
 
         restTemplate.exchange(
-                "/api/chapters/" + chapter2,
+                REQUEST_MAPPING + "/chapters/" + chapter2,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -253,7 +254,7 @@ class ChapterControllerTest {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/chapters/" + chapterId,
+                REQUEST_MAPPING + "/chapters/" + chapterId,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -288,7 +289,7 @@ class ChapterControllerTest {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/chapters/" + chapter1,
+                REQUEST_MAPPING + "/chapters/" + chapter1,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -319,7 +320,7 @@ class ChapterControllerTest {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/chapters/" + chapter3,
+                REQUEST_MAPPING + "/chapters/" + chapter3,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -348,7 +349,7 @@ class ChapterControllerTest {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/chapters/" + chapter1,
+                REQUEST_MAPPING + "/chapters/" + chapter1,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -375,7 +376,7 @@ class ChapterControllerTest {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/chapters/" + chapter1,
+                REQUEST_MAPPING + "/chapters/" + chapter1,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -408,7 +409,7 @@ class ChapterControllerTest {
     })
     void shouldReturnNotFoundWhenUpdatingNonExistentChapter(String body) {
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/chapters/" + UUID.randomUUID(),
+                REQUEST_MAPPING + "/chapters/" + UUID.randomUUID(),
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -434,7 +435,7 @@ class ChapterControllerTest {
                 """, invalidOrderIndex);
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/chapters/" + chapter1,
+                REQUEST_MAPPING + "/chapters/" + chapter1,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
