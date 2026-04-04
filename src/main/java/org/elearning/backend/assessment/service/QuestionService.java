@@ -10,12 +10,16 @@ import org.elearning.backend.assessment.dto.QuestionResponseDto;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.mapper.QuestionMapper;
 import org.elearning.backend.assessment.model.Question;
+import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.repository.QuestionRepository;
 import org.elearning.backend.assessment.repository.TestRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Sort;
 
 import org.springframework.security.access.AccessDeniedException;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -109,6 +113,23 @@ public class QuestionService {
         }
 
         return questionMapper.toResponseDto(question);
+    }
+
+    public List<QuestionResponseDto> getFilteredAndSortedQuestions(
+            UUID testId,
+            QuestionType questionType,
+            BigDecimal difficulty,
+            String sortBy,
+            String sortDirection) {
+
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        // Daca sortBy nu e trimis, punem by default "displayOrder"
+        String finalSortBy = (sortBy != null && !sortBy.isEmpty()) ? sortBy : "displayOrder";
+        Sort sort = Sort.by(direction, finalSortBy);
+        List<Question> questions = questionRepository.findFilteredQuestions(testId, questionType, difficulty, sort);
+        return questions.stream()
+                .map(questionMapper::toResponseDto)
+                .toList();
     }
 
     @Transactional

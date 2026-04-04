@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.dto.QuestionRequestDto;
 import org.elearning.backend.assessment.dto.QuestionResponseDto;
+import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.assessment.service.QuestionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,17 +44,6 @@ public class QuestionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdQuestion);
     }
 
-    @Operation(summary = "Get all questions for a test", description = "Retrieves a list of all questions associated with the specified test ID.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved the list of questions")
-    })
-    @GetMapping
-    public ResponseEntity<List<QuestionResponseDto>> getAllQuestions(
-            @PathVariable UUID testId
-    ) {
-        return ResponseEntity.ok(questionService.getAllQuestionsForTest(testId));
-    }
-
     @Operation(summary = "Get a specific question", description = "Retrieves the details of a specific question by its ID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved the question"),
@@ -65,6 +56,27 @@ public class QuestionController {
             @PathVariable Integer questionId
     ) {
         return ResponseEntity.ok(questionService.getQuestionById(testId, questionId));
+    }
+
+    @Operation(
+            summary = "Get filtered and sorted questions for a test",
+            description = "Retrieves a list of questions associated with a specific test. Supports optional filtering by question type and difficulty, and dynamic sorting."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved the list of questions (returns an empty list if no questions match the filters)"),
+            @ApiResponse(responseCode = "400", description = "Invalid request parameters (e.g., wrong sorting direction or invalid enum value for question type)")
+    })
+    @GetMapping
+    public ResponseEntity<List<QuestionResponseDto>> getQuestions(
+            @PathVariable UUID testId,
+            @RequestParam(required = false) QuestionType questionType,
+            @RequestParam(required = false) BigDecimal difficulty,
+            @RequestParam(required = false, defaultValue = "displayOrder") String sortBy,
+            @RequestParam(required = false, defaultValue = "asc") String sortDir
+    ) {
+        return ResponseEntity.ok(
+                questionService.getFilteredAndSortedQuestions(testId, questionType, difficulty, sortBy, sortDir)
+        );
     }
 
     @Operation(summary = "Update an existing question", description = "Fully updates a question and its options. The test must be in DRAFT state and owned by the authenticated professor.")
