@@ -13,6 +13,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/v1")
 public class AttemptController {
 
     private final AttemptService attemptService;
@@ -23,7 +24,7 @@ public class AttemptController {
             @ApiResponse(responseCode = "400", description = "Test is not PUBLISHED"),
             @ApiResponse(responseCode = "404", description = "Test not found")
     })
-    @PostMapping("/api/tests/{testId}/start")
+    @PostMapping("tests/{testId}/start")
     public ResponseEntity<StartAttemptResponseDto> startAttempt(@PathVariable UUID testId) {
 
         // Placeholder for JWT - to be replaced with actual authentication logic
@@ -40,7 +41,7 @@ public class AttemptController {
             @ApiResponse(responseCode = "409", description = "Attempt already submitted"),
             @ApiResponse(responseCode = "410", description = "Timer expired")
     })
-    @PostMapping("/api/attempts/{attemptId}/submit")
+    @PostMapping("attempts/{attemptId}/submit")
     public ResponseEntity<TestResultDto> submitAttempt(
             @PathVariable UUID attemptId,
             @RequestBody SubmitRequestDto request) {
