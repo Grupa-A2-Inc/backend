@@ -34,6 +34,7 @@ public interface AttemptMapper {
      */
     @Mapping(target = "timeLimitSec", source = "test.timeLimitSec")
     @Mapping(target = "questions", source = "questionsList")
+    @Mapping(target="attemptId", source="attempt.id")
     StartAttemptResponseDto toStartAttemptResponseDTO(TestAttempt attempt, Test test, List<QuestionForStudentDto> questionsList);
 
     StartAttemptResponseDto.TestInfoForAttemptDto toTestInfoForAttemptDTO(Test test);
