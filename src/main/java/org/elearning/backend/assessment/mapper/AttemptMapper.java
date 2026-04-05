@@ -1,8 +1,8 @@
 package org.elearning.backend.assessment.mapper;
 
-import org.elearning.backend.assessment.dto.QuestionForStudentDto;
-import org.elearning.backend.assessment.dto.StartAttemptResponseDto;
-import org.elearning.backend.assessment.dto.TestResultDto;
+import org.elearning.backend.assessment.dto.question_dto.QuestionForStudentDto;
+import org.elearning.backend.assessment.dto.test_dto.StartAttemptResponseDto;
+import org.elearning.backend.assessment.dto.assigment_dto.TestResultDto;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.model.TestAttempt;
 import org.elearning.backend.assessment.model.TestResult;

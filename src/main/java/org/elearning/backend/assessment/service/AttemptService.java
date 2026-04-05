@@ -1,7 +1,11 @@
 package org.elearning.backend.assessment.service;
 
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.assessment.dto.*;
+import org.elearning.backend.assessment.dto.assigment_dto.TestResultDto;
+import org.elearning.backend.assessment.dto.question_dto.QuestionForStudentDto;
+import org.elearning.backend.assessment.dto.test_dto.StartAttemptResponseDto;
+import org.elearning.backend.assessment.dto.test_dto.SubmitAnswerDto;
+import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
 import org.elearning.backend.assessment.exception.*;
 import org.elearning.backend.assessment.mapper.AttemptMapper;
 import org.elearning.backend.assessment.mapper.QuestionMapper;

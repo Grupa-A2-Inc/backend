@@ -75,6 +75,19 @@ public class AssessmentExceptionHandler extends GlobalExceptionHandler {
     public ResponseEntity<String> handleInvalidBody(HttpMessageNotReadableException ex) {
         return ResponseEntity.badRequest().body("Invalid request body: " + ex.getMessage());
     }
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(org.springframework.security.access.AccessDeniedException exception) {
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException exception) {
+        return buildErrorResponse(exception, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(jakarta.validation.ValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleValidation(jakarta.validation.ValidationException exception) {
+        return buildErrorResponse(exception, HttpStatus.BAD_REQUEST);
+    }
 
 }

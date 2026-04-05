@@ -1,10 +1,10 @@
 package org.elearning.backend.assessment.service;
 
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.assessment.dto.AttemptReportDTO;
-import org.elearning.backend.assessment.dto.AttemptStatusDTO;
-import org.elearning.backend.assessment.dto.QuestionForAttemptReportDTO;
-import org.elearning.backend.assessment.dto.TestResultDto;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptReportDTO;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptStatusDTO;
+import org.elearning.backend.assessment.dto.question_dto.QuestionForAttemptReportDTO;
+import org.elearning.backend.assessment.dto.assigment_dto.TestResultDto;
 import org.elearning.backend.assessment.exception.AttemptInProgressException;
 import org.elearning.backend.assessment.exception.TimerExpiredException;
 import org.elearning.backend.assessment.mapper.AttemptMapper;
@@ -80,7 +80,7 @@ public class TestResultService {
     @Transactional
     public List<AttemptStatusDTO> getTestAttempts(UUID testId, UUID studentId) {
         List<TestResult> results = testResultRepository.findByStudentIdAndTestIdOrderByAttemptStartedAtDesc(studentId, testId);
-        return results.stream().map(attemptReportMapper::toAttemptStatusDTO).collect(Collectors.toList());
+        return results.stream().map(attemptReportMapper::toAttemptStatusDTO).toList();
     }
 
     @Transactional

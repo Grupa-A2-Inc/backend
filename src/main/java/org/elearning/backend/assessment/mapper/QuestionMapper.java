@@ -1,6 +1,10 @@
 package org.elearning.backend.assessment.mapper;
 
-import org.elearning.backend.assessment.dto.*;
+import org.elearning.backend.assessment.dto.question_dto.QuestionForStudentDto;
+import org.elearning.backend.assessment.dto.question_dto.QuestionRequestDto;
+import org.elearning.backend.assessment.dto.question_dto.QuestionResponseDto;
+import org.elearning.backend.assessment.dto.question_option_dto.OptionRequestDto;
+import org.elearning.backend.assessment.dto.question_option_dto.OptionResponseDto;
 import org.elearning.backend.assessment.model.Question;
 import org.elearning.backend.assessment.model.QuestionOption;
 import org.mapstruct.Mapper;

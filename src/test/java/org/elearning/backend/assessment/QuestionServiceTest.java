@@ -1,9 +1,9 @@
 package org.elearning.backend.assessment;
 
 import jakarta.validation.ValidationException;
-import org.elearning.backend.assessment.dto.OptionRequestDto;
-import org.elearning.backend.assessment.dto.QuestionRequestDto;
-import org.elearning.backend.assessment.dto.QuestionResponseDto;
+import org.elearning.backend.assessment.dto.question_option_dto.OptionRequestDto;
+import org.elearning.backend.assessment.dto.question_dto.QuestionRequestDto;
+import org.elearning.backend.assessment.dto.question_dto.QuestionResponseDto;
 import org.elearning.backend.assessment.mapper.QuestionMapper;
 import org.elearning.backend.assessment.model.Question;
 import org.elearning.backend.assessment.model.QuestionType;

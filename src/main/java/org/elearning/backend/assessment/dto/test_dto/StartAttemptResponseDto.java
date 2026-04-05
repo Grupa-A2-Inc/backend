@@ -1,7 +1,9 @@
 // dto/StartAttemptResponseDTO.java
-package org.elearning.backend.assessment.dto;
+package org.elearning.backend.assessment.dto.test_dto;
 
 import lombok.*;
+import org.elearning.backend.assessment.dto.question_dto.QuestionForStudentDto;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;

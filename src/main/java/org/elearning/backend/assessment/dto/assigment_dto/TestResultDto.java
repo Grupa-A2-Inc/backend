@@ -1,5 +1,5 @@
 // dto/TestResultDTO.java
-package org.elearning.backend.assessment.dto;
+package org.elearning.backend.assessment.dto.assigment_dto;
 
 import lombok.*;
 import org.elearning.backend.assessment.model.QuestionType;

@@ -1,9 +1,9 @@
 package org.elearning.backend.assessment.service;
 
 import jakarta.transaction.Transactional;
-import org.elearning.backend.assessment.dto.QuestionDataForUsersDto;
-import org.elearning.backend.assessment.dto.TestEditDto;
-import org.elearning.backend.assessment.dto.TestEntityDto;
+import org.elearning.backend.assessment.dto.question_dto.QuestionDataForUsersDto;
+import org.elearning.backend.assessment.dto.assigment_dto.TestEditDto;
+import org.elearning.backend.assessment.dto.assigment_dto.TestEntityDto;
 import org.elearning.backend.assessment.exception.*;
 import org.elearning.backend.assessment.mapper.QuestionOptionMapper;
 import org.elearning.backend.assessment.mapper.TestMapper;
