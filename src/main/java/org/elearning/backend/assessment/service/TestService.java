@@ -109,28 +109,19 @@ public class TestService {
 
     @Transactional
     public TestEntityDto updateTest(TestEditDto editableContent, UUID testId){
-        if(!testRepository.existsById(testId)){
-            throw new DoesNotExistException(TEST_DOES_NOT_EXIST);
-        }
+        Test test = testRepository.findById(testId)
+                .orElseThrow(() -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
 
+        if(editableContent.getTitle() != null)
+            test.setTitle(editableContent.getTitle());
+        if(editableContent.getDescription() != null)
+            test.setDescription(editableContent.getDescription());
+        if(editableContent.getTimeLimitSec() != null)
+            test.setTimeLimitSec(editableContent.getTimeLimitSec());
+        if(editableContent.getAiEnabled() != null)
+            test.setAiEnabled(editableContent.getAiEnabled());
 
-        if(editableContent.getTitle()!=null){
-            testRepository.updateTestTitle(editableContent.getTitle(), testId);
-        }
-
-        if(editableContent.getDescription()!=null){
-            testRepository.updateTestDescription(editableContent.getDescription(), testId);
-        }
-        if(editableContent.getTimeLimitSec()!=null){
-            testRepository.updateTestTimeLimitSeconds(editableContent.getTimeLimitSec(), testId);
-        }
-
-        if(editableContent.getAiEnabled()!=null){
-            testRepository.updateTestAiEnabled(editableContent.getAiEnabled(), testId);
-        }
-
-        return testMapper.toEntityDto(testRepository.findById(testId).orElse(null));
-
+        return testMapper.toEntityDto(testRepository.save(test));
     }
 
     @Transactional

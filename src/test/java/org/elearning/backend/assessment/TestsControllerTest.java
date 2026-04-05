@@ -5,6 +5,9 @@ import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -12,8 +15,10 @@ import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -401,6 +406,105 @@ class TestsControllerTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void shouldGetQuestionsIfAuthor(){
+        UUID professorId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID testId = UUID.randomUUID();
+
+        jdbcTemplate.update(
+                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status)" +
+                        " VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? as test_status))",
+                testId, lessonId, professorId, "Test1", "description", 600, true, "DRAFT"
+        );
+
+        insertQuestion(testId);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + TESTS + testId + "/questions",
+                String.class
+        );
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void shouldNotGetQuestionsIfTestDoesNotExist(){
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + TESTS + UUID.randomUUID() + "/questions",
+                String.class
+        );
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+
+    @Test
+    void shouldNotGetQuestionsIfIsNotAuthor(){
+        UUID testId = insertTest("Test1", "desc", 600, false, "DRAFT");
+        insertQuestion(testId);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + TESTS + testId + "/questions",
+                String.class
+        );
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+
+    @Test
+    void shouldTriggerOnUpdate(){
+        UUID testId = insertTest("Test1", "desc", 600, false, "DRAFT");
+
+        String body = """
+        { "title": "Updated Title" }
+        """;
+
+        restTemplate.exchange(
+                REQUEST_MAPPING + TESTS + testId,
+                HttpMethod.PATCH,
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        LocalDateTime updatedAt = jdbcTemplate.queryForObject(
+                "SELECT updated_at FROM tests WHERE id = ?",
+                LocalDateTime.class, testId
+        );
+        assertThat(updatedAt).isNotNull();
+    }
+
+    @ParameterizedTest
+    @MethodSource("providePartialUpdateArguments")
+    void shouldUpdateTestWithPartialData(String requestBody){
+        UUID testId = insertTest("Test1", "desc", 600, false, "DRAFT");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                REQUEST_MAPPING + TESTS + testId,
+                HttpMethod.PATCH,
+                new HttpEntity<>(requestBody, jsonHeaders()),
+                String.class
+        );
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    private static Stream<Arguments> providePartialUpdateArguments(){
+        return Stream.of(
+                Arguments.of("""
+                        { "title": "Only title" }
+                        """),
+                Arguments.of("""
+                        { "description": "Only desc" }
+                        """),
+                Arguments.of("""
+                        { "timeLimitSec": 300 }
+                        """),
+                Arguments.of("""
+                        { "aiEnabled": true }
+                        """),
+                Arguments.of("""
+                                {}
+                                """)
+        );
     }
 
 }
