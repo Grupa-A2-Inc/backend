@@ -88,7 +88,7 @@ public class AttemptService {
      * @throws TimerExpiredException            If the time limit for the attempt has expired.
      */
     private static final Logger log = LoggerFactory.getLogger(AttemptService.class);
-    @Transactional
+    @Transactional(noRollbackFor = TimerExpiredException.class)
     public TestResultDto submitAttempt(UUID attemptId, UUID studentId,
                                        SubmitRequestDto request) {
         TestAttempt attempt = attemptRepository.findById(attemptId)
@@ -112,14 +112,54 @@ public class AttemptService {
         if (LocalDateTime.now().isAfter(expireTime)) {
             attempt.setStatus(AttemptStatus.EXPIRED);
             attempt.setEndedAt(LocalDateTime.now());
-            attemptRepository.save(attempt);
+            attemptRepository.saveAndFlush(attempt);
 
             throw new TimerExpiredException("The time limit for this attempt has expired");
         }
 
-        int correctCount = 0;
-        int totalCount = request.getAnswers().size();
         List<TestResultDto.TestResultQuestionDto> resultQuestions = new ArrayList<>();
+
+        Set<Integer> allQuestionIds = questionRepository
+                .findByTestIdAndIsActiveTrue(test.getId())
+                .stream()
+                .map(Question::getId)
+                .collect(Collectors.toSet());
+
+        Set<Integer> submittedQuestionIds = request.getAnswers()
+                .stream()
+                .map(SubmitAnswerDto::getQuestionId)
+                .collect(Collectors.toSet());
+
+        int correctCount = 0;
+        int totalCount = allQuestionIds.size();
+
+        allQuestionIds.removeAll(submittedQuestionIds);
+        for(Integer questionId : allQuestionIds) {
+            Question question = questionRepository.findById(questionId).get();
+
+            TestResultDto.TestResultQuestionDto resultQuestion = new TestResultDto.TestResultQuestionDto();
+            resultQuestion.setQuestionId(questionId);
+            resultQuestion.setQuestionType(question.getQuestionType());
+            resultQuestion.setContent(question.getContent());
+            resultQuestion.setSelectedOptionIds(Collections.emptyList());
+            resultQuestion.setCorrectOptionIds(optionRepository
+                    .findByQuestionIdAndIsCorrectTrue(questionId)
+                    .stream()
+                    .map(QuestionOption::getId)
+                    .toList());
+            resultQuestion.setCorrect(false);
+            resultQuestions.add(resultQuestion);
+
+            AttemptAnswer answer = new AttemptAnswer();
+            answer.setAttempt(attempt);
+            answer.setQuestion(question);
+            answer.setSelectedOptionIds(Collections.emptyList());
+            answer.setCorrect(false);
+            answer.setTimeSpent(BigDecimal.valueOf(0));
+            answer.setAnsweredAt(LocalDateTime.now());
+
+            answerRepository.save(answer);
+        }
 
         for (SubmitAnswerDto answerDTO : request.getAnswers()) {
             TestResultDto.TestResultQuestionDto resultQuestion = new TestResultDto.TestResultQuestionDto();
@@ -139,13 +179,13 @@ public class AttemptService {
             boolean isCorrect = selectedIds.equals(correctOptionIds);
             if (isCorrect) {
                 correctCount++;
-                resultQuestion.setCorrect(true);
             }
-            else
-                resultQuestion.setCorrect(false);
 
             resultQuestion.setSelectedOptionIds(answerDTO.getSelectedOptionIds());
             resultQuestion.setCorrectOptionIds(new ArrayList<>(correctOptionIds));
+            resultQuestion.setQuestionType(question.getQuestionType());
+            resultQuestion.setContent(question.getContent());
+            resultQuestion.setCorrect(isCorrect);
 
             resultQuestions.add(resultQuestion);
 
