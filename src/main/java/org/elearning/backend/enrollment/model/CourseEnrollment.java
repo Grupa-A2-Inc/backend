@@ -8,6 +8,8 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Setter
@@ -42,4 +44,7 @@ public class CourseEnrollment {
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt; // null = în progres
+
+    @OneToMany(mappedBy = "courseEnrollment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LessonProgress> lessonProgresses = new ArrayList<>();
 }
