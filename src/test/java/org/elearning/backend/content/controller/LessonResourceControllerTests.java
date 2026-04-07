@@ -144,7 +144,7 @@ class LessonResourceControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -162,7 +162,7 @@ class LessonResourceControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
@@ -204,7 +204,7 @@ class LessonResourceControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
@@ -214,7 +214,7 @@ class LessonResourceControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
@@ -267,7 +267,7 @@ class LessonResourceControllerTests {
                 Void.class
         );
 
-        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
@@ -279,7 +279,7 @@ class LessonResourceControllerTests {
                 Void.class
         );
 
-        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
 
@@ -359,7 +359,7 @@ class LessonResourceControllerTests {
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
@@ -378,7 +378,7 @@ class LessonResourceControllerTests {
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
@@ -403,7 +403,7 @@ class LessonResourceControllerTests {
                 String.class
         );
 
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
     }
 
