@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
  * si aici le prind si le decid statusul si bodyul
  */
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "org.elearning.backend.common.exception")
 public class GlobalExceptionHandler
 {
 
