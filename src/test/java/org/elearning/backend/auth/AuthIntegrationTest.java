@@ -6,9 +6,10 @@ import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.response.UserDataResponse;
+import org.elearning.backend.auth.exception.AuthConflictException;
+import org.elearning.backend.auth.exception.AuthExceptionHandler;
+import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.auth.service.AuthService;
-import org.elearning.backend.common.exception.DuplicateResourceException;
-import org.elearning.backend.common.exception.GlobalExceptionHandler;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.user.entity.UserStatus;
@@ -35,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import(AuthExceptionHandler.class)
 class AuthIntegrationTest {
 
     @Autowired
@@ -111,6 +112,10 @@ class AuthIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("refresh_token=refresh-token")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Path=/api/v1/auth")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=none")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Secure")))
                 .andExpect(jsonPath("$.message").value("User registered successfully"));
     }
 
@@ -135,7 +140,7 @@ class AuthIntegrationTest {
         request.setEmail("dup@test.com");
 
         when(authService.register(any(RegisterRequest.class)))
-                .thenThrow(new DuplicateResourceException("Email already in use: dup@test.com"));
+                .thenThrow(new AuthConflictException("Email already in use: dup@test.com"));
 
         RegisterRequest request2 = validRegisterRequest();
         request2.setEmail("dup@test.com");
@@ -150,7 +155,7 @@ class AuthIntegrationTest {
     void register_duplicateOrgName_returns409() throws Exception {
 
         when(authService.register(any(RegisterRequest.class)))
-                .thenThrow(new DuplicateResourceException("Organization name already exists: Scoala Ion"));
+                .thenThrow(new AuthConflictException("Organization name already exists: Scoala Ion"));
 
         RegisterRequest request2 = validRegisterRequest();
         request2.setEmail("admin2@test.com");
@@ -193,6 +198,9 @@ class AuthIntegrationTest {
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("refresh_token=refresh-token")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Path=/api/v1/auth")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=none")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Secure")))
                 .andExpect(jsonPath("$.message").value("Login successful"))
                 .andExpect(jsonPath("$.refreshToken").isEmpty());
     }
@@ -204,7 +212,7 @@ class AuthIntegrationTest {
         loginRequest.setPassword("parolaGresita");
 
         when(authService.login(any(LoginRequest.class)))
-                .thenThrow(new org.elearning.backend.common.exception.InvalidCredentials("Invalid credentials"));
+                .thenThrow(new InvalidCredentialsException("Invalid credentials"));
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -219,7 +227,7 @@ class AuthIntegrationTest {
         loginRequest.setPassword("parola123");
 
         when(authService.login(any(LoginRequest.class)))
-                .thenThrow(new org.elearning.backend.common.exception.InvalidCredentials("Invalid credentials"));
+                .thenThrow(new InvalidCredentialsException("Invalid credentials"));
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

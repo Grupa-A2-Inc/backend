@@ -2,12 +2,9 @@ package org.elearning.backend.common;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
-
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 
 public class GlobalExceptionHandler {
     protected ResponseEntity<Map<String, Object>> buildErrorResponse(Exception ex, HttpStatus status) {

@@ -23,7 +23,7 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Value("${app.auth.secure-cookies:false}")
+    @Value("${app.auth.secure-cookies:true}")
     private boolean secureCookies;
 
     @PostMapping("/register")
@@ -42,7 +42,8 @@ public class AuthController {
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", response.getRefreshToken())
                 .httpOnly(true)
                 .secure(secureCookies)
-                .path("/api/auth")
+                .sameSite("none")
+                .path("/api/v1/auth")
                 .maxAge(Duration.ofDays(7))
                 .build();
 

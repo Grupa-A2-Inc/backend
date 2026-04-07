@@ -29,7 +29,7 @@ class OrganizationControllerTest {
 
     @Test
     void createOrganization_returns201Created() {
-        CreateOrganizationRequest request = CreateOrganizationRequest.builder().name("Org").build();
+        CreateOrganizationRequest request = new CreateOrganizationRequest("Org", null, null, null, null, null, null);
         OrganizationResponse responseBody = makeResponse();
         when(organizationService.createOrganization(request)).thenReturn(responseBody);
 
@@ -65,10 +65,11 @@ class OrganizationControllerTest {
     @Test
     void updateOrganization_returns204NoContent() {
         UUID id = UUID.randomUUID();
-        UpdateOrganizationRequest request = UpdateOrganizationRequest.builder().name("Updated").build();
+        UpdateOrganizationRequest request = new UpdateOrganizationRequest("Updated", null, null, null, null, null);
 
         ResponseEntity<Void> response = organizationController.updateOrganization(id, request);
 
+        verify(organizationService).updateOrganization(id, request);
         assertThat(response.getStatusCode().value()).isEqualTo(204);
         assertThat(response.getBody()).isNull();
     }
