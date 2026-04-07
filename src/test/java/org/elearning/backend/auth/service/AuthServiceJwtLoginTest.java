@@ -2,7 +2,7 @@ package org.elearning.backend.auth.service;
 
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
-import org.elearning.backend.common.exception.InvalidCredentials;
+import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
@@ -126,7 +126,7 @@ class AuthServiceJwtLoginTest {
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(InvalidCredentials.class)
+                .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Invalid credentials");
 
         verify(jwtUtil, never()).generateAccessToken(any(), any());
@@ -143,7 +143,7 @@ class AuthServiceJwtLoginTest {
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(InvalidCredentials.class)
+                .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Invalid credentials");
 
         verify(jwtUtil, never()).generateAccessToken(any(), any());

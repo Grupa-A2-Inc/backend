@@ -5,6 +5,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.auth.CustomUserDetailsService;
 import org.elearning.backend.security.config.SecurityConfig;
+import org.elearning.backend.security.handler.JwtAccessDeniedHandler;
 import org.elearning.backend.security.controller.ProtectedController;
 import org.elearning.backend.security.handler.JwtAuthenticationEntryPoint;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
@@ -26,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProtectedController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtAuthenticationEntryPoint.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtAuthenticationEntryPoint.class, JwtAccessDeniedHandler.class})
 class ProtectedEndpointTest {
 
     @Autowired

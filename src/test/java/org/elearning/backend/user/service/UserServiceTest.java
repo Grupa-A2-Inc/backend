@@ -1,7 +1,5 @@
 package org.elearning.backend.user.service;
 
-import org.elearning.backend.common.exception.DuplicateResourceException;
-import org.elearning.backend.common.exception.ResourceNotFoundException;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
@@ -19,6 +17,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.elearning.backend.user.exception.UserAlreadyExistsException;
+import org.elearning.backend.user.exception.UserNotFoundException;
+import org.elearning.backend.user.exception.UserOrganizationNotFoundException;
+import org.elearning.backend.user.exception.UserRoleNotFoundException;
 
 import java.util.List;
 
@@ -87,7 +89,7 @@ class UserServiceTest {
 
         when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(true);
 
-        assertThrows(DuplicateResourceException.class,
+        assertThrows(UserAlreadyExistsException.class,
                 () -> userService.createUser(request));
     }
 
@@ -97,7 +99,7 @@ class UserServiceTest {
 
         when(userRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(UserNotFoundException.class,
                 () -> userService.getUserById(id));
     }
 
@@ -152,10 +154,12 @@ class UserServiceTest {
         when(userRepository.findById(id)).thenReturn(Optional.of(existingUser));
         when(userRepository.save(any(User.class))).thenReturn(existingUser);
 
+        var originalUpdatedAt = existingUser.getUpdatedAt();
         UserResponse response = userService.updateUser(id, request);
 
         assertEquals("ion.nou@scoala.ro", response.getEmail());
         assertEquals("Popescu", response.getLastName());
+        assertTrue(!existingUser.getUpdatedAt().isBefore(originalUpdatedAt));
     }
 
     @Test
@@ -175,7 +179,7 @@ class UserServiceTest {
 
         when(userRepository.existsById(id)).thenReturn(false);
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(UserNotFoundException.class,
                 () -> userService.deleteUser(id));
     }
 
@@ -212,7 +216,7 @@ class UserServiceTest {
 
         when(userRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(UserNotFoundException.class,
                 () -> userService.updateUser(id, request));
     }
 
@@ -229,7 +233,7 @@ class UserServiceTest {
         when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(false);
         when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(UserRoleNotFoundException.class,
                 () -> userService.createUser(request));
     }
 
@@ -290,7 +294,7 @@ class UserServiceTest {
 
         when(userRepository.existsByEmail("ana@example.com")).thenReturn(true);
 
-        assertThrows(DuplicateResourceException.class, () -> userService.createUser(request));
+        assertThrows(UserAlreadyExistsException.class, () -> userService.createUser(request));
 
         verify(userRepository, never()).save(any(User.class));
         verify(passwordEncoder, never()).encode(anyString());
@@ -309,7 +313,7 @@ class UserServiceTest {
         when(userRepository.existsByEmail("ana@example.com")).thenReturn(false);
         when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> userService.createUser(request));
+        assertThrows(UserRoleNotFoundException.class, () -> userService.createUser(request));
 
         verify(userRepository, never()).save(any(User.class));
     }
@@ -370,7 +374,7 @@ class UserServiceTest {
         when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
         when(organizationRepository.findById(orgId)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(UserOrganizationNotFoundException.class,
                 () -> userService.createUser(request));
     }
 
@@ -433,7 +437,34 @@ class UserServiceTest {
         when(userRepository.findById(id)).thenReturn(Optional.of(existingUser));
         when(organizationRepository.findById(orgId)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(UserOrganizationNotFoundException.class,
                 () -> userService.updateUser(id, request));
+    }
+
+    @Test
+    void getUsersByOrganizationId_returnsMappedUsers() {
+        UUID organizationId = UUID.randomUUID();
+        Role role = new Role(RoleName.STUDENT);
+
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setEmail("student@example.com");
+        user.setFirstName("Student");
+        user.setLastName("One");
+        user.setRole(role);
+        user.setStatus(UserStatus.ACTIVE);
+
+        Organization organization = new Organization();
+        organization.setId(organizationId);
+        user.setOrganization(organization);
+
+        when(userRepository.findByOrganizationId(organizationId)).thenReturn(List.of(user));
+
+        List<UserResponse> responses = userService.getUsersByOrganizationId(organizationId);
+
+        assertEquals(1, responses.size());
+        assertEquals(user.getId(), responses.get(0).getId());
+        assertEquals(organizationId, responses.get(0).getOrganizationId());
+        assertEquals(RoleName.STUDENT, responses.get(0).getRoleName());
     }
 }
