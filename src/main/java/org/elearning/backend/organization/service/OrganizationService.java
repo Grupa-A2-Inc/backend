@@ -1,11 +1,12 @@
 package org.elearning.backend.organization.service;
 
 import lombok.AllArgsConstructor;
-import org.elearning.backend.common.exception.ResourceNotFoundException;
 import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
 import org.elearning.backend.organization.entity.Organization;
+import org.elearning.backend.organization.exception.OrganizationNotFoundException;
+import org.elearning.backend.organization.exception.OrganizationOwnerNotFoundException;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.repository.UserRepository;
@@ -24,7 +25,7 @@ public class OrganizationService {
 
     public OrganizationResponse createOrganization(CreateOrganizationRequest request) {
         User owner = userRepository.findById(request.getOwnerId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + request.getOwnerId()));
+                .orElseThrow(() -> new OrganizationOwnerNotFoundException("User not found: " + request.getOwnerId()));
 
         Organization organization = new Organization();
         organization.setName(request.getName());
@@ -41,7 +42,7 @@ public class OrganizationService {
 
     public OrganizationResponse getOrganizationById(UUID id) {
         Organization organization = organizationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Organization not found: " + id));
+                .orElseThrow(() -> new OrganizationNotFoundException("Organization not found: " + id));
         return toResponse(organization);
     }
 
@@ -54,7 +55,7 @@ public class OrganizationService {
 
     public OrganizationResponse updateOrganization(UUID id, UpdateOrganizationRequest request) {
         Organization organization = organizationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Organization not found: " + id));
+                .orElseThrow(() -> new OrganizationNotFoundException("Organization not found: " + id));
 
         organization.setName(request.getName());
         organization.setCountry(request.getCountry());
@@ -70,7 +71,7 @@ public class OrganizationService {
 
     public void deleteOrganization(UUID id) {
         if (!organizationRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Organization not found: " + id);
+            throw new OrganizationNotFoundException("Organization not found: " + id);
         }
         organizationRepository.deleteById(id);
     }

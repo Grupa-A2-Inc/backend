@@ -5,10 +5,10 @@ import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.response.UserDataResponse;
-import org.elearning.backend.common.exception.BadRequestException;
-import org.elearning.backend.common.exception.DuplicateResourceException;
-import org.elearning.backend.common.exception.InvalidCredentials;
-import org.elearning.backend.common.exception.ResourceNotFoundException;
+import org.elearning.backend.auth.exception.AuthBadRequestException;
+import org.elearning.backend.auth.exception.AuthConflictException;
+import org.elearning.backend.auth.exception.AuthResourceNotFoundException;
+import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -42,19 +42,19 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already in use: " + request.getEmail());
+            throw new AuthConflictException("Email already in use: " + request.getEmail());
         }
 
         if (organizationRepository.existsByName(request.getOrganizationName())) {
-            throw new DuplicateResourceException("Organization name already exists: " + request.getOrganizationName());
+            throw new AuthConflictException("Organization name already exists: " + request.getOrganizationName());
         }
 
         if (!Objects.equals(request.getConfirmPassword(), request.getPassword())) {
-            throw new BadRequestException("Passwords do not match");
+            throw new AuthBadRequestException("Passwords do not match");
         }
 
         Role role = roleRepository.findByName(RoleName.ORGANIZATION_ADMIN)
-                .orElseThrow(() -> new ResourceNotFoundException("Role ORGANIZATION_ADMIN not found"));
+                .orElseThrow(() -> new AuthResourceNotFoundException("Role ORGANIZATION_ADMIN not found"));
 
         User user = new User();
         user.setEmail(request.getEmail());
@@ -130,7 +130,7 @@ public class AuthService {
 
             return new AuthResponse("Login successful", accessToken, refreshToken, userData);
         } catch (AuthenticationException ex) {
-            throw new InvalidCredentials("Invalid credentials");
+            throw new InvalidCredentialsException("Invalid credentials");
         }
     }
 }
