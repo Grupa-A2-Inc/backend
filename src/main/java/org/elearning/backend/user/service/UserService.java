@@ -5,15 +5,13 @@ import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.repository.RoleRepository;
+import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
-import org.elearning.backend.user.exception.UserAlreadyExistsException;
-import org.elearning.backend.user.exception.UserNotFoundException;
-import org.elearning.backend.user.exception.UserOrganizationNotFoundException;
-import org.elearning.backend.user.exception.UserRoleNotFoundException;
+import org.elearning.backend.user.exception.*;
 import org.elearning.backend.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -92,6 +90,23 @@ public class UserService {
             throw new UserNotFoundException("User does not exist: " + id);
         }
         userRepository.deleteById(id);
+    }
+
+    public void changePassword(UUID id, ChangePasswordRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User does not exist: " + id));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new UserBadRequestException("Current password is incorrect");
+        }
+
+        if (!request.getNewPassword().equals(request.getNewPasswordConfirm())) {
+            throw new UserBadRequestException("Passwords do not match");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
     }
 
     private UserResponse toResponse(User user) {
