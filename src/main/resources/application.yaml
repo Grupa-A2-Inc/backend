@@ -26,8 +26,8 @@ spring:
 server:
   port: 8067
 
-logging:
-  file:
-    name: app.log
-  level:
-    root: INFO
+#logging:
+#  file:
+#    name: app.log
+#  level:
+#    root: INFO
