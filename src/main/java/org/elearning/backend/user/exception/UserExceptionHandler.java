@@ -46,4 +46,9 @@ public class UserExceptionHandler extends GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleUnexpected(Exception ex) {
         return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    @ExceptionHandler(UserBadRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequest(UserBadRequestException ex) {
+        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST);
+    }
 }
