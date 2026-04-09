@@ -26,6 +26,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
+    private static final String USER_NO_EXIST = "User does not exist: ";
 
     public UserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -55,7 +56,7 @@ public class UserService {
 
     public UserResponse getUserById(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User does not exist: " + id));
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + id));
         return toResponse(user);
     }
 
@@ -68,7 +69,7 @@ public class UserService {
 
     public UserResponse updateUser(UUID id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User does not exist: " + id));
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + id));
 
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
@@ -87,14 +88,14 @@ public class UserService {
 
     public void deleteUser(UUID id) {
         if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException("User does not exist: " + id);
+            throw new UserNotFoundException(USER_NO_EXIST + id);
         }
         userRepository.deleteById(id);
     }
 
     public void changePassword(UUID id, ChangePasswordRequest request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User does not exist: " + id));
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + id));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new UserBadRequestException("Current password is incorrect");

@@ -49,6 +49,7 @@
     </appender>
 
     <logger name="org.elearning.backend.security.listener.Listener" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
         <appender-ref ref="FAILED_LOGIN_FILE" />
     </logger>
 

@@ -164,23 +164,6 @@
             <scope>test</scope>
         </dependency>
 
-<!--astea 3 sunt de test pentru logger-->
-<!--        <dependency>-->
-<!--            <groupId>ch.qos.logback</groupId>-->
-<!--            <artifactId>logback-core</artifactId>-->
-<!--            <version>1.5.18</version>-->
-<!--        </dependency>-->
-
-<!--daca o adaug pe asta am eroare in listener-->
-
-<!--        <dependency>-->
-<!--            <groupId>org.slf4j</groupId>-->
-<!--            <artifactId>slf4j-api</artifactId>-->
-<!--            <version>2.1.0-alpha1</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
-
-
     </dependencies>
 
     <build>
