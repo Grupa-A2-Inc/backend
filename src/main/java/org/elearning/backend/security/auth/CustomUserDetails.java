@@ -1,6 +1,7 @@
 package org.elearning.backend.security.auth;
 
 import lombok.Getter;
+import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,6 +29,14 @@ public class CustomUserDetails implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().name()));
+    }
+
+    public RoleName getRoleName() {
+        return user.getRole().getName();
+    }
+
+    public UUID getOrganizationId() {
+        return user.getOrganization() != null ? user.getOrganization().getId() : null;
     }
 
     @Override

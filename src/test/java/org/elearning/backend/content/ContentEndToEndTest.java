@@ -200,7 +200,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(put(REQUEST_MAPPING + "/courses/" + UUID.randomUUID()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(update)))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
 
@@ -236,7 +236,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/chapters"))
                         .contentType(MediaType.TEXT_PLAIN)
                         .content("Some chapter"))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -302,7 +302,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(patch(REQUEST_MAPPING + "/chapters/" + chapterId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
     }
 
 
@@ -349,7 +349,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/chapters/" + chapterId + "/lessons"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -362,7 +362,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/chapters/" + UUID.randomUUID() + "/lessons"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -489,7 +489,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/lessons/" + lessonId + "/resources"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -504,7 +504,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/lessons/" + lessonId + "/resources"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -517,7 +517,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/resources"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -562,7 +562,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(patch(REQUEST_MAPPING + "/lessons/" + differentLessonId + "/resources/" + resourceId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
 
@@ -591,7 +591,7 @@ class ContentEndToEndTest {
     void getCourseFullView_notFound_shouldReturn404() throws Exception {
 
         mockMvc.perform(authorized(get(REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/full-view")))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
 
@@ -624,7 +624,7 @@ class ContentEndToEndTest {
         createLesson_shouldReturn201();
 
         mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/lessons/" + lessonId + "/resources/" + UUID.randomUUID())))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -667,7 +667,7 @@ class ContentEndToEndTest {
     void deleteChapter_notFound_shouldReturn404() throws Exception {
 
         mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/chapters/" + UUID.randomUUID())))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -684,7 +684,7 @@ class ContentEndToEndTest {
         // Verify that the chapter list returns 404 (full-view cannot be verified
         // in the same Hibernate session after delete — TransientObjectException)
         mockMvc.perform(authorized(get(REQUEST_MAPPING + "/courses/" + courseId + "/chapters")))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -693,7 +693,7 @@ class ContentEndToEndTest {
     void deleteCourse_notFound_shouldReturn404() throws Exception {
 
         mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/courses/" + UUID.randomUUID())))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
 

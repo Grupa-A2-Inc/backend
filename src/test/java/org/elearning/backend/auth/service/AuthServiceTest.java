@@ -3,9 +3,9 @@ package org.elearning.backend.auth.service;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.request.LoginRequest;
-import org.elearning.backend.common.exception.BadRequestException;
-import org.elearning.backend.common.exception.DuplicateResourceException;
-import org.elearning.backend.common.exception.InvalidCredentials;
+import org.elearning.backend.auth.exception.AuthBadRequestException;
+import org.elearning.backend.auth.exception.AuthConflictException;
+import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -97,7 +97,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("existent@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(DuplicateResourceException.class)
+                .isInstanceOf(AuthConflictException.class)
                 .hasMessage("Email already in use: existent@test.com");
 
         verify(userRepository, never()).save(any());
@@ -156,7 +156,7 @@ class AuthServiceTest {
         when(organizationRepository.existsByName("Scoala Ion")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(DuplicateResourceException.class)
+                .isInstanceOf(AuthConflictException.class)
                 .hasMessage("Organization name already exists: Scoala Ion");
 
         verify(organizationRepository, never()).save(any());
@@ -171,7 +171,7 @@ class AuthServiceTest {
         when(organizationRepository.existsByName(any())).thenReturn(false);
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(AuthBadRequestException.class)
                 .hasMessage("Passwords do not match");
 
         verify(roleRepository, never()).findByName(any());
@@ -267,7 +267,7 @@ class AuthServiceTest {
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(InvalidCredentials.class)
+                .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Invalid credentials");
     }
 
@@ -281,7 +281,7 @@ class AuthServiceTest {
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(InvalidCredentials.class)
+                .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Invalid credentials");
     }
 
