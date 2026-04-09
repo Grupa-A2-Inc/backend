@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -60,6 +62,8 @@ public interface TestRepository extends JpaRepository<Test, UUID> {
     @Query("DELETE FROM Test t WHERE t.id = :testId")
     void deleteTest(@Param("testId") UUID id);
 
+    @Query("SELECT t.lessonId FROM Test t WHERE t.lessonId IN :lessonIds AND t.status = 'PUBLISHED'")
+    Set<UUID> findLessonIdsWithPublishedTest(@Param("lessonIds") List<UUID> lessonIds);
 
 
 }
