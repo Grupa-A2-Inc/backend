@@ -104,4 +104,11 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     List<Lesson> findLessonsWithResourcesByCourseId(@Param("courseId") UUID courseId);
 
 
+
+
+    @Query("""
+        SELECT l.id FROM Lesson l
+        WHERE l.chapter.course.id = :courseId
+    """)
+    List<UUID> findAllLessonIdsByCourseId(@Param("courseId") UUID courseId);
 }
