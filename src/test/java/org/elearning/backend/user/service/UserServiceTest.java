@@ -4,10 +4,12 @@ import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
+import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
+import org.elearning.backend.user.exception.*;
 import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,10 +19,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.elearning.backend.user.exception.UserAlreadyExistsException;
-import org.elearning.backend.user.exception.UserNotFoundException;
-import org.elearning.backend.user.exception.UserOrganizationNotFoundException;
-import org.elearning.backend.user.exception.UserRoleNotFoundException;
 
 import java.util.List;
 
@@ -466,5 +464,100 @@ class UserServiceTest {
         assertEquals(user.getId(), responses.get(0).getId());
         assertEquals(organizationId, responses.get(0).getOrganizationId());
         assertEquals(RoleName.STUDENT, responses.get(0).getRoleName());
+    }
+
+    @Test
+    void changePassword_success() {
+        UUID id = UUID.randomUUID();
+        Role role = new Role(RoleName.TEACHER);
+
+        User user = new User();
+        user.setId(id);
+        user.setEmail("ion@scoala.ro");
+        user.setFirstName("Ion");
+        user.setLastName("Pop");
+        user.setRole(role);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setPasswordHash("hashed_old_password");
+
+        ChangePasswordRequest request = ChangePasswordRequest.builder()
+                .currentPassword("oldPassword")
+                .newPassword("newPassword")
+                .newPasswordConfirm("newPassword")
+                .build();
+
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("oldPassword", "hashed_old_password")).thenReturn(true);
+        when(passwordEncoder.encode("newPassword")).thenReturn("hashed_new_password");
+
+        userService.changePassword(id, request);
+
+        verify(userRepository).save(user);
+        assertEquals("hashed_new_password", user.getPasswordHash());
+    }
+
+    @Test
+    void changePassword_userNotFound_throwsException() {
+        UUID id = UUID.randomUUID();
+        ChangePasswordRequest request = ChangePasswordRequest.builder()
+                .currentPassword("oldPassword")
+                .newPassword("newPassword")
+                .newPasswordConfirm("newPassword")
+                .build();
+
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class,
+                () -> userService.changePassword(id, request));
+    }
+
+    @Test
+    void changePassword_wrongCurrentPassword_throwsException() {
+        UUID id = UUID.randomUUID();
+        Role role = new Role(RoleName.TEACHER);
+
+        User user = new User();
+        user.setId(id);
+        user.setEmail("ion@scoala.ro");
+        user.setRole(role);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setPasswordHash("hashed_old_password");
+
+        ChangePasswordRequest request = ChangePasswordRequest.builder()
+                .currentPassword("wrongPassword")
+                .newPassword("newPassword")
+                .newPasswordConfirm("newPassword")
+                .build();
+
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrongPassword", "hashed_old_password")).thenReturn(false);
+
+        assertThrows(UserBadRequestException.class,
+                () -> userService.changePassword(id, request));
+    }
+
+    @Test
+    void changePassword_passwordsDoNotMatch_throwsException() {
+        UUID id = UUID.randomUUID();
+        Role role = new Role(RoleName.TEACHER);
+
+        User user = new User();
+        user.setId(id);
+        user.setEmail("ion@scoala.ro");
+        user.setRole(role);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setPasswordHash("hashed_old_password");
+
+        ChangePasswordRequest request = ChangePasswordRequest.builder()
+                .currentPassword("oldPassword")
+                .newPassword("newPassword")
+                .newPasswordConfirm("differentPassword")
+                .build();
+
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("oldPassword", "hashed_old_password")).thenReturn(true);
+
+        assertThrows(UserBadRequestException.class,
+                () -> userService.changePassword(id, request));
     }
 }

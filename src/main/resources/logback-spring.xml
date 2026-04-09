@@ -3,7 +3,14 @@
 
     <include resource="org/springframework/boot/logging/logback/defaults.xml" />
 
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{35} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
     <root level="INFO">
+        <appender-ref ref="CONSOLE" />
         <appender-ref ref="APP_FILE" />
     </root>
 
@@ -42,6 +49,7 @@
     </appender>
 
     <logger name="org.elearning.backend.security.listener.Listener" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
         <appender-ref ref="FAILED_LOGIN_FILE" />
     </logger>
 
