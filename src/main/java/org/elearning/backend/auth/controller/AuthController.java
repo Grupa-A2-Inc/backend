@@ -7,10 +7,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.auth.dto.request.ForgotPasswordRequest;
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
+import org.elearning.backend.auth.dto.request.ResetPasswordRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
+import org.elearning.backend.auth.dto.response.ResetPasswordResponse;
 import org.elearning.backend.auth.service.AuthService;
+import org.elearning.backend.auth.service.PasswordResetService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,6 +33,7 @@ import java.time.Duration;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService resetService;
 
     @Value("${app.auth.secure-cookies:true}")
     private boolean secureCookies;
@@ -89,6 +94,18 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return responseWithRefreshCookie(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ResetPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request){
+        ResetPasswordResponse response = resetService.forgotPassword(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ResetPasswordResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request){
+        ResetPasswordResponse response = resetService.resetPassword(request);
+        return ResponseEntity.ok(response);
     }
 
     private ResponseEntity<AuthResponse> responseWithRefreshCookie(AuthResponse response) {
