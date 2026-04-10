@@ -15,6 +15,21 @@ public class EnrollmentExceptionHandler extends GlobalExceptionHandler {
         return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
     }
 
+    @ExceptionHandler(StudentAccessForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(StudentAccessForbiddenException exception) {
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(CourseHasNotBeenFinalizedException.class)
+    public ResponseEntity<Map<String, Object>> handleUnfinishedCourse(CourseHasNotBeenFinalizedException exception) {
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(CourseMustBePublicException.class)
+    public ResponseEntity<Map<String, Object>> handlePrivateCourse(CourseMustBePublicException exception) {
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
+
     @ExceptionHandler(StudentAlreadyEnrolledInCourseException.class)
     public ResponseEntity<Map<String, Object>> handleStudentAlreadyEnrolledInCourse(StudentAlreadyEnrolledInCourseException exception) {
         return buildErrorResponse(exception, HttpStatus.CONFLICT);
@@ -29,4 +44,12 @@ public class EnrollmentExceptionHandler extends GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleCourseNotFound(CourseNotFoundException ex) {
         return buildErrorResponse(ex, HttpStatus.NOT_FOUND);
     }
+
+    // It's normal to return an Internal Server Error here because only a coding error would cause it
+    @ExceptionHandler(CertificateGenerationException.class)
+    public ResponseEntity<Map<String, Object>> handleCouldNotGenerate(CertificateGenerationException exception) {
+        return buildErrorResponse(exception, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+
 }

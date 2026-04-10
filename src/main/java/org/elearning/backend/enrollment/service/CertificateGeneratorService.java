@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -13,9 +14,24 @@ import com.lowagie.text.pdf.PdfContentByte;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import com.lowagie.text.Image;
+import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.model.CourseVisibility;
+import org.elearning.backend.content.repository.CourseRepository;
+import org.elearning.backend.enrollment.exception.*;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
+import org.elearning.backend.user.entity.User;
+import org.elearning.backend.user.repository.UserRepository;
+import org.springframework.stereotype.Service;
 
+@Service
 public class CertificateGeneratorService {
 
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
+    private final CourseRepository courseRepository;
+    private final UserRepository userRepository;
+
+    // FONTS USES ACROSS THE DOCUMENT
 
     private BaseFont titleFont;
     private BaseFont certificationFont;
@@ -23,16 +39,18 @@ public class CertificateGeneratorService {
     private BaseFont applicationNameFont;
 
 
+    // PAGE SIZES
+
     private static final float HEIGHT = PageSize.A4.getHeight();
     private static final float WIDTH = PageSize.A4.getWidth();
 
-    //RECTANGLE CONSTANTS
+    // RECTANGLE CONSTANTS
     private static final float RECTANGLE_X_ORIGIN = WIDTH/14f;
     private static final float RECTANGLE_Y_ORIGIN = HEIGHT/20f;
     private static final float RECTANGLE_X_END = 12*WIDTH/14;
     private static final float RECTANGLE_Y_END = 18*HEIGHT/20;
 
-    //CORNER CONSTANTS
+    // CORNER CONSTANTS
 
     private static final float CORNER_LEFT_MARGIN  = WIDTH / 12f;
     private static final float CORNER_RIGHT_MARGIN = 11 * WIDTH / 12f;
@@ -44,7 +62,7 @@ public class CertificateGeneratorService {
     private static final float CORNER_BOTTOM_INNER = 3 * HEIGHT / 18f;
     private static final float CORNER_LENGTH_SIZE = WIDTH/6f;
 
-    //BOTTOM LAYOUT CONSTANTS
+    // BOTTOM LAYOUT CONSTANTS
 
     private static final float BOTTOM_HEIGHT_UNIT = HEIGHT / 36;
     private static final float BOTTOM_WIDTH_UNIT = WIDTH / 48;
@@ -55,7 +73,7 @@ public class CertificateGeneratorService {
     private static final String SERIAL_ID_FIELD = "Serial ID";
     private static final String DATE_FIELD = "Date";
 
-    //GENERAL CERTIFICATE CONTENT CONSTANTS
+    // GENERAL CERTIFICATE CONTENT CONSTANTS
 
     private static final float CONTENT_HEIGHT_UNIT = HEIGHT/60;
     private static final float CONTENT_X_CENTERED_IMAGE_POSITION = 7*WIDTH/17;
@@ -78,12 +96,12 @@ public class CertificateGeneratorService {
     private static final String CERTIFYING  = "That is to certify that";
     private static final String SUCCESS_MESSAGE = "Has successfully completed";
 
-    //FONT PATH
+    // FONT PATH
     private static final String PATH_QUADRILLION_FONT = "/fonts/Quadrillion-Sb.otf";
     private static final String PATH_JASTYKA_FONT = "/fonts/Jastyka.ttf";
 
 
-    //DOCUMENT COLOR SCHEME
+    // DOCUMENT COLOR SCHEME
     private static final Color DOCUMENT_COLOR_SCHEME = new Color(23, 70, 124);
 
 
@@ -281,16 +299,7 @@ public class CertificateGeneratorService {
         generateCertificationMessage(canvas, currentPosition, courseTitle);
 
     }
-
-
-
-
-
-    public CertificateGeneratorService() throws IOException {
-        loadFont();
-    }
-
-    public byte[] generatePdf(UUID enrollmentId, String studentName, String courseTitle, LocalDate completedAt){
+    private byte[] generatePdf(UUID enrollmentId, String studentName, String courseTitle, LocalDateTime completedAt){
         Document document = new Document(PageSize.A4);
         try(ByteArrayOutputStream generatedPdfBytes = new ByteArrayOutputStream()) {
 
@@ -298,13 +307,48 @@ public class CertificateGeneratorService {
             document.open();
             PdfContentByte canvas = instance.getDirectContent();
             generateLayout(canvas);
-            generateBottomLayout(canvas, enrollmentId, completedAt);
+            generateBottomLayout(canvas, enrollmentId, LocalDate.from(completedAt));
             generateContent(canvas, studentName, courseTitle);
             document.close();
             return generatedPdfBytes.toByteArray();
 
         } catch (DocumentException | IOException documentException) {
-            throw new RuntimeException("PDF generation failed", documentException);
+            throw new CertificateGenerationException(enrollmentId, documentException);
         }
     }
+
+    public CertificateGeneratorService(CourseEnrollmentRepository courseEnrollmentRepository,
+                                       CourseRepository courseRepository, UserRepository userRepository) throws IOException {
+        loadFont();
+        this.courseEnrollmentRepository = courseEnrollmentRepository;
+        this.courseRepository = courseRepository;
+        this.userRepository = userRepository;
+    }
+
+    public byte[] generateCertificatePdf(UUID enrollmentId, UUID jwtStudentId){
+        CourseEnrollment courseEnrollment = courseEnrollmentRepository.findById(enrollmentId)
+                .orElseThrow(() -> new CourseEnrollmentNotFoundException(enrollmentId));
+
+        if(!courseEnrollment.getStudentId().equals(jwtStudentId)){
+            throw new StudentAccessForbiddenException(jwtStudentId);
+        }
+
+        if(courseEnrollment.getCompletedAt()==null){
+            throw new CourseHasNotBeenFinalizedException(enrollmentId);
+        }
+
+        Course course = courseRepository.findById(courseEnrollment.getCourseId()).orElseThrow();
+
+        if(course.getVisibility()== CourseVisibility.PRIVATE){
+            throw new CourseMustBePublicException(course.getId());
+        }
+
+        User student = userRepository.findById(jwtStudentId).orElseThrow();
+        String studentFullName = student.getFirstName() + " " + student.getLastName();
+
+
+        return generatePdf(enrollmentId, studentFullName , course.getTitle(), courseEnrollment.getCompletedAt());
+    }
+
+
 }
