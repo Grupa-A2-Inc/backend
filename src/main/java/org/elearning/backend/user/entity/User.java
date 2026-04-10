@@ -52,4 +52,12 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "organization_id", nullable = true)
     private Organization organization;
+
+    //la fel, astea 2 le am adaugat pentru taskul asta cu timeout la login failed
+
+    @Column(name = "failed_login_attempts", nullable = false)
+    private Integer failedLoginAttempts = 0;
+
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
 }
