@@ -3,6 +3,7 @@ package org.elearning.backend.auth;
 import org.elearning.backend.auth.controller.AuthController;
 import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.service.AuthService;
+import org.elearning.backend.auth.service.PasswordResetService;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,9 @@ class AuthLogoutTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private PasswordResetService passwordResetService;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;

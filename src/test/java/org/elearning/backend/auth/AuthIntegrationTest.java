@@ -10,6 +10,7 @@ import org.elearning.backend.auth.exception.AuthConflictException;
 import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.auth.service.AuthService;
+import org.elearning.backend.auth.service.PasswordResetService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.user.entity.UserStatus;
@@ -47,6 +48,9 @@ class AuthIntegrationTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private PasswordResetService passwordResetService;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;

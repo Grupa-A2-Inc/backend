@@ -27,6 +27,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PasswordResetService {
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private final EmailService emailService;
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -52,7 +54,7 @@ public class PasswordResetService {
 
         //generez token nou
         byte[] randomBytes = new byte[32];
-        new SecureRandom().nextBytes(randomBytes);
+        SECURE_RANDOM.nextBytes(randomBytes);
         String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
 
         //fac hash

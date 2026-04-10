@@ -7,6 +7,7 @@ import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.response.UserDataResponse;
 import org.elearning.backend.auth.service.AuthService;
+import org.elearning.backend.auth.service.PasswordResetService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.user.entity.UserStatus;
@@ -44,6 +45,9 @@ class AuthIntegrationJwtLoginTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private PasswordResetService passwordResetService;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
