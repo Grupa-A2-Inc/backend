@@ -23,11 +23,21 @@ spring:
       ddl-auto: validate
     show-sql: true
 
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 server:
   port: 8067
 
-#logging:
-#  file:
-#    name: app.log
-#  level:
-#    root: INFO
+app:
+  mail:
+    from: ${MAIL_FROM}
