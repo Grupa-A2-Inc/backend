@@ -247,6 +247,7 @@ class AuthServiceTest {
         user.setPasswordHash("hashed_parola");
         user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
 
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
@@ -263,8 +264,7 @@ class AuthServiceTest {
         request.setEmail("inexistent@test.com");
         request.setPassword("parola123");
 
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(new BadCredentialsException("Bad credentials"));
+        when(userRepository.findByEmail("inexistent@test.com")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(InvalidCredentialsException.class)
@@ -277,6 +277,13 @@ class AuthServiceTest {
         request.setEmail("test@test.com");
         request.setPassword("parolaGresita");
 
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setEmail("test@test.com");
+        user.setPasswordHash("hashed_parola");
+        user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
+
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
@@ -297,6 +304,7 @@ class AuthServiceTest {
         user.setPasswordHash("hashed_parola");
         user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
 
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
@@ -329,6 +337,7 @@ class AuthServiceTest {
         org.setId(organizationId);
         user.setOrganization(org);
 
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");

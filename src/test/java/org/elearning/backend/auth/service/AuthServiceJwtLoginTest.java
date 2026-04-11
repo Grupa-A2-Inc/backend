@@ -8,6 +8,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
+import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +19,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +36,9 @@ class AuthServiceJwtLoginTest {
 
     @Mock
     private JwtUtil jwtUtil;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -61,6 +66,7 @@ class AuthServiceJwtLoginTest {
 
         User user = makeUser("test@test.com", "hashed_parola", RoleName.ORGANIZATION_ADMIN);
 
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN))
@@ -81,6 +87,7 @@ class AuthServiceJwtLoginTest {
 
         User user = makeUser("test@test.com", "hashed_parola", RoleName.ORGANIZATION_ADMIN);
 
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN))
@@ -101,6 +108,7 @@ class AuthServiceJwtLoginTest {
 
         User user = makeUser("test@test.com", "hashed_parola", RoleName.ORGANIZATION_ADMIN);
 
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN))
@@ -122,6 +130,9 @@ class AuthServiceJwtLoginTest {
         request.setEmail("test@test.com");
         request.setPassword("parolaGresita");
 
+        User user = makeUser("test@test.com", "hashed_parola", RoleName.ORGANIZATION_ADMIN);
+
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
@@ -139,8 +150,7 @@ class AuthServiceJwtLoginTest {
         request.setEmail("inexistent@test.com");
         request.setPassword("parola123");
 
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(new BadCredentialsException("Bad credentials"));
+        when(userRepository.findByEmail("inexistent@test.com")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(InvalidCredentialsException.class)

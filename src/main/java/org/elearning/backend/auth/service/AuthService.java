@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.Objects;
 
 @Service
@@ -39,6 +38,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private static final DateTimeFormatter LOCK_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final int LOCK_OUT_TIME_IN_MINUTES = 5;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -105,24 +105,9 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new InvalidCredentialsException("InvalidCredentials"));
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
 
-        LocalDateTime now = LocalDateTime.now();
-
-        if (user.getLockedUntil() != null) {
-            if (user.getLockedUntil().isAfter(now)) {
-
-                String lockedFormat = user.getLockedUntil().format(LOCK_TIME_FORMAT);
-
-                throw new AuthLockedAccount("Too many login attempts. Please try again after " +
-                        lockedFormat);
-            } else {
-                user.setLockedUntil(null);
-                user.setFailedLoginAttempts(0);
-                user.setUpdatedAt(LocalDateTime.now());
-                userRepository.save(user);
-            }
-        }
+        handleExistingLock(user);
 
         try {
             var authentication = authenticationManager.authenticate(
@@ -159,26 +144,49 @@ public class AuthService {
 
         } catch (AuthenticationException ex) {
 
-            Integer failedAttempts = user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts();
-            failedAttempts++;
-            user.setFailedLoginAttempts(failedAttempts);
-
-            if (failedAttempts >= 5) {
-                //pragul e de 5 failed attempts
-                user.setLockedUntil(LocalDateTime.now().plusMinutes(5));
-            }
-
-            user.setUpdatedAt(LocalDateTime.now());
-            userRepository.save(user);
-
-            if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
-
-                String lockedFormat = user.getLockedUntil().format(LOCK_TIME_FORMAT);
-                throw new AuthLockedAccount("Too many login attempts. Please try again after " +
-                        lockedFormat);
-            }
+            checkIfTooManyLoginAttempts(user);
 
             throw new InvalidCredentialsException("Invalid credentials");
+        }
+    }
+
+    private void handleExistingLock(User user) {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (user.getLockedUntil() != null) {
+            if (user.getLockedUntil().isAfter(now)) {
+
+                String lockedFormat = user.getLockedUntil().format(LOCK_TIME_FORMAT);
+
+                throw new AuthLockedAccount("Too many login attempts. Please try again after " +
+                        lockedFormat);
+            } else {
+                user.setLockedUntil(null);
+                user.setFailedLoginAttempts(0);
+                user.setUpdatedAt(LocalDateTime.now());
+                userRepository.save(user);
+            }
+        }
+    }
+
+    private void checkIfTooManyLoginAttempts(User user) {
+        int failedAttempts = user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts();
+        failedAttempts++;
+        user.setFailedLoginAttempts(failedAttempts);
+
+        if (failedAttempts >= 5) {
+            //pragul e de 5 failed attempts
+            user.setLockedUntil(LocalDateTime.now().plusMinutes(5));
+        }
+
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
+
+            String lockedFormat = user.getLockedUntil().format(LOCK_TIME_FORMAT);
+            throw new AuthLockedAccount("Too many login attempts. Please try again after " +
+                    lockedFormat);
         }
     }
 }

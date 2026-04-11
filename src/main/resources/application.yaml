@@ -3,19 +3,14 @@ spring:
     import: optional:file:.env
   application:
     name: backend
-#  autoconfigure:
-#   exclude:
-#      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration
-#      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
-#      - org.springframework.boot.actuate.autoconfigure.security.reactive.ReactiveManagementWebSecurityAutoConfiguration
   datasource:
-    url: jdbc:postgresql://localhost:5432/adaptive_tutor
-    username: user
-    password: password
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/adaptive_tutor
+#    username: user
+#    password: password
   flyway:
     enabled: true
   jpa:
@@ -36,7 +31,8 @@ spring:
             enable: true
 
 server:
-  port: 8067
+  port: ${PORT:8067}
+#  port: 8067
 
 app:
   mail:
