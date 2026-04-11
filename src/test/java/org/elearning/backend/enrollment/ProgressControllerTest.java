@@ -39,11 +39,9 @@ class ProgressControllerTest {
 
     @BeforeEach
     void setUp() {
-        // 1. Creăm un student și setăm token-ul pe RestTemplate
         studentId = insertUser(RoleName.STUDENT);
         authorizeRequests(studentId, RoleName.STUDENT);
 
-        // 2. Creăm cursul și un capitol
         courseId = UUID.randomUUID();
         jdbcTemplate.execute(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
@@ -56,7 +54,6 @@ class ProgressControllerTest {
                         "VALUES ('" + chapterId + "', '" + courseId + "', 'Capitolul 1', 1)"
         );
 
-        // 3. Înrolăm studentul la curs
         enrollmentId = insertEnrollment(studentId, courseId);
     }
 
@@ -64,7 +61,6 @@ class ProgressControllerTest {
     void tearDown() {
         restTemplate.getRestTemplate().setInterceptors(List.of());
 
-        // Ordinea de ștergere este importantă pentru a nu încălca Foreign Keys
         jdbcTemplate.execute("DELETE FROM lesson_progress");
         jdbcTemplate.execute("DELETE FROM course_enrollments");
         jdbcTemplate.execute("DELETE FROM lessons");
@@ -74,7 +70,7 @@ class ProgressControllerTest {
     }
 
     /**
-     * Helper method pentru a insera un user cu un rol specific.
+     * Helper method for inserting a user with a specific role and returning its ID.
      */
     private UUID insertUser(RoleName role) {
         UUID userId = UUID.randomUUID();
@@ -92,7 +88,7 @@ class ProgressControllerTest {
     }
 
     /**
-     * Helper method pentru a seta token-ul JWT.
+     * Helper method for generating a JWT token for a user and setting it in the RestTemplate's interceptors for authenticated requests.
      */
     private void authorizeRequests(UUID userId, RoleName role) {
         String token = jwtUtil.generateAccessToken(userId, role);
@@ -103,7 +99,7 @@ class ProgressControllerTest {
     }
 
     /**
-     * Helper method pentru a insera o înrolare.
+     * Helper method for inserting a course enrollment and returning its ID.
      */
     private UUID insertEnrollment(UUID studentId, UUID courseId) {
         UUID id = UUID.randomUUID();
@@ -115,7 +111,7 @@ class ProgressControllerTest {
     }
 
     /**
-     * Helper method pentru a insera o lecție.
+     * Helper method for inserting a lesson into the database and returning its ID.
      */
     private UUID insertLesson(String title, int orderIndex) {
         UUID lessonID = UUID.randomUUID();
@@ -127,11 +123,10 @@ class ProgressControllerTest {
     }
 
     /**
-     * Helper method pentru a marca o lecție ca vizitată.
+     * Helper method for inserting a lesson progress record, simulating that a student has visited a lesson.
      */
     private void insertLessonProgress(UUID lessonId) {
         jdbcTemplate.update(
-                // Am modificat "created_at" in "visited_at"
                 "INSERT INTO lesson_progress (id, lesson_id, student_id, enrollment_id, visited_at) VALUES (?, ?, ?, ?, NOW())",
                 UUID.randomUUID(), lessonId, studentId, enrollmentId
         );
@@ -143,15 +138,13 @@ class ProgressControllerTest {
 
     /**
      * GET /api/v1/courses/{courseId}/my-progress
-     * Verifică un "Happy Path" complet: curs cu 2 lecții, 1 completată -> 50% progres.
+     * Checks that the endpoint returns the correct progress information for a student, including total lessons, visited lessons, progress percentage, and the list of lessons with their visited status.
      */
     @Test
     void shouldGetMyCourseProgressWithCorrectCalculations() {
-        // Creăm 2 lecții
         UUID lesson1 = insertLesson("Lectia 1", 1);
         insertLesson("Lectia 2", 2);
 
-        // Marcăm doar prima lecție ca vizitată
         insertLessonProgress(lesson1);
 
         ResponseEntity<String> response = restTemplate.getForEntity(
@@ -161,7 +154,6 @@ class ProgressControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        // Verificăm conținutul JSON al DTO-ului returnat
         String body = response.getBody();
         assertThat(body)
                 .isNotNull()
@@ -176,29 +168,25 @@ class ProgressControllerTest {
 
     /**
      * GET /api/v1/courses/{courseId}/my-progress
-     * Verifică comportamentul când cursul nu există sau studentul nu este înrolat (ar trebui să dea 404).
+     * Checks that if a student tries to access the progress of a course they are not enrolled in, the service returns 404 Not Found.
      */
     @Test
     void shouldReturnNotFoundWhenNotEnrolled() {
-        // Generăm un courseId aleatoriu la care studentul nu este înrolat
         UUID wrongCourseId = UUID.randomUUID();
 
         ResponseEntity<String> response = restTemplate.getForEntity(
                 REQUEST_MAPPING + "/" + wrongCourseId + "/my-progress",
                 String.class
         );
-
-        // Ne așteptăm ca serviciul să arunce CourseNotFoundException, interceptat cu 404
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     /**
      * GET /api/v1/courses/{courseId}/my-progress
-     * Verifică că un profesor primește 403 Forbidden datorită @PreAuthorize("hasRole('STUDENT')").
+     * Checks that if a user with a non STUDENT role tries to access the endpoint, the service returns 403 Forbidden, since only STUDENT role is allowed.
      */
     @Test
     void shouldReturnForbiddenWhenUserIsTeacher() {
-        // Înlocuim token-ul curent (de student) cu unul de profesor
         UUID teacherId = insertUser(RoleName.TEACHER);
         authorizeRequests(teacherId, RoleName.TEACHER);
 

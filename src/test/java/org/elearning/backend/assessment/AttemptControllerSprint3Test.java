@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureMockMvc(addFilters = false) // controllerul foloseste hardcoded UUID, nu @AuthenticationPrincipal
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 class AttemptControllerSprint3Test {
 
@@ -36,7 +36,6 @@ class AttemptControllerSprint3Test {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // hardcodat in controller
     private final UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @AfterEach
@@ -153,7 +152,6 @@ class AttemptControllerSprint3Test {
 
     @Test
     void submitAttempt_shouldMarkProgress_whenEnrollmentExists() throws Exception {
-        // Acoperă calea: chapter prezent -> course prezent -> enrollment prezent (HAPPY PATH)
         TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
         UUID enrollmentId = insertEnrollment(studentId, context.courseId());
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
@@ -176,7 +174,6 @@ class AttemptControllerSprint3Test {
 
     @Test
     void submitAttempt_shouldNotMarkProgress_whenNoEnrollmentExists() throws Exception {
-        // Acoperă calea: chapter prezent -> course prezent -> enrollment LIPSĂ
         TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
         // NU apelăm insertEnrollment
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
@@ -199,9 +196,7 @@ class AttemptControllerSprint3Test {
 
     @Test
     void submitAttempt_shouldNotMarkProgress_whenCourseNotFound() throws Exception {
-        // Acoperă calea: chapter prezent -> course LIPSĂ
         TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
-        // Ștergem cursul pentru a forța courseIdOptional.isPresent() să fie false
         jdbcTemplate.update("DELETE FROM courses WHERE id = ?", context.courseId());
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
 
@@ -211,7 +206,7 @@ class AttemptControllerSprint3Test {
                         .content(objectMapper.writeValueAsString(
                                 submitRequestForAnswer(context.questionId(), context.correctOptionId())
                         )))
-                .andExpect(status().isOk()); // Răspunsul rămâne 200 OK
+                .andExpect(status().isOk());
 
         Integer progressCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM lesson_progress WHERE lesson_id = ? AND student_id = ?",
@@ -223,9 +218,7 @@ class AttemptControllerSprint3Test {
 
     @Test
     void submitAttempt_shouldNotMarkProgress_whenChapterNotFound() throws Exception {
-        // Acoperă calea: chapter LIPSĂ
         TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
-        // Ștergem capitolul pentru a forța chapterIdOptional.isPresent() să fie false
         jdbcTemplate.update("DELETE FROM chapters WHERE id = ?", context.chapterId());
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
 
@@ -235,7 +228,7 @@ class AttemptControllerSprint3Test {
                         .content(objectMapper.writeValueAsString(
                                 submitRequestForAnswer(context.questionId(), context.correctOptionId())
                         )))
-                .andExpect(status().isOk()); // Răspunsul rămâne 200 OK
+                .andExpect(status().isOk());
 
         Integer progressCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM lesson_progress WHERE lesson_id = ? AND student_id = ?",
