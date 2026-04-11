@@ -11,6 +11,12 @@ import org.elearning.backend.assessment.mapper.AttemptMapper;
 import org.elearning.backend.assessment.mapper.QuestionMapper;
 import org.elearning.backend.assessment.model.*;
 import org.elearning.backend.assessment.repository.*;
+import org.elearning.backend.content.repository.ChapterRepository;
+import org.elearning.backend.content.repository.LessonRepository;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
+import org.elearning.backend.enrollment.repository.LessonProgressRepository;
+import org.elearning.backend.enrollment.service.ProgressCalculatorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +39,12 @@ public class AttemptService {
     private final TestRepository testRepository;
     private final QuestionRepository questionRepository;
     private final QuestionOptionRepository optionRepository;
+
+    private final LessonRepository lessonRepository;
+    private final ChapterRepository chapterRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
+    private final LessonProgressRepository lessonProgressRepository;
+    private final ProgressCalculatorService progressCalculatorService;
 
     private final AttemptMapper attemptMapper;
     private final QuestionMapper questionMapper;
@@ -230,6 +243,37 @@ public class AttemptService {
         TestResultDto testResultDto = attemptMapper.toTestResultDTO(result);
         testResultDto.setQuestions(resultQuestions);
 
+        //=========== Sprint 3 - Marking lesson progress and checking course completion after a test ===========
+        markLessonAndCheckCourseCompletion(studentId, test);
         return testResultDto;
+    }
+
+    private void markLessonAndCheckCourseCompletion(UUID studentId, Test test) {
+        UUID lessonId = test.getLessonId();
+        Optional<UUID> chapterIdOptional = lessonRepository.findChapterIdFromID(lessonId);
+        if (chapterIdOptional.isPresent())
+        {
+            UUID chapterId = chapterIdOptional.get();
+            Optional<UUID> courseIdOptional = chapterRepository.findCourseIdFromId(chapterId);
+            if (courseIdOptional.isPresent()) {
+                UUID courseId = courseIdOptional.get();
+                Optional<CourseEnrollment> enrollmentOpt = courseEnrollmentRepository
+                        .findByStudentIdAndCourseId(studentId, courseId);
+
+                if (enrollmentOpt.isPresent()) {
+                    UUID enrollmentId = enrollmentOpt.get().getId();
+
+                    lessonProgressRepository.insertProgressIdempotent(lessonId, studentId, enrollmentId);
+
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            progressCalculatorService.checkAndMarkCompletion(enrollmentId);
+                        } catch (Exception e) {
+                            log.error("Error during async progress calculation for enrollmentId: {}", enrollmentId, e);
+                        }
+                    });
+                }
+            }
+        }
     }
 }

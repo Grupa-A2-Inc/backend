@@ -1,0 +1,20 @@
+package org.elearning.backend.enrollment.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+public class LessonStatusDto {
+    private UUID lessonId;
+    private String title;
+    private boolean visited;
+    private LocalDateTime visitedAt;
+}

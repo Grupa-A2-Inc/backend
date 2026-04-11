@@ -9,8 +9,10 @@ import org.elearning.backend.content.dto.LessonDtoEntity;
 import org.elearning.backend.content.dto.LessonDtoMetadata;
 import org.elearning.backend.content.dto.LessonDtoPost;
 import org.elearning.backend.content.service.LessonService;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -94,5 +96,16 @@ public class LessonsController {
             @PathVariable UUID id,
             @RequestBody String markdownContent) {
         return ResponseEntity.ok(lessonService.updateLessonMarkdownContent(id, markdownContent));
+    }
+
+    @Operation(summary = "Get lesson by ID", description = "Returns a lesson given by its ID. If the user is a student, it will mark it as visited")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lesson successfully returned"),
+            @ApiResponse(responseCode = "404", description = "Lesson not found")
+    })
+
+    @GetMapping("/lessons/{id}")
+    public ResponseEntity<LessonDtoEntity> getLessonByID(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID id) {
+        return ResponseEntity.ok(lessonService.getLessonById(userDetails.getUserId(), userDetails.getRoleName(), id));
     }
 }
