@@ -80,9 +80,19 @@ class SecurityConfigTest {
         CorsConfigurationSource source = securityConfig.corsConfigurationSource();
         var configuration = source.getCorsConfiguration(new org.springframework.mock.web.MockHttpServletRequest("OPTIONS", "/api/v1/secure/ping"));
 
-        assertThat(configuration.getAllowedOrigins()).containsExactly("https://frontend-teal-five-57.vercel.app", "https://frontend-z1g5f.vercel.app");
+        assertThat(configuration.getAllowedOrigins()).containsExactly(
+                "http://localhost:3000",
+                "https://frontend-teal-five-57.vercel.app",
+                "https://frontend-z1g5f.vercel.app"
+        );
         assertThat(configuration.getAllowedMethods()).containsExactly("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS");
-        assertThat(configuration.getAllowedHeaders()).containsExactly("https://frontend-teal-five-57.vercel.app", "https://frontend-z1g5f.vercel.app");
+        assertThat(configuration.getAllowedHeaders()).containsExactly(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "X-Requested-With"
+        );
     }
 
     private AnnotationConfigWebApplicationContext createContext() {

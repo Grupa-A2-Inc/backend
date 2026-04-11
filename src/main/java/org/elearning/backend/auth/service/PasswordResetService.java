@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.elearning.backend.auth.exception.AuthBadRequestException;
+import org.springframework.util.function.ThrowingSupplier;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -111,15 +112,13 @@ public class PasswordResetService {
     }
 
     private String hashToken(String token) {
+        MessageDigest digest = createSha256Digest();
+        byte[] hashedBytes = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+        return HexFormat.of().formatHex(hashedBytes);
+    }
 
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashedBytes = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hashedBytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 algorithm not available.", e);
-        }
-
+    private MessageDigest createSha256Digest() {
+        return ThrowingSupplier.of(() -> MessageDigest.getInstance("SHA-256")).get();
     }
 
 

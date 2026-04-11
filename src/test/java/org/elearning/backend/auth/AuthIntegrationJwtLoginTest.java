@@ -107,7 +107,7 @@ class AuthIntegrationJwtLoginTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("refresh_token=refresh-token")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Path=/api/v1/auth")))
-                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=none")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=None")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Secure")))
                 .andExpect(jsonPath("$.refreshToken").isEmpty());
     }

@@ -28,16 +28,20 @@ public class OrganizationExceptionHandler extends GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .findFirst()
                 .orElse("Validation failed");
-        return buildErrorResponse(new IllegalArgumentException(message), HttpStatus.BAD_REQUEST);
+        return errorBuilder(new IllegalArgumentException(message), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
-        return buildErrorResponse(ex, HttpStatus.FORBIDDEN);
+        return errorBuilder(ex, HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleUnexpected(Exception ex) {
-        return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR);
+        return errorBuilder(ex, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private ResponseEntity<Map<String, Object>> errorBuilder(Exception ex, HttpStatus status) {
+        return buildErrorResponse(ex, status);
     }
 }

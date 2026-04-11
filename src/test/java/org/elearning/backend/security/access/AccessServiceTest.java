@@ -79,6 +79,16 @@ class AccessServiceTest {
     }
 
     @Test
+    void canCreateUser_returnsFalseForNonAdminRoles() {
+        CreateUserRequest request = CreateUserRequest.builder().organizationId(UUID.randomUUID()).build();
+
+        assertThat(accessService.canCreateUser(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
+                request
+        )).isFalse();
+    }
+
+    @Test
     void canViewUser_returnsFalseWhenAuthenticationPrincipalIsUnsupported() {
         Authentication authentication = new UsernamePasswordAuthenticationToken("plain-user", "secret");
 
@@ -213,6 +223,16 @@ class AccessServiceTest {
     }
 
     @Test
+    void canViewOrganization_returnsFalseForOrganizationAdminInDifferentOrganization() {
+        UUID currentOrganizationId = UUID.randomUUID();
+
+        assertThat(accessService.canViewOrganization(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, currentOrganizationId)),
+                UUID.randomUUID()
+        )).isFalse();
+    }
+
+    @Test
     void canViewOrganization_returnsFalseForNonOrganizationAdmin() {
         assertThat(accessService.canViewOrganization(
                 authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
@@ -237,6 +257,14 @@ class AccessServiceTest {
                 authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, organizationId)),
                 organizationId
         )).isTrue();
+    }
+
+    @Test
+    void canEditOrganization_reusesViewRulesForDeniedRequests() {
+        assertThat(accessService.canEditOrganization(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
+                UUID.randomUUID()
+        )).isFalse();
     }
 
     @Test
@@ -328,6 +356,18 @@ class AccessServiceTest {
         Authentication authentication = authenticationFor(user);
 
         assertThat(accessService.extractCurrentUser(authentication).getUser()).isSameAs(user);
+    }
+
+    @Test
+    void extractCurrentUser_returnsNullWhenAuthenticationIsMissing() {
+        assertThat(accessService.extractCurrentUser(null)).isNull();
+    }
+
+    @Test
+    void extractCurrentUser_returnsNullWhenPrincipalIsUnsupported() {
+        Authentication authentication = new UsernamePasswordAuthenticationToken("plain-user", "secret");
+
+        assertThat(accessService.extractCurrentUser(authentication)).isNull();
     }
 
     private Authentication authenticationFor(User user) {
