@@ -23,9 +23,9 @@ public class EmailService {
         msg.setTo(email);
         msg.setSubject("Reset password");
         msg.setText(
-                "Use this reset token to change your password: "
+                "Use this reset token to change your password:\n" + "   "
                         + rawToken
-                        + " This token expires in 5 minutes.");
+                        + "\n\nThis token expires in 5 minutes.");
 
         javaMailSender.send(msg);
     }
