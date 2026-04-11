@@ -1,5 +1,6 @@
 package org.elearning.backend.content.service;
 
+import lombok.extern.slf4j.Slf4j;
 import jakarta.transaction.Transactional;
 import org.elearning.backend.content.dto.LessonDtoEntity;
 import org.elearning.backend.content.dto.LessonDtoMetadata;
@@ -11,23 +12,38 @@ import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.ChapterRepository;
 import org.elearning.backend.content.repository.LessonRepository;
+import org.elearning.backend.enrollment.exception.CourseNotFoundException;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
+import org.elearning.backend.enrollment.repository.LessonProgressRepository;
+import org.elearning.backend.enrollment.service.ProgressCalculatorService;
+import org.elearning.backend.role.entity.RoleName;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @Service
 public class LessonService {
 
     private final LessonRepository lessonRepository;
     private final ChapterRepository chapterRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
+    private final LessonProgressRepository lessonProgressRepository;
+    private final ProgressCalculatorService progressCalculatorService;
 
-    public LessonService(LessonRepository lessonRepository, ChapterRepository chapterRepository) {
+    public LessonService(LessonRepository lessonRepository, ChapterRepository chapterRepository, CourseEnrollmentRepository courseEnrollmentRepository, LessonProgressRepository lessonProgressRepository, ProgressCalculatorService progressCalculatorService) {
         this.lessonRepository = lessonRepository;
         this.chapterRepository = chapterRepository;
+        this.courseEnrollmentRepository = courseEnrollmentRepository;
+        this.lessonProgressRepository = lessonProgressRepository;
+        this.progressCalculatorService = progressCalculatorService;
     }
 
     /**
@@ -183,5 +199,45 @@ public class LessonService {
 
         lessonRepository.repairLessonOrderIndexAfterDeletion(orderIndex, chapterID);
         lessonRepository.deleteLesson(lessonID);
+    }
+
+    /**
+     * Returns a lesson given by its ID. If the lesson doesn't exist, it will throw an exception instead.
+     * If the user is a student, it will also mark the lesson as completed for the student and check if the course has been completed.
+     * @param currentUserId the id of the user making the request
+     * @param currentUserRole the role of the user making the request
+     * @param lessonId the specified lesson's id
+     * @return the lesson in DTO format
+     */
+    @Transactional
+    public LessonDtoEntity getLessonById(UUID currentUserId, RoleName currentUserRole, UUID lessonId) {
+        Lesson lesson = lessonRepository.findById(lessonId)
+                .orElseThrow(() -> new LessonNotFoundException(lessonId));
+
+        if (RoleName.STUDENT.equals(currentUserRole)) {
+
+            UUID chapterId = lessonRepository.findChapterIdFromID(lessonId).orElseThrow(() -> new ChapterNotFoundException(lessonId));
+            UUID courseId = chapterRepository.findCourseIdFromId(chapterId).orElseThrow(() -> new CourseNotFoundException(chapterId));
+
+            Optional<CourseEnrollment> enrollmentOpt = courseEnrollmentRepository
+                    .findByStudentIdAndCourseId(currentUserId, courseId);
+
+            if (enrollmentOpt.isPresent()) {
+                UUID enrollmentId = enrollmentOpt.get().getId();
+
+                lessonProgressRepository.insertProgressIdempotent(lessonId, currentUserId, enrollmentId);
+
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        progressCalculatorService.checkAndMarkCompletion(enrollmentId);
+                    } catch (Exception e) {
+                        log.error("Error during async progress calculation for enrollmentId: {}", enrollmentId, e);
+                    }
+                });
+            }
+
+        }
+
+        return new LessonDtoEntity(lesson);
     }
 }

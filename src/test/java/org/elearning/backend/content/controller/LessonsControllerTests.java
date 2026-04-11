@@ -58,7 +58,11 @@ class LessonsControllerTests {
         jdbcTemplate.execute("DELETE FROM lessons");
         jdbcTemplate.execute("DELETE FROM chapters");
         jdbcTemplate.execute("DELETE FROM courses");
-        jdbcTemplate.update("DELETE FROM users WHERE id = ?", authenticatedUserId);
+
+        jdbcTemplate.execute("DELETE FROM lesson_progress"); // ADAUGAT IN SPRINT 3
+        jdbcTemplate.execute("DELETE FROM course_enrollments"); //ADAUGAT IN SPRINT 3
+
+        jdbcTemplate.execute("DELETE FROM users"); //MODIFICAT IN SPRINT 3
     }
 
     private UUID insertAuthenticatedUser() {
@@ -603,5 +607,144 @@ class LessonsControllerTests {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.TEXT_PLAIN);
         return headers;
+    }
+
+    // =========================================================================
+    // GET /api/v1/lessons/{id} - TESTE PENTRU SPRINT 3
+    // =========================================================================
+
+
+    /**
+     * Helper method to insert a STUDENT user.
+     */
+    private UUID insertAuthenticatedStudent() {
+        UUID userId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = 'STUDENT'), 'ACTIVE')",
+                userId,
+                "student-" + userId + "@test.com",
+                "password-hash",
+                "Student",
+                "User"
+        );
+        return userId;
+    }
+
+    /**
+     * Helper method to switch the current RestTemplate authentication to a specific student.
+     */
+    private void authorizeAsStudent(UUID studentId) {
+        String token = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
+        restTemplate.getRestTemplate().setInterceptors(List.of((request, body, execution) -> {
+            request.getHeaders().setBearerAuth(token);
+            return execution.execute(request, body);
+        }));
+    }
+
+    /**
+     * Helper method to insert a course enrollment.
+     */
+    private UUID insertEnrollment(UUID studentId, UUID courseId) {
+        UUID enrollmentId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO course_enrollments (id, student_id, course_id, enrolled_at) VALUES (?, ?, ?, NOW())",
+                enrollmentId, studentId, courseId
+        );
+        return enrollmentId;
+    }
+
+    /**
+     * GET /api/v1/lessons/{id}
+     * Tests that a TEACHER can get the lesson, and no progress is marked (no side-effects).
+     */
+    @Test
+    void shouldGetLessonByIdAsTeacherWithoutMarkingProgress() {
+        UUID lessonID = insertLesson("Lectia Profesor", 1, null);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + lessonID,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Lectia Profesor");
+
+        Integer progressCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lesson_progress",
+                Integer.class
+        );
+        assertThat(progressCount).isZero();
+    }
+
+    /**
+     * GET /api/v1/lessons/{id}
+     * Tests that a STUDENT WITH ENROLLMENT gets the lesson, and progress is marked.
+     */
+    @Test
+    void shouldGetLessonByIdAsStudentAndMarkProgress() {
+        UUID studentId = insertAuthenticatedStudent();
+        authorizeAsStudent(studentId);
+
+        UUID courseId = jdbcTemplate.queryForObject(
+                "SELECT course_id FROM chapters WHERE id = '" + chapterID + "'",
+                UUID.class
+        );
+
+        UUID enrollmentId = insertEnrollment(studentId, courseId);
+        UUID lessonID = insertLesson("Lectia Student", 1, null);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + lessonID,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Lectia Student");
+
+        Integer progressCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lesson_progress WHERE lesson_id = ? AND student_id = ? AND enrollment_id = ?",
+                Integer.class, lessonID, studentId, enrollmentId
+        );
+        assertThat(progressCount).isEqualTo(1);
+    }
+
+    /**
+     * GET /api/v1/lessons/{id}
+     * Tests that a STUDENT WITHOUT ENROLLMENT gets the lesson, but NO progress is marked.
+     */
+    @Test
+    void shouldGetLessonByIdAsStudentWithoutEnrollment() {
+        UUID studentId = insertAuthenticatedStudent();
+        authorizeAsStudent(studentId);
+
+        UUID lessonID = insertLesson("Lectia Ne-inrolata", 1, null);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + lessonID,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        Integer progressCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lesson_progress WHERE lesson_id = ? AND student_id = ?",
+                Integer.class, lessonID, studentId
+        );
+        assertThat(progressCount).isZero();
+    }
+
+    /**
+     * GET /api/v1/lessons/{id}
+     * Tests that requesting a missing lesson returns 404 NOT FOUND.
+     */
+    @Test
+    void shouldReturnNotFoundWhenGettingMissingLessonById() {
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + UUID.randomUUID(),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 }
