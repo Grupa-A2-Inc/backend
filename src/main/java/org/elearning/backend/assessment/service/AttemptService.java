@@ -244,7 +244,9 @@ public class AttemptService {
         testResultDto.setQuestions(resultQuestions);
 
         //=========== Sprint 3 - Marking lesson progress and checking course completion after a test ===========
-        markLessonAndCheckCourseCompletion(studentId, test);
+        if (passed) {
+            markLessonAndCheckCourseCompletion(studentId, test);
+        }
         return testResultDto;
     }
 
