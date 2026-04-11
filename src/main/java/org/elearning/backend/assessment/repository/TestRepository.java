@@ -65,5 +65,6 @@ public interface TestRepository extends JpaRepository<Test, UUID> {
     @Query("SELECT t.lessonId FROM Test t WHERE t.lessonId IN :lessonIds AND t.status = 'PUBLISHED'")
     Set<UUID> findLessonIdsWithPublishedTest(@Param("lessonIds") List<UUID> lessonIds);
 
-
+    @Query("SELECT t.lessonId, t.id FROM Test t WHERE t.lessonId IN :lessonIds")
+    List<Object[]> findTestIdsByLessonIds(@Param("lessonIds") List<UUID> lessonIds);
 }
