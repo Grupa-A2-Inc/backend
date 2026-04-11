@@ -29,6 +29,18 @@ public class CourseEnrollmentService {
     private final CourseEnrollmentRepository courseEnrollmentRepository;
     private final EnrollmentMapper enrollmentMapper;
 
+    private final ProgressCalculatorService progressCalculatorService;
+
+    /**
+     * Enrolls a student in a course if the course is public and published, and the student is not already enrolled.
+     *
+     * @param studentId the ID of the student to enroll
+     * @param courseId  the ID of the course to enroll in
+     * @return an EnrollmentDto containing details of the enrollment
+     * @throws CourseNotFoundException if the course does not exist or is not published
+     * @throws CourseIsPrivateException if the course is private
+     * @throws StudentAlreadyEnrolledInCourseException if the student is already enrolled in the course
+     */
     public EnrollmentDto enrollStudentInCourse(UUID studentId, UUID courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new CourseNotFoundException(courseId));
@@ -56,6 +68,13 @@ public class CourseEnrollmentService {
         return enrollmentDto;
     }
 
+    /**
+     * Unenrolls a student from a course if the enrollment exists.
+     *
+     * @param studentId the ID of the student to unenroll
+     * @param courseId  the ID of the course to unenroll from
+     * @throws CourseEnrollmentNotFoundException if the enrollment does not exist
+     */
     public void unenrollStudentFromCourse(UUID studentId, UUID courseId) {
         CourseEnrollment enrollment = courseEnrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)
                 .orElseThrow(() -> new CourseEnrollmentNotFoundException(courseId));
@@ -63,6 +82,12 @@ public class CourseEnrollmentService {
         courseEnrollmentRepository.delete(enrollment);
     }
 
+    /**
+     * Retrieves a list of courses that a student is currently enrolled in, along with their progress.
+     *
+     * @param studentId the ID of the student
+     * @return a list of EnrolledCourseDto containing details of the enrolled courses and progress
+     */
     public List<EnrolledCourseDto> getEnrolledCoursesForStudent(UUID studentId) {
         List<CourseEnrollment> enrollments = courseEnrollmentRepository.findAllByStudentId(studentId);
         List<EnrolledCourseDto> enrolledCourseDtos = enrollmentMapper.toEnrolledCourseDtos(enrollments);
@@ -73,8 +98,7 @@ public class CourseEnrollmentService {
             dto.setCourseTitle(course.getTitle());
             dto.setCourseCategory(course.getCategory());
 
-            //Aici trebuie inlocuit cu functia de calculare a progresului
-            dto.setProgressPercent(BigDecimal.valueOf(0));
+            dto.setProgressPercent(BigDecimal.valueOf(progressCalculatorService.calculateProgressPercent(dto.getUnrollmentId())));
         }
 
         return enrolledCourseDtos;
