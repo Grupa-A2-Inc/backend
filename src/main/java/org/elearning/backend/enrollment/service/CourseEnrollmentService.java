@@ -15,6 +15,7 @@ import org.elearning.backend.enrollment.mapper.EnrollmentMapper;
 import org.elearning.backend.enrollment.model.CourseEnrollment;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -41,6 +42,7 @@ public class CourseEnrollmentService {
      * @throws CourseIsPrivateException if the course is private
      * @throws StudentAlreadyEnrolledInCourseException if the student is already enrolled in the course
      */
+    @Transactional
     public EnrollmentDto enrollStudentInCourse(UUID studentId, UUID courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new CourseNotFoundException(courseId));
@@ -75,6 +77,7 @@ public class CourseEnrollmentService {
      * @param courseId  the ID of the course to unenroll from
      * @throws CourseEnrollmentNotFoundException if the enrollment does not exist
      */
+    @Transactional
     public void unenrollStudentFromCourse(UUID studentId, UUID courseId) {
         CourseEnrollment enrollment = courseEnrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)
                 .orElseThrow(() -> new CourseEnrollmentNotFoundException(courseId));

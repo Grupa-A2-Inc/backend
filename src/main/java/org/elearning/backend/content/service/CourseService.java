@@ -207,7 +207,7 @@ public class CourseService {
                 .map(Lesson::getId)
                 .toList();
 
-        // { lessonId: testId }
+        //lessonId: testId
         Map<UUID, UUID> lessonToTestMap = new java.util.HashMap<>();
 
         if (!lessonIds.isEmpty()) {
