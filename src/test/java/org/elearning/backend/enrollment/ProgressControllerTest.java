@@ -197,4 +197,69 @@ class ProgressControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
+
+    // =========================================================================
+    // TESTE PENTRU DEV 4: PROGRES PROFESOR SI PARINTE
+    // =========================================================================
+
+    /**
+     * GET /api/v1/courses/{courseId}/students-progress
+     * Test: The professor sees the progress of the course he created. (200 OK)
+     */
+    @Test
+    void shouldGetCourseProgressForProfessorOwner() {
+        UUID teacherId = insertUser(RoleName.TEACHER);
+        authorizeRequests(teacherId, RoleName.TEACHER);
+
+        UUID myCourseId = UUID.randomUUID();
+        jdbcTemplate.execute(
+                "INSERT INTO courses (id, title, created_by, status, visibility) " +
+                        "VALUES ('" + myCourseId + "', 'Cursul Meu', '" + teacherId + "', 'PUBLISHED', 'PUBLIC')"
+        );
+
+        insertEnrollment(studentId, myCourseId);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/" + myCourseId + "/students-progress",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains(studentId.toString());
+    }
+
+    /**
+     * GET /api/v1/courses/{courseId}/students-progress
+     * Test: The professor tries to see the progress of a course owned by another professor -> 403 Forbidden.
+     */
+    @Test
+    void shouldReturnForbiddenWhenTeacherNotOwner() {
+        UUID hackerTeacherId = insertUser(RoleName.TEACHER);
+        authorizeRequests(hackerTeacherId, RoleName.TEACHER);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/" + courseId + "/students-progress",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * GET /api/v1/students/{studentId}/courses-progress
+     * Test: The parent sees the student's progress. (200 OK)
+     */
+    @Test
+    void shouldGetStudentProgressForParent() {
+        UUID parentId = insertUser(RoleName.PARENT);
+        authorizeRequests(parentId, RoleName.PARENT);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/v1/students/" + studentId + "/courses-progress",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains(courseId.toString());
+    }
 }
