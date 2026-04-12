@@ -1,6 +1,7 @@
 package org.elearning.backend.enrollment.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.enrollment.dto.CompletedCourseDto;
 import org.elearning.backend.enrollment.dto.EnrolledCourseDto;
 import org.elearning.backend.enrollment.dto.ProgressWithLessonListDto;
 import org.elearning.backend.enrollment.dto.StudentProgressDto;
@@ -36,7 +37,7 @@ public class ProgressController {
     }
 
     @GetMapping("/courses/{courseId}/students-progress")
-    @PreAuthorize("hasRole('PROFESSOR')")
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<Page<StudentProgressDto>> getCourseProgress(
             @PathVariable UUID courseId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -47,9 +48,17 @@ public class ProgressController {
     }
 
     @GetMapping("/students/{studentId}/courses-progress")
-    @PreAuthorize("hasAnyRole('PROFESSOR', 'PARENT', 'ADMIN') or (hasRole('STUDENT') and #studentId == principal.id)")
+    @PreAuthorize("hasAnyRole('TEACHER', 'PARENT', 'ADMIN') or (hasRole('STUDENT') and #studentId == principal.id)")
     public ResponseEntity<List<EnrolledCourseDto>> getStudentProgress(
             @PathVariable UUID studentId) {
         return ResponseEntity.ok(courseProgressService.getStudentCoursesProgress(studentId));
+    }
+
+    @GetMapping("/students/me/completed-courses")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<List<CompletedCourseDto>> getMyCompletedCourses(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID studentId = userDetails.getUserId();
+        return ResponseEntity.ok(courseProgressService.getMyCompletedCourses(studentId));
     }
 }

@@ -99,4 +99,19 @@ public class ProgressService {
 
         }).toList();
     }
+
+    public List<CompletedCourseDto> getMyCompletedCourses(UUID studentId) {
+        List<CourseEnrollment> completedEnrollments = enrollmentRepository.findAllByStudentIdAndCompletedAtIsNotNullOrderByCompletedAtDesc(studentId);
+
+        return completedEnrollments.stream().map(enrollment -> {
+            var course = courseRepository.findById(enrollment.getCourseId())
+                    .orElseThrow(() -> new RuntimeException("Course was not found."));
+            return CompletedCourseDto.builder()
+                    .courseId(course.getId())
+                    .courseTitle(course.getTitle())
+                    .enrolledAt(enrollment.getEnrolledAt())
+                    .completedAt(enrollment.getCompletedAt())
+                    .build();
+        }).toList();
+    }
 }
