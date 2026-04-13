@@ -92,8 +92,8 @@ class ProgressCalculatorServiceTest {
         ProgressDto progress = progressCalculatorService.calculateCourseProgress(
                 course.getId(), studentId, enrollment.getId()
         );
-        assertThat(progress.getPercentageDisplay()).isEqualTo(0.0);
-        assertThat(progress.getCompletedLessons()).isEqualTo(0);
+        assertThat(progress.getPercentageDisplay()).isZero();
+        assertThat(progress.getCompletedLessons()).isZero();
         assertThat(progress.getTotalLessons()).isEqualTo(2);
         assertThat(progress.isCompleted()).isFalse();
     }
@@ -150,8 +150,8 @@ class ProgressCalculatorServiceTest {
         ProgressDto progress = progressCalculatorService.calculateCourseProgress(
                 emptyCourse.getId(), studentId, emptyEnrollment.getId()
         );
-        assertThat(progress.getPercentageDisplay()).isEqualTo(0.0);
-        assertThat(progress.getTotalLessons()).isEqualTo(0);
+        assertThat(progress.getPercentageDisplay()).isZero();
+        assertThat(progress.getTotalLessons()).isZero();
         assertThat(progress.isCompleted()).isFalse();
     }
 
