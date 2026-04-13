@@ -8,7 +8,9 @@ import org.elearning.backend.assessment.dto.assigment_dto.TestResultDto;
 import org.elearning.backend.assessment.dto.test_dto.StartAttemptResponseDto;
 import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
 import org.elearning.backend.assessment.service.AttemptService;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -19,9 +21,8 @@ import java.util.UUID;
 public class AttemptController {
 
     private final AttemptService attemptService;
-    private static String hardcodedId = "00000000-0000-0000-0000-000000000001";
 
-    private static final String OK = "201";
+    private static final String OK = "200";
     private static final String NOT_FOUND = "404";
     private static final String CONFLICT = "409";
     private static final String BAD_REQUEST = "400";
@@ -34,13 +35,8 @@ public class AttemptController {
             @ApiResponse(responseCode = NOT_FOUND, description = "Test not found")
     })
     @PostMapping("/tests/{testId}/start")
-    public ResponseEntity<StartAttemptResponseDto> startAttempt(@PathVariable UUID testId) {
-
-        // Placeholder for JWT - to be replaced with actual authentication logic
-        UUID studentId = UUID.fromString(hardcodedId);
-
-        StartAttemptResponseDto response = attemptService.startAttempt(testId, studentId);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<StartAttemptResponseDto> startAttempt(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID testId) {
+        return ResponseEntity.ok(attemptService.startAttempt(testId, userDetails.getUserId()));
     }
 
     @Operation(summary = "Submit attempt answers", description = "Processes the student's answers, calculates the score, and saves the result.")
@@ -52,13 +48,9 @@ public class AttemptController {
     })
     @PostMapping("/attempts/{attemptId}/submit")
     public ResponseEntity<TestResultDto> submitAttempt(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID attemptId,
             @RequestBody SubmitRequestDto request) {
-
-        // Placeholder for JWT - to be replaced with actual authentication logic
-        UUID studentId = UUID.fromString(hardcodedId);
-
-        TestResultDto result = attemptService.submitAttempt(attemptId, studentId, request);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(attemptService.submitAttempt(attemptId, userDetails.getUserId(), request));
     }
 }
