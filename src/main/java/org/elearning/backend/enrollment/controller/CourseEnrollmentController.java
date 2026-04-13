@@ -23,12 +23,19 @@ public class CourseEnrollmentController {
 
     private final CourseEnrollmentService enrollmentService;
 
+    private static final String CREATED = "201";
+    private static final String OK = "200";
+    private static final String NO_CONTENT = "204";
+    private static final String NOT_FOUND = "404";
+    private static final String CONFLICT = "409";
+    private static final String FORBIDDEN = "403";
+
     @Operation(summary = "Enroll in a course", description = "Enrolls the authenticated student in the specified course")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Student successfully enrolled in the course"),
-            @ApiResponse(responseCode = "404", description = "Course not found"),
-            @ApiResponse(responseCode = "409", description = "Student is already enrolled in the course"),
-            @ApiResponse(responseCode = "403", description = "User does not have permission to enroll in the course")
+            @ApiResponse(responseCode = CREATED, description = "Student successfully enrolled in the course"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found"),
+            @ApiResponse(responseCode = CONFLICT, description = "Student is already enrolled in the course"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "User does not have permission to enroll in the course")
     })
     @PostMapping("/courses/{courseId}/enroll")
     public ResponseEntity<EnrollmentDto> enrollInCourse(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID courseId) {
@@ -37,8 +44,8 @@ public class CourseEnrollmentController {
 
     @Operation(summary = "Unenroll from a course", description = "Unenrolls the authenticated student from the specified course")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Student successfully unenrolled from the course"),
-            @ApiResponse(responseCode = "404", description = "Course not found or student is not enrolled in the course")
+            @ApiResponse(responseCode = NO_CONTENT, description = "Student successfully unenrolled from the course"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found or student is not enrolled in the course")
     })
     @DeleteMapping("/courses/{courseId}/unenroll")
     public ResponseEntity<Void> unenrollFromCourse(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID courseId) {
@@ -48,7 +55,7 @@ public class CourseEnrollmentController {
 
     @Operation(summary = "Get enrolled courses", description = "Returns a list of courses the authenticated student is currently enrolled in")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Enrolled courses successfully returned")
+            @ApiResponse(responseCode = OK, description = "Enrolled courses successfully returned")
     })
     @GetMapping("/students/me/courses")
     public ResponseEntity<List<EnrolledCourseDto>> getEnrolledCourses(@AuthenticationPrincipal CustomUserDetails userDetails) {

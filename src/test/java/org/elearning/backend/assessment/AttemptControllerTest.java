@@ -3,15 +3,20 @@ package org.elearning.backend.assessment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.assessment.dto.test_dto.SubmitAnswerDto;
 import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
+import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.security.jwt.JwtUtil;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -25,7 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureMockMvc(addFilters = false) // controllerul foloseste hardcoded UUID, nu @AuthenticationPrincipal
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AttemptControllerTest {
 
@@ -38,8 +43,18 @@ class AttemptControllerTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // hardcodat in controller
-    private final UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    private UUID studentId;
+    private String accessToken;
+
+    @BeforeEach
+    void setUp() {
+        studentId = UUID.randomUUID();
+        insertStudent(studentId);
+        accessToken = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
+    }
 
     @AfterEach
     void tearDown() {
@@ -52,15 +67,34 @@ class AttemptControllerTest {
         jdbcTemplate.execute("DELETE FROM lessons");
         jdbcTemplate.execute("DELETE FROM chapters");
         jdbcTemplate.execute("DELETE FROM courses");
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", studentId);
+    }
+
+    private void insertStudent(UUID userId) {
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                userId,
+                "student-" + userId + "@test.com",
+                "password-hash",
+                "Test",
+                "Student",
+                RoleName.STUDENT.name(),
+                "ACTIVE"
+        );
+    }
+
+    private MockHttpServletRequestBuilder authorized(MockHttpServletRequestBuilder requestBuilder) {
+        return requestBuilder.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
     }
 
     private record TestContext(UUID testId, Integer questionId, Integer correctOptionId) {}
 
     private TestContext insertTestWithQuestion(String status, int timeLimitSec) {
-                return insertTestWithQuestion(status, timeLimitSec, false);
-        }
+        return insertTestWithQuestion(status, timeLimitSec, false);
+    }
 
-        private TestContext insertTestWithQuestion(String status, int timeLimitSec, boolean aiEnabled) {
+    private TestContext insertTestWithQuestion(String status, int timeLimitSec, boolean aiEnabled) {
         UUID courseId = UUID.randomUUID();
         UUID chapterId = UUID.randomUUID();
         UUID lessonId = UUID.randomUUID();
@@ -199,22 +233,22 @@ class AttemptControllerTest {
         return request;
     }
 
-        private SubmitRequestDto submitRequestForAnswer(Integer questionId, Integer selectedOptionId) {
-                SubmitAnswerDto answer = new SubmitAnswerDto();
-                answer.setQuestionId(questionId);
-                answer.setSelectedOptionIds(List.of(selectedOptionId));
-                answer.setTimeSpent(BigDecimal.valueOf(30));
+    private SubmitRequestDto submitRequestForAnswer(Integer questionId, Integer selectedOptionId) {
+        SubmitAnswerDto answer = new SubmitAnswerDto();
+        answer.setQuestionId(questionId);
+        answer.setSelectedOptionIds(List.of(selectedOptionId));
+        answer.setTimeSpent(BigDecimal.valueOf(30));
 
-                SubmitRequestDto request = new SubmitRequestDto();
-                request.setAnswers(List.of(answer));
-                return request;
-        }
+        SubmitRequestDto request = new SubmitRequestDto();
+        request.setAnswers(List.of(answer));
+        return request;
+    }
 
-        private SubmitRequestDto emptySubmitRequest() {
-                SubmitRequestDto request = new SubmitRequestDto();
-                request.setAnswers(List.of());
-                return request;
-        }
+    private SubmitRequestDto emptySubmitRequest() {
+        SubmitRequestDto request = new SubmitRequestDto();
+        request.setAnswers(List.of());
+        return request;
+    }
 
     // =========================================================================
     // POST /api/v1/tests/{testId}/start
@@ -224,7 +258,7 @@ class AttemptControllerTest {
     void startAttempt_shouldReturn200_whenValid() throws Exception {
         TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
 
-        mockMvc.perform(post("/api/v1/tests/{testId}/start", context.testId())
+        mockMvc.perform(authorized(post("/api/v1/tests/{testId}/start", context.testId()))
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.attemptId").exists())
@@ -237,7 +271,7 @@ class AttemptControllerTest {
     void startAttempt_shouldReturn404_whenTestNotFound() throws Exception {
         UUID missingTestId = UUID.randomUUID();
 
-        mockMvc.perform(post("/api/v1/tests/{testId}/start", missingTestId)
+        mockMvc.perform(authorized(post("/api/v1/tests/{testId}/start", missingTestId))
                         .with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("does not exist")));
@@ -247,7 +281,7 @@ class AttemptControllerTest {
     void startAttempt_shouldReturn400_whenTestNotPublished() throws Exception {
         TestContext context = insertTestWithQuestion("DRAFT", 1800);
 
-        mockMvc.perform(post("/api/v1/tests/{testId}/start", context.testId())
+        mockMvc.perform(authorized(post("/api/v1/tests/{testId}/start", context.testId()))
                         .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("is not published yet")));
@@ -270,7 +304,7 @@ class AttemptControllerTest {
         SubmitRequestDto request = new SubmitRequestDto();
         request.setAnswers(List.of(answer));
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -285,7 +319,7 @@ class AttemptControllerTest {
     void submitAttempt_shouldReturn404_whenAttemptNotFound() throws Exception {
         UUID missingAttemptId = UUID.randomUUID();
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", missingAttemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", missingAttemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(mockSubmitRequest())))
@@ -298,7 +332,7 @@ class AttemptControllerTest {
         TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "DONE", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(mockSubmitRequest())))
@@ -311,7 +345,7 @@ class AttemptControllerTest {
         TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "EXPIRED", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(mockSubmitRequest())))
@@ -325,7 +359,7 @@ class AttemptControllerTest {
         UUID anotherStudentId = UUID.randomUUID();
         UUID attemptId = insertAttempt(context.testId(), anotherStudentId, 1, "IN_PROGRESS", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -346,7 +380,7 @@ class AttemptControllerTest {
                 "NOW() - INTERVAL '5 minutes'"
         );
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -370,7 +404,7 @@ class AttemptControllerTest {
 
         UUID attemptId = insertAttempt(firstQuestion.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -404,7 +438,7 @@ class AttemptControllerTest {
         SubmitRequestDto requestBody = new SubmitRequestDto();
         requestBody.setAnswers(List.of(correctAns, wrongAns));
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestBody)))
@@ -420,7 +454,7 @@ class AttemptControllerTest {
         UUID testId = insertTestWithoutQuestions("PUBLISHED", 1800, true);
         UUID attemptId = insertAttempt(testId, studentId, 1, "IN_PROGRESS", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(emptySubmitRequest())))
@@ -444,7 +478,7 @@ class AttemptControllerTest {
         SubmitRequestDto requestBody = new SubmitRequestDto();
         requestBody.setAnswers(List.of(invalidAnswer));
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestBody)))
@@ -475,10 +509,10 @@ class AttemptControllerTest {
 
     @Test
     void submitAttempt_shouldReturn400_whenBodyMissing() throws Exception {
-                TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
-                UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
+        TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
+        UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
