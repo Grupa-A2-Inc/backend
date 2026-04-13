@@ -3,15 +3,20 @@ package org.elearning.backend.assessment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.assessment.dto.test_dto.SubmitAnswerDto;
 import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
+import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -23,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AttemptControllerSprint3Test {
 
@@ -36,7 +41,18 @@ class AttemptControllerSprint3Test {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private final UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        @Autowired
+        private JwtUtil jwtUtil;
+
+        private UUID studentId;
+        private String accessToken;
+
+        @BeforeEach
+        void setUp() {
+                studentId = UUID.randomUUID();
+                insertStudent(studentId);
+                accessToken = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
+        }
 
     @AfterEach
     void tearDown() {
@@ -51,7 +67,26 @@ class AttemptControllerSprint3Test {
         jdbcTemplate.execute("DELETE FROM chapters");
         jdbcTemplate.execute("DELETE FROM course_enrollments");
         jdbcTemplate.execute("DELETE FROM courses");
+                jdbcTemplate.update("DELETE FROM users WHERE id = ?", studentId);
     }
+
+        private void insertStudent(UUID userId) {
+                jdbcTemplate.update(
+                                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
+                                                "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                                userId,
+                                "student-" + userId + "@test.com",
+                                "password-hash",
+                                "Test",
+                                "Student",
+                                RoleName.STUDENT.name(),
+                                "ACTIVE"
+                );
+        }
+
+        private MockHttpServletRequestBuilder authorized(MockHttpServletRequestBuilder requestBuilder) {
+                return requestBuilder.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
+        }
 
     private record TestContext(UUID testId, UUID courseId, UUID chapterId, UUID lessonId, Integer questionId, Integer correctOptionId) {}
 
@@ -156,7 +191,7 @@ class AttemptControllerSprint3Test {
         UUID enrollmentId = insertEnrollment(studentId, context.courseId());
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -178,7 +213,7 @@ class AttemptControllerSprint3Test {
         // NU apelăm insertEnrollment
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -200,7 +235,7 @@ class AttemptControllerSprint3Test {
         jdbcTemplate.update("DELETE FROM courses WHERE id = ?", context.courseId());
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
@@ -222,7 +257,7 @@ class AttemptControllerSprint3Test {
         jdbcTemplate.update("DELETE FROM chapters WHERE id = ?", context.chapterId());
         UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
 
-        mockMvc.perform(post("/api/v1/attempts/{attemptId}/submit", attemptId)
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
