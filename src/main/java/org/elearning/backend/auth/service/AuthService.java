@@ -37,6 +37,7 @@ public class AuthService {
     private final OrganizationRepository organizationRepository;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
     private static final DateTimeFormatter LOCK_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
     private static final int LOCK_OUT_TIME_IN_MINUTES = 5;
 
@@ -82,6 +83,7 @@ public class AuthService {
 
         String accessToken = jwtUtil.generateAccessToken(savedUser.getId(), RoleName.ORGANIZATION_ADMIN);
         String refreshToken = jwtUtil.generateRefreshToken(savedUser.getId());
+        refreshTokenService.storeRefreshToken(savedUser, refreshToken);
 
         UserDataResponse userData = new UserDataResponse(
                 savedUser.getId(),
@@ -123,6 +125,7 @@ public class AuthService {
 
             String accessToken = jwtUtil.generateAccessToken(authenticatedUser.getId(), authenticatedUser.getRole().getName());
             String refreshToken = jwtUtil.generateRefreshToken(authenticatedUser.getId());
+            refreshTokenService.storeRefreshToken(authenticatedUser, refreshToken);
 
             UserDataResponse userData = new UserDataResponse(
                     authenticatedUser.getId(),

@@ -1,0 +1,134 @@
+package org.elearning.backend.auth.service;
+
+import org.elearning.backend.auth.entity.RefreshToken;
+import org.elearning.backend.auth.exception.InvalidCredentialsException;
+import org.elearning.backend.auth.repository.RefreshTokenRepository;
+import org.elearning.backend.security.jwt.JwtUtil;
+import org.elearning.backend.user.entity.User;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class RefreshTokenServiceTest {
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
+    private JwtUtil jwtUtil;
+
+    @InjectMocks
+    private RefreshTokenService refreshTokenService;
+
+    private User user;
+
+    private static final String RAW_TOKEN = "someRawRefreshToken";
+
+    @BeforeEach
+    void setUp() {
+        user = new User();
+    }
+
+    @Test
+    void storeRefreshToken_savesEntityWithHashedTokenAndCorrectExpiry() {
+        refreshTokenService.storeRefreshToken(user, RAW_TOKEN);
+
+        ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository).save(captor.capture());
+
+        RefreshToken saved = captor.getValue();
+        assertThat(saved.getUser()).isEqualTo(user);
+        assertThat(saved.getTokenHash()).isNotEqualTo(RAW_TOKEN);
+        assertThat(saved.getTokenHash()).hasSize(64);
+        assertThat(saved.getExpiresAt()).isAfter(LocalDateTime.now().plusDays(6));
+    }
+
+    @Test
+    void validateAndGetUser_tokenNotFound_throwsForbidden() {
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> refreshTokenService.validateAndGetUser(RAW_TOKEN))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid refresh token");
+
+        verifyNoInteractions(jwtUtil);
+    }
+
+    @Test
+    void validateAndGetUser_tokenRevoked_throwsForbidden() {
+        RefreshToken revoked = new RefreshToken();
+        revoked.setUser(user);
+        revoked.setRevokedAt(LocalDateTime.now().minusMinutes(1)); // already revoked
+        revoked.setExpiresAt(LocalDateTime.now().plusDays(7));
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(revoked));
+
+        assertThatThrownBy(() -> refreshTokenService.validateAndGetUser(RAW_TOKEN))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Refresh token has been revoked");
+
+        verifyNoInteractions(jwtUtil);
+    }
+
+    @Test
+    void validateAndGetUser_tokenExpired_throwsForbidden() {
+        RefreshToken expired = new RefreshToken();
+        expired.setUser(user);
+        expired.setRevokedAt(null);
+        expired.setExpiresAt(LocalDateTime.now().minusSeconds(1)); // expired
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(expired));
+
+        assertThatThrownBy(() -> refreshTokenService.validateAndGetUser(RAW_TOKEN))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Refresh token has expired");
+
+        verifyNoInteractions(jwtUtil);
+    }
+
+    @Test
+    void validateAndGetUser_validToken_callsJwtValidateAndReturnsUser() {
+        RefreshToken valid = new RefreshToken();
+        valid.setUser(user);
+        valid.setRevokedAt(null);
+        valid.setExpiresAt(LocalDateTime.now().plusDays(7));
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(valid));
+
+        User result = refreshTokenService.validateAndGetUser(RAW_TOKEN);
+
+        verify(jwtUtil).validateToken(RAW_TOKEN); // must call JWT validation as final check
+        assertThat(result).isEqualTo(user);
+    }
+
+    @Test
+    void revokeForToken_tokenFound_setsRevokedAtAndSaves() {
+        RefreshToken active = new RefreshToken();
+        active.setUser(user);
+        active.setRevokedAt(null);
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(active));
+
+        refreshTokenService.revokeForToken(RAW_TOKEN);
+
+        assertThat(active.getRevokedAt()).isNotNull();
+        verify(refreshTokenRepository).save(active);
+    }
+
+    @Test
+    void revokeForToken_tokenNotFound_doesNothing() {
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
+
+        assertThatCode(() -> refreshTokenService.revokeForToken(RAW_TOKEN))
+                .doesNotThrowAnyException();
+
+        verify(refreshTokenRepository, never()).save(any());
+    }
+}
