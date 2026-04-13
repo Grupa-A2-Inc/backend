@@ -102,6 +102,20 @@ public class AccessService {
                 && currentUser.getOrganizationId().equals(targetUser.getOrganization().getId());
     }
 
+    public boolean canChangePassword(Authentication authentication, UUID targetUserId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        return currentUser.getUserId().equals(targetUserId);
+    }
+
     public CustomUserDetails extractCurrentUser(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails userDetails)) {
             return null;

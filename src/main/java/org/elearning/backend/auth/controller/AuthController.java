@@ -96,16 +96,74 @@ public class AuthController {
         return responseWithRefreshCookie(response);
     }
 
+    @Operation(
+            summary = "Request password reset",
+            description = "Accepts an email address and always returns a generic response message. If the account exists, a reset token is generated and sent by email."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Password reset request processed",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ResetPasswordResponse.class)
+            )
+    )
+    @ApiResponse(
+            responseCode = "400",
+            description = "Invalid request data",
+            content = @Content
+    )
     @PostMapping("/forgot-password")
     public ResponseEntity<ResetPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request){
         ResetPasswordResponse response = resetService.forgotPassword(request);
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "Reset password",
+            description = "Consumes a password reset token and updates the user's password if the token is valid and not expired."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Password reset processed",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ResetPasswordResponse.class)
+            )
+    )
+    @ApiResponse(
+            responseCode = "400",
+            description = "Invalid request data or reset token",
+            content = @Content
+    )
     @PostMapping("/reset-password")
     public ResponseEntity<ResetPasswordResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request){
         ResetPasswordResponse response = resetService.resetPassword(request);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Logout user",
+            description = "Clears the refresh token cookie by returning the same cookie with an empty value and Max-Age=0."
+    )
+    @ApiResponse(
+            responseCode = "204",
+            description = "Logout successful",
+            content = @Content
+    )
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        ResponseCookie expiredCookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(secureCookies)
+                .sameSite("None")
+                .path("/api/v1/auth")
+                .maxAge(0)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
+                .build();
     }
 
     private ResponseEntity<AuthResponse> responseWithRefreshCookie(AuthResponse response) {
@@ -121,20 +179,5 @@ public class AuthController {
 
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                 .body(response);
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        ResponseCookie expiredCookie = ResponseCookie.from("refresh_token", "")
-                .httpOnly(true)
-                .secure(secureCookies)
-                .sameSite("None")
-                .path("/api/v1/auth")
-                .maxAge(0)
-                .build();
-
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
-                .build();
     }
 }

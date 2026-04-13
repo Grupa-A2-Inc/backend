@@ -188,6 +188,31 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(
+            summary = "Change password",
+            description = "Changes the password of user that has the specified UUID"
+    )
+    @ApiResponse(
+            responseCode = "204",
+            description = "Password change with success",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "403",
+            description = "Access denied",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "404",
+            description = "User not found",
+            content = @Content
+    )
+    @PreAuthorize("@accessService.canChangePassword(authentication, #id)")
     @PatchMapping("/{id}/change-password")
     public ResponseEntity<Void> changePassword(@P("id") @PathVariable UUID id,
                                                @RequestBody ChangePasswordRequest request) {
