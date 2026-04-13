@@ -23,6 +23,7 @@ public class CourseEnrollmentController {
 
     private final CourseEnrollmentService enrollmentService;
 
+    private static final String CREATED = "201";
     private static final String OK = "200";
     private static final String NO_CONTENT = "204";
     private static final String NOT_FOUND = "404";
@@ -31,7 +32,7 @@ public class CourseEnrollmentController {
 
     @Operation(summary = "Enroll in a course", description = "Enrolls the authenticated student in the specified course")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = OK, description = "Student successfully enrolled in the course"),
+            @ApiResponse(responseCode = CREATED, description = "Student successfully enrolled in the course"),
             @ApiResponse(responseCode = NOT_FOUND, description = "Course not found"),
             @ApiResponse(responseCode = CONFLICT, description = "Student is already enrolled in the course"),
             @ApiResponse(responseCode = FORBIDDEN, description = "User does not have permission to enroll in the course")
