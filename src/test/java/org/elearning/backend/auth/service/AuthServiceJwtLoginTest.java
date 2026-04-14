@@ -40,6 +40,9 @@ class AuthServiceJwtLoginTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
     private AuthService authService;
 
