@@ -41,8 +41,13 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final JwtUtil jwtUtil;
 
+    @Value("${app.auth.api-path:/api/v1/auth}")
+    private String apiAuthPath = "/api/v1/auth";
+
+    private static final String REFRESH_STRING_LITERAL = "refresh_token";
+
     @Value("${app.auth.secure-cookies:true}")
-    private boolean secureCookies;
+    private boolean secureCookies = true;
 
     @Operation(
             summary = "Register a new account",
@@ -165,11 +170,11 @@ public class AuthController {
         String newRawRefreshToken = refreshTokenService.rotateRefreshToken(rawRefreshToken);
         String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().getName());
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", newRawRefreshToken)
+        ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, newRawRefreshToken)
                 .httpOnly(true)
                 .secure(secureCookies)
                 .sameSite("None")
-                .path("/api/v1/auth")
+                .path(apiAuthPath)
                 .maxAge(Duration.ofDays(7))
                 .build();
 
@@ -193,11 +198,11 @@ public class AuthController {
                 refreshTokenService.revokeForToken(rawRefreshToken);
             }
 
-            ResponseCookie expiredCookie = ResponseCookie.from("refresh_token", "")
+            ResponseCookie expiredCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, "")
                 .httpOnly(true)
                 .secure(secureCookies)
                 .sameSite("None")
-                .path("/api/v1/auth")
+                .path(apiAuthPath)
                 .maxAge(0)
                 .build();
 
@@ -207,11 +212,11 @@ public class AuthController {
     }
 
     private ResponseEntity<AuthResponse> responseWithRefreshCookie(AuthResponse response) {
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", response.getRefreshToken())
+        ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, response.getRefreshToken())
                 .httpOnly(true)
                 .secure(secureCookies)
                 .sameSite("None")
-                .path("/api/v1/auth")
+                .path(apiAuthPath)
                 .maxAge(Duration.ofDays(7))
                 .build();
 

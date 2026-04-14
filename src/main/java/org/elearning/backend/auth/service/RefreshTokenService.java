@@ -22,7 +22,6 @@ public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtil jwtUtil;
 
-    @Transactional
     public void storeRefreshToken(User user, String rawToken) {
         RefreshToken entity = new RefreshToken();
         entity.setUser(user);
