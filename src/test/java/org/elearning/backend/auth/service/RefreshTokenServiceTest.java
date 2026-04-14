@@ -55,10 +55,10 @@ class RefreshTokenServiceTest {
     }
 
     @Test
-    void validateAndGetUser_tokenNotFound_throwsForbidden() {
+    void rotateRefreshToken_tokenNotFound_throwsUnauthorized() {
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> refreshTokenService.validateAndGetUser(RAW_TOKEN))
+        assertThatThrownBy(() -> refreshTokenService.rotateRefreshToken(RAW_TOKEN))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Invalid refresh token");
 
@@ -66,14 +66,14 @@ class RefreshTokenServiceTest {
     }
 
     @Test
-    void validateAndGetUser_tokenRevoked_throwsForbidden() {
+    void rotateRefreshToken_tokenRevoked_throwsUnauthorized() {
         RefreshToken revoked = new RefreshToken();
         revoked.setUser(user);
         revoked.setRevokedAt(LocalDateTime.now().minusMinutes(1)); // already revoked
         revoked.setExpiresAt(LocalDateTime.now().plusDays(7));
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(revoked));
 
-        assertThatThrownBy(() -> refreshTokenService.validateAndGetUser(RAW_TOKEN))
+        assertThatThrownBy(() -> refreshTokenService.rotateRefreshToken(RAW_TOKEN))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Refresh token has been revoked");
 
@@ -81,14 +81,14 @@ class RefreshTokenServiceTest {
     }
 
     @Test
-    void validateAndGetUser_tokenExpired_throwsForbidden() {
+    void rotateRefreshToken_tokenExpired_throwsUnauthorized() {
         RefreshToken expired = new RefreshToken();
         expired.setUser(user);
         expired.setRevokedAt(null);
         expired.setExpiresAt(LocalDateTime.now().minusSeconds(1)); // expired
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(expired));
 
-        assertThatThrownBy(() -> refreshTokenService.validateAndGetUser(RAW_TOKEN))
+        assertThatThrownBy(() -> refreshTokenService.rotateRefreshToken(RAW_TOKEN))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Refresh token has expired");
 
@@ -96,17 +96,24 @@ class RefreshTokenServiceTest {
     }
 
     @Test
-    void validateAndGetUser_validToken_callsJwtValidateAndReturnsUser() {
+    void getUserFromToken_tokenFound_returnsUser() {
         RefreshToken valid = new RefreshToken();
         valid.setUser(user);
-        valid.setRevokedAt(null);
-        valid.setExpiresAt(LocalDateTime.now().plusDays(7));
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(valid));
 
-        User result = refreshTokenService.validateAndGetUser(RAW_TOKEN);
+        User result = refreshTokenService.getUserFromToken(RAW_TOKEN);
 
-        verify(jwtUtil).validateToken(RAW_TOKEN); // must call JWT validation as final check
         assertThat(result).isEqualTo(user);
+        verifyNoInteractions(jwtUtil);
+    }
+
+    @Test
+    void getUserFromToken_tokenNotFound_throwsInvalidCredentials() {
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> refreshTokenService.getUserFromToken(RAW_TOKEN))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid refresh token");
     }
 
     @Test
