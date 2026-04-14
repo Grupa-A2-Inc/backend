@@ -169,22 +169,12 @@ public class AccessService {
 
     @Description("Defines who can view the content of a specific lesson. Returns true if the user can access that course, false otherwise")
     public boolean canViewLessonContent(Authentication authentication, UUID targetLessonId) {
-        Lesson lesson = lessonRepository.findById(targetLessonId).orElse(null);
-        if(lesson == null) {
-            return false;
-        }
-
-        return canAccessCourse(authentication, lesson.getChapter().getCourse().getId());
+        return canEditLessonContent(authentication, targetLessonId);
     }
 
     @Description("Defines who can edit the content of a specific lesson. Returns true if the user can manage that course, false otherwise")
     public boolean canEditLessonContent(Authentication authentication, UUID targetLessonId) {
-        Lesson lesson = lessonRepository.findById(targetLessonId).orElse(null);
-        if(lesson == null) {
-            return false;
-        }
-
-        return canManageCourse(authentication, lesson.getChapter().getCourse().getId());
+        return canEditLessonMetaData(authentication, targetLessonId);
     }
 
     @Description("Defines who can delete a specific lesson. Returns true if the user can manage that course, false otherwise")

@@ -4,7 +4,9 @@ import org.elearning.backend.auth.controller.AuthController;
 import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.service.AuthService;
 import org.elearning.backend.auth.service.PasswordResetService;
+import org.elearning.backend.auth.service.RefreshTokenService;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
+import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -32,6 +34,12 @@ class AuthLogoutTest {
 
     @MockitoBean
     private PasswordResetService passwordResetService;
+
+    @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
+    @MockitoBean
+    private JwtUtil jwtUtil;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
