@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -93,6 +94,35 @@ class RefreshTokenServiceTest {
                 .hasMessage("Refresh token has expired");
 
         verifyNoInteractions(jwtUtil);
+    }
+
+    @Test
+    void rotateRefreshToken_validToken_revokesOldTokenAndStoresNewOne() {
+        user.setId(java.util.UUID.randomUUID());
+
+        RefreshToken active = new RefreshToken();
+        active.setUser(user);
+        active.setRevokedAt(null);
+        active.setExpiresAt(LocalDateTime.now().plusDays(7));
+
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(active));
+        when(jwtUtil.generateRefreshToken(user.getId())).thenReturn("new-refresh-token");
+
+        String result = refreshTokenService.rotateRefreshToken(RAW_TOKEN);
+
+        assertThat(result).isEqualTo("new-refresh-token");
+        assertThat(active.getRevokedAt()).isNotNull();
+
+        ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository, times(2)).save(captor.capture());
+        List<RefreshToken> savedTokens = captor.getAllValues();
+        assertThat(savedTokens.get(0)).isSameAs(active);
+        assertThat(savedTokens.get(1).getUser()).isEqualTo(user);
+        assertThat(savedTokens.get(1).getTokenHash()).hasSize(64);
+        assertThat(savedTokens.get(1).getTokenHash()).isNotEqualTo("new-refresh-token");
+
+        verify(jwtUtil).validateToken(RAW_TOKEN);
+        verify(jwtUtil).generateRefreshToken(user.getId());
     }
 
     @Test

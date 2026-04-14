@@ -94,8 +94,9 @@ class AuthControllerRefreshTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
         String setCookieHeader = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
-        assertThat(setCookieHeader).contains("refresh_token=");
-        assertThat(setCookieHeader).contains("Max-Age=0");
+        assertThat(setCookieHeader)
+                .contains("refresh_token=")
+                .contains("Max-Age=0");
     }
 
     @Test
