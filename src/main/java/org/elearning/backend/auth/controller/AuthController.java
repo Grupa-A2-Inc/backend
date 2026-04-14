@@ -18,6 +18,7 @@ import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.auth.service.AuthService;
 import org.elearning.backend.auth.service.PasswordResetService;
 import org.elearning.backend.auth.service.RefreshTokenService;
+import org.elearning.backend.auth.service.TokenBlacklistService;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +29,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 
 
 @RestController
@@ -39,6 +41,7 @@ public class AuthController {
     private final AuthService authService;
     private final PasswordResetService resetService;
     private final RefreshTokenService refreshTokenService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final JwtUtil jwtUtil;
 
     @Value("${app.auth.api-path:/api/v1/auth}")
@@ -193,12 +196,23 @@ public class AuthController {
             content = @Content
     )
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@CookieValue(name = "refresh_token", required = false) String rawRefreshToken) {
-            if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {
-                refreshTokenService.revokeForToken(rawRefreshToken);
-            }
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = "refresh_token", required = false) String rawRefreshToken,
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
 
-            ResponseCookie expiredCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, "")
+        if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {
+            refreshTokenService.revokeForToken(rawRefreshToken);
+        }
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String rawAccessToken = authHeader.substring(7);
+            try {
+                LocalDateTime expiresAt = jwtUtil.extractExpiration(rawAccessToken);
+                tokenBlacklistService.revokeAccessToken(rawAccessToken, expiresAt);
+            } catch (Exception ignored) { }
+        }
+
+        ResponseCookie expiredCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, "")
                 .httpOnly(true)
                 .secure(secureCookies)
                 .sameSite("None")

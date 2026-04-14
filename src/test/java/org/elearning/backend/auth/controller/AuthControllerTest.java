@@ -9,6 +9,7 @@ import org.elearning.backend.auth.dto.response.ResetPasswordResponse;
 import org.elearning.backend.auth.service.AuthService;
 import org.elearning.backend.auth.service.PasswordResetService;
 import org.elearning.backend.auth.service.RefreshTokenService;
+import org.elearning.backend.auth.service.TokenBlacklistService;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,9 @@ class AuthControllerTest {
 
     @InjectMocks
     private AuthController authController;
+
+    @Mock
+    private TokenBlacklistService tokenBlacklistService;
 
     @Test
     void login_setsSecureRefreshCookieAndClearsTokenFromBody() {
@@ -86,7 +90,7 @@ class AuthControllerTest {
     void logout_omitsSecureAttributeWhenSecureCookiesAreDisabled() {
         ReflectionTestUtils.setField(authController, "secureCookies", false);
 
-        ResponseEntity<Void> response = authController.logout(null);
+        ResponseEntity<Void> response = authController.logout(null, null);
 
         assertThat(response.getStatusCode().value()).isEqualTo(204);
         assertThat(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE))
