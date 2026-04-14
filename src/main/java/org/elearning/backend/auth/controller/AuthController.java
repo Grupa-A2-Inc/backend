@@ -12,15 +12,19 @@ import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.request.ResetPasswordRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
+import org.elearning.backend.auth.dto.response.RefreshResponse;
 import org.elearning.backend.auth.dto.response.ResetPasswordResponse;
+import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.auth.service.AuthService;
 import org.elearning.backend.auth.service.PasswordResetService;
+import org.elearning.backend.auth.service.RefreshTokenService;
+import org.elearning.backend.security.jwt.JwtUtil;
+import org.elearning.backend.user.entity.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
@@ -34,6 +38,8 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService resetService;
+    private final RefreshTokenService refreshTokenService;
+    private final JwtUtil jwtUtil;
 
     @Value("${app.auth.secure-cookies:true}")
     private boolean secureCookies;
@@ -143,6 +149,27 @@ public class AuthController {
     }
 
     @Operation(
+            summary = "Refresh access token",
+            description = "Validates the refresh token from the HttpOnly cookie and issues a new access token."
+    )
+    @ApiResponse(responseCode = "200", description = "New access token issued",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = RefreshResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Invalid, expired or revoked refresh token", content = @Content)
+    @PostMapping("/refresh")
+    public ResponseEntity<RefreshResponse> refresh(
+            @CookieValue(name = "refresh_token", required = false) String rawRefreshToken) {
+
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            throw new InvalidCredentialsException("Refresh token missing");
+        }
+
+        User user = refreshTokenService.validateAndGetUser(rawRefreshToken);
+        String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().getName());
+
+        return ResponseEntity.ok(new RefreshResponse(newAccessToken));
+    }
+
+    @Operation(
             summary = "Logout user",
             description = "Clears the refresh token cookie by returning the same cookie with an empty value and Max-Age=0."
     )
@@ -152,8 +179,12 @@ public class AuthController {
             content = @Content
     )
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        ResponseCookie expiredCookie = ResponseCookie.from("refresh_token", "")
+    public ResponseEntity<Void> logout(@CookieValue(name = "refresh_token", required = false) String rawRefreshToken) {
+            if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {
+                refreshTokenService.revokeForToken(rawRefreshToken);
+            }
+
+            ResponseCookie expiredCookie = ResponseCookie.from("refresh_token", "")
                 .httpOnly(true)
                 .secure(secureCookies)
                 .sameSite("None")
