@@ -22,7 +22,6 @@ public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtil jwtUtil;
 
-    @Transactional
     public void storeRefreshToken(User user, String rawToken) {
         RefreshToken entity = new RefreshToken();
         entity.setUser(user);
@@ -32,7 +31,7 @@ public class RefreshTokenService {
     }
 
     @Transactional
-    public User validateAndGetUser(String rawToken) {
+    public String rotateRefreshToken(String rawToken) {
         String tokenHash = hashToken(rawToken);
 
         RefreshToken stored = refreshTokenRepository.findByTokenHash(tokenHash)
@@ -47,8 +46,22 @@ public class RefreshTokenService {
         }
 
         jwtUtil.validateToken(rawToken);
+        stored.setRevokedAt(LocalDateTime.now());
+        refreshTokenRepository.save(stored);
 
-        return stored.getUser();
+        User user = stored.getUser();
+        String newRawToken = jwtUtil.generateRefreshToken(user.getId());
+        storeRefreshToken(user, newRawToken);
+
+        return newRawToken;
+    }
+
+    @Transactional
+    public User getUserFromToken(String rawToken) {
+        String tokenHash = hashToken(rawToken);
+        return refreshTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid refresh token"))
+                .getUser();
     }
 
     @Transactional

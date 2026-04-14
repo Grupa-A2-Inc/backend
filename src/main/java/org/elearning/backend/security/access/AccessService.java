@@ -148,23 +148,12 @@ public class AccessService {
 
     @Description("Defines who can create lessons for a specific chapter. Returns true if the user can manage that course, false otherwise")
     public boolean canCreateLessons(Authentication authentication, UUID targetChapterId) {
-        Chapter chapter = chapterRepository.findById(targetChapterId).orElse(null);
-
-        if(chapter == null) {
-            return false;
-        }
-
-        return canManageCourse(authentication, chapter.getCourse().getId());
+        return canManageChapterCourse(authentication, targetChapterId);
     }
 
     @Description("Defines who can edit metadata for a specific lesson. Returns true if the user can manage that course, false otherwise")
     public boolean canEditLessonMetaData(Authentication authentication, UUID targetLessonId) {
-        Lesson lesson = lessonRepository.findById(targetLessonId).orElse(null);
-        if(lesson == null) {
-            return false;
-        }
-
-        return canManageCourse(authentication, lesson.getChapter().getCourse().getId());
+        return canManageLessonCourse(authentication, targetLessonId);
     }
 
     @Description("Defines who can view the content of a specific lesson. Returns true if the user can access that course, false otherwise")
@@ -179,32 +168,17 @@ public class AccessService {
 
     @Description("Defines who can delete a specific lesson. Returns true if the user can manage that course, false otherwise")
     public boolean canDeleteLesson(Authentication authentication, UUID targetLessonId) {
-        Lesson lesson = lessonRepository.findById(targetLessonId).orElse(null);
-        if(lesson == null) {
-            return false;
-        }
-
-        return canManageCourse(authentication, lesson.getChapter().getCourse().getId());
+        return canEditLessonMetaData(authentication, targetLessonId);
     }
 
     @Description("Defines who can view the resources of a specific lesson. Returns true if the user can access that course, false otherwise")
     public boolean canViewLessonResources(Authentication authentication, UUID lessonId) {
-        Lesson lesson = lessonRepository.findById(lessonId).orElse(null);
-        if (lesson == null) {
-            return false;
-        }
-
-        return canAccessCourse(authentication, lesson.getChapter().getCourse().getId());
+        return canAccessLessonCourse(authentication, lessonId);
     }
 
     @Description("Defines who can create a lesson resource for a specific lesson. Returns true if the user can manage that course, false otherwise")
     public boolean canCreateLessonResource(Authentication authentication, UUID lessonId) {
-        Lesson lesson = lessonRepository.findById(lessonId).orElse(null);
-        if (lesson == null) {
-            return false;
-        }
-
-        return canManageCourse(authentication, lesson.getChapter().getCourse().getId());
+        return canManageLessonCourse(authentication, lessonId);
     }
 
     @Description("Defines who can edit a specific lesson resource. Returns true if the user can manage that resource, false otherwise")
@@ -229,37 +203,17 @@ public class AccessService {
 
     @Description("Defines who can edit a specific chapter. Returns true if the user can manage that chapter's course, false otherwise")
     public boolean canEditChapter(Authentication authentication, UUID targetChapterId) {
-        Chapter chapter = chapterRepository.findById(targetChapterId).orElse(null);
-        if (chapter == null) {
-            return false;
-        }
-
-        return canManageCourse(authentication, chapter.getCourse().getId());
+        return canCreateLessons(authentication, targetChapterId);
     }
 
     @Description("Defines who can delete a specific chapter. Returns true if the user can manage that chapter's course, false otherwise")
     public boolean canDeleteChapter(Authentication authentication, UUID targetChapterId) {
-        Chapter chapter = chapterRepository.findById(targetChapterId).orElse(null);
-        if (chapter == null) {
-            return false;
-        }
-
-        return canManageCourse(authentication, chapter.getCourse().getId());
+        return canEditChapter(authentication, targetChapterId);
     }
 
     @Description("Defines who can create a course. Returns true if the user is allowed to create courses, false otherwise")
     public boolean canCreateCourse(Authentication authentication) {
-        CustomUserDetails currentUser = extractCurrentUser(authentication);
-
-        if (currentUser == null) {
-            return false;
-        }
-
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
-            return true;
-        }
-
-        return currentUser.getRoleName() == RoleName.TEACHER;
+        return canCreateOrViewOwnCourses(authentication);
     }
 
     @Description("Defines who can edit a specific course. Returns true if the user can manage that course, false otherwise")
@@ -289,17 +243,7 @@ public class AccessService {
 
     @Description("Defines who can view their own courses. Returns true for authenticated teachers and students, false otherwise")
     public boolean canViewMyCourses(Authentication authentication) {
-        CustomUserDetails currentUser = extractCurrentUser(authentication);
-
-        if (currentUser == null) {
-            return false;
-        }
-
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
-            return true;
-        }
-
-        return currentUser.getRoleName() == RoleName.TEACHER;
+        return canCreateCourse(authentication);
     }
 
     @Description("Defines who can view a specific question from a test. Returns true if the user can manage that test, false otherwise")
@@ -360,22 +304,12 @@ public class AccessService {
 
     @Description("Defines who can view the test of a lesson. Returns true if the user can access that course, false otherwise")
     public boolean canViewLessonTest(Authentication authentication, UUID lessonId) {
-        Lesson lesson = lessonRepository.findById(lessonId).orElse(null);
-        if (lesson == null) {
-            return false;
-        }
-
-        return canAccessCourse(authentication, lesson.getChapter().getCourse().getId());
+        return canViewLessonResources(authentication, lessonId);
     }
 
     @Description("Defines who can create a test for a lesson. Returns true if the user can manage that course, false otherwise")
     public boolean canCreateLessonTest(Authentication authentication, UUID lessonId) {
-        Lesson lesson = lessonRepository.findById(lessonId).orElse(null);
-        if (lesson == null) {
-            return false;
-        }
-
-        return canManageCourse(authentication, lesson.getChapter().getCourse().getId());
+        return canCreateLessonResource(authentication, lessonId);
     }
 
     @Description("Defines who can view test details. Returns true if the user can manage that test, false otherwise")
@@ -400,35 +334,17 @@ public class AccessService {
 
     @Description("Defines who can enroll in a course. Returns true if the user is a student, false otherwise")
     public boolean canEnrollInCourse(Authentication authentication, UUID courseId) {
-        CustomUserDetails currentUser = extractCurrentUser(authentication);
-
-        if (currentUser == null) {
-            return false;
-        }
-
-        return currentUser.getRoleName() == RoleName.STUDENT;
+        return isStudent(authentication);
     }
 
     @Description("Defines who can view their enrolled courses. Returns true if the user is a student, false otherwise")
     public boolean canViewEnrolledCourses(Authentication authentication) {
-        CustomUserDetails currentUser = extractCurrentUser(authentication);
-
-        if (currentUser == null) {
-            return false;
-        }
-
-        return currentUser.getRoleName() == RoleName.STUDENT;
+        return canEnrollInCourse(authentication, null);
     }
 
     @Description("Defines who can unenroll from a course. Returns true if the user is a student, false otherwise")
     public boolean canUnenrollFromCourse(Authentication authentication, UUID courseId) {
-        CustomUserDetails currentUser = extractCurrentUser(authentication);
-
-        if (currentUser == null) {
-            return false;
-        }
-
-        return currentUser.getRoleName() == RoleName.STUDENT;
+        return canEnrollInCourse(authentication, courseId);
     }
 
     @Description("Defines who can view their best result for a test. Returns true if the user is a student and has access to the course")
@@ -477,6 +393,56 @@ public class AccessService {
         return currentUser.getUserId().equals(attempt.getStudentId());
     }
 
+    private boolean canManageChapterCourse(Authentication authentication, UUID targetChapterId) {
+        Chapter chapter = chapterRepository.findById(targetChapterId).orElse(null);
+        if (chapter == null) {
+            return false;
+        }
+
+        return canManageCourse(authentication, chapter.getCourse().getId());
+    }
+
+    private boolean canManageLessonCourse(Authentication authentication, UUID targetLessonId) {
+        Lesson lesson = lessonRepository.findById(targetLessonId).orElse(null);
+        if (lesson == null) {
+            return false;
+        }
+
+        return canManageCourse(authentication, lesson.getChapter().getCourse().getId());
+    }
+
+    private boolean canAccessLessonCourse(Authentication authentication, UUID lessonId) {
+        Lesson lesson = lessonRepository.findById(lessonId).orElse(null);
+        if (lesson == null) {
+            return false;
+        }
+
+        return canAccessCourse(authentication, lesson.getChapter().getCourse().getId());
+    }
+
+    private boolean canCreateOrViewOwnCourses(Authentication authentication) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        return currentUser.getRoleName() == RoleName.TEACHER;
+    }
+
+    private boolean isStudent(Authentication authentication) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        return currentUser.getRoleName() == RoleName.STUDENT;
+    }
 
 
 

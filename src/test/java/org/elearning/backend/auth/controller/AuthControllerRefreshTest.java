@@ -67,7 +67,7 @@ class AuthControllerRefreshTest {
         String rawToken = "valid.refresh.token";
         String newAccessToken = "new.access.token";
 
-        when(refreshTokenService.validateAndGetUser(rawToken)).thenReturn(user);
+        when(refreshTokenService.getUserFromToken(rawToken)).thenReturn(user);
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn(newAccessToken);
 
         var response = authController.refresh(rawToken);
@@ -79,7 +79,7 @@ class AuthControllerRefreshTest {
 
     @Test
     void refresh_serviceThrowsUnauthorized_propagatesException() {
-        when(refreshTokenService.validateAndGetUser(anyString()))
+        when(refreshTokenService.getUserFromToken(anyString()))
                 .thenThrow(new InvalidCredentialsException("Refresh token has been revoked"));
 
         assertThatThrownBy(() -> authController.refresh("some.token"))
@@ -98,8 +98,9 @@ class AuthControllerRefreshTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
         String setCookieHeader = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
-        assertThat(setCookieHeader).contains("refresh_token=");
-        assertThat(setCookieHeader).contains("Max-Age=0");
+        assertThat(setCookieHeader)
+                .contains("refresh_token=")
+                .contains("Max-Age=0");
     }
 
     @Test

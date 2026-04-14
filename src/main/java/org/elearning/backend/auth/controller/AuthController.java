@@ -44,8 +44,13 @@ public class AuthController {
     private final TokenBlacklistService tokenBlacklistService;
     private final JwtUtil jwtUtil;
 
+    @Value("${app.auth.api-path:/api/v1/auth}")
+    private String apiAuthPath = "/api/v1/auth";
+
+    private static final String REFRESH_STRING_LITERAL = "refresh_token";
+
     @Value("${app.auth.secure-cookies:true}")
-    private boolean secureCookies;
+    private boolean secureCookies = true;
 
     @Operation(
             summary = "Register a new account",
@@ -159,17 +164,26 @@ public class AuthController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = RefreshResponse.class)))
     @ApiResponse(responseCode = "401", description = "Invalid, expired or revoked refresh token", content = @Content)
     @PostMapping("/refresh")
-    public ResponseEntity<RefreshResponse> refresh(
-            @CookieValue(name = "refresh_token", required = false) String rawRefreshToken) {
-
+    public ResponseEntity<RefreshResponse> refresh(@CookieValue(name = "refresh_token", required = false) String rawRefreshToken) {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
             throw new InvalidCredentialsException("Refresh token missing");
         }
 
-        User user = refreshTokenService.validateAndGetUser(rawRefreshToken);
+        User user = refreshTokenService.getUserFromToken(rawRefreshToken);
+        String newRawRefreshToken = refreshTokenService.rotateRefreshToken(rawRefreshToken);
         String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().getName());
 
-        return ResponseEntity.ok(new RefreshResponse(newAccessToken));
+        ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, newRawRefreshToken)
+                .httpOnly(true)
+                .secure(secureCookies)
+                .sameSite("None")
+                .path(apiAuthPath)
+                .maxAge(Duration.ofDays(7))
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(new RefreshResponse(newAccessToken));
     }
 
     @Operation(
@@ -198,11 +212,11 @@ public class AuthController {
             } catch (Exception ignored) { }
         }
 
-        ResponseCookie expiredCookie = ResponseCookie.from("refresh_token", "")
+        ResponseCookie expiredCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, "")
                 .httpOnly(true)
                 .secure(secureCookies)
                 .sameSite("None")
-                .path("/api/v1/auth")
+                .path(apiAuthPath)
                 .maxAge(0)
                 .build();
 
@@ -212,11 +226,11 @@ public class AuthController {
     }
 
     private ResponseEntity<AuthResponse> responseWithRefreshCookie(AuthResponse response) {
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", response.getRefreshToken())
+        ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, response.getRefreshToken())
                 .httpOnly(true)
                 .secure(secureCookies)
                 .sameSite("None")
-                .path("/api/v1/auth")
+                .path(apiAuthPath)
                 .maxAge(Duration.ofDays(7))
                 .build();
 
