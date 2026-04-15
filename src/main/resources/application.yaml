@@ -3,19 +3,14 @@ spring:
     import: optional:file:.env
   application:
     name: backend
-#  autoconfigure:
-#   exclude:
-#      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration
-#      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
-#      - org.springframework.boot.actuate.autoconfigure.security.reactive.ReactiveManagementWebSecurityAutoConfiguration
   datasource:
-    url: jdbc:postgresql://localhost:5432/adaptive_tutor
-    username: user
-    password: password
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/adaptive_tutor
+#    username: user
+#    password: password
   flyway:
     enabled: true
   jpa:
@@ -23,11 +18,22 @@ spring:
       ddl-auto: validate
     show-sql: true
 
-server:
-  port: 8067
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
-logging:
-  file:
-    name: app.log
-  level:
-    root: INFO
+server:
+  port: ${PORT:8067}
+#  port: 8067
+
+app:
+  mail:
+    from: ${MAIL_FROM}

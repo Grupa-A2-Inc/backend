@@ -1,6 +1,7 @@
 package org.elearning.backend.user.controller;
 
 import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
@@ -130,6 +131,22 @@ class UserControllerTest {
         ResponseEntity<Void> response = userController.deleteUser(id);
 
         verify(userService).deleteUser(id);
+        assertEquals(204, response.getStatusCode().value());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void changePassword_returns204NoContent() {
+        UUID id = UUID.randomUUID();
+        ChangePasswordRequest request = ChangePasswordRequest.builder()
+                .currentPassword("oldPassword")
+                .newPassword("newPassword")
+                .newPasswordConfirm("newPassword")
+                .build();
+
+        ResponseEntity<Void> response = userController.changePassword(id, request);
+
+        verify(userService).changePassword(id, request);
         assertEquals(204, response.getStatusCode().value());
         assertNull(response.getBody());
     }

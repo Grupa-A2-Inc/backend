@@ -4,16 +4,25 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@ActiveProfiles("test")
+@TestPropertySource(properties = "app.mail.from=test@example.com")
 class OrganizationSchemaTest {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
+
+    @MockitoBean
+    JavaMailSender javaMailSender;
 
     @Test
     void shouldHaveOrganizationsTable() {

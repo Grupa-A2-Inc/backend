@@ -10,8 +10,12 @@ import org.elearning.backend.auth.exception.AuthConflictException;
 import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.auth.service.AuthService;
+import org.elearning.backend.auth.service.PasswordResetService;
+import org.elearning.backend.auth.service.RefreshTokenService;
+import org.elearning.backend.auth.service.TokenBlacklistService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
+import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.UserStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +51,18 @@ class AuthIntegrationTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private PasswordResetService passwordResetService;
+
+    @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
+    @MockitoBean
+    private TokenBlacklistService tokenBlacklistService;
+
+    @MockitoBean
+    private JwtUtil jwtUtil;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -114,7 +130,7 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("refresh_token=refresh-token")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Path=/api/v1/auth")))
-                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=none")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=None")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Secure")))
                 .andExpect(jsonPath("$.message").value("User registered successfully"));
     }
@@ -199,7 +215,7 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("refresh_token=refresh-token")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Path=/api/v1/auth")))
-                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=none")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=None")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Secure")))
                 .andExpect(jsonPath("$.message").value("Login successful"))
                 .andExpect(jsonPath("$.refreshToken").isEmpty());

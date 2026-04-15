@@ -1,5 +1,6 @@
 package org.elearning.backend.security.config;
 
+import org.elearning.backend.auth.service.TokenBlacklistService;
 import org.elearning.backend.security.auth.CustomUserDetailsService;
 import org.elearning.backend.security.handler.JwtAccessDeniedHandler;
 import org.elearning.backend.security.handler.JwtAuthenticationEntryPoint;
@@ -72,7 +73,11 @@ class SecurityConfigTest {
     @Test
     void corsConfigurationSource_allowsConfiguredOriginsMethodsAndHeaders() {
         SecurityConfig securityConfig = new SecurityConfig(
-                new JwtAuthenticationFilter(new NoopJwtUtil(), new NoopCustomUserDetailsService()),
+                new JwtAuthenticationFilter(
+                        new NoopJwtUtil(),
+                        new NoopCustomUserDetailsService(),
+                        new NoopTokenBlacklistService()
+                ),
                 new JwtAccessDeniedHandler(),
                 new JwtAuthenticationEntryPoint()
         );
@@ -80,9 +85,19 @@ class SecurityConfigTest {
         CorsConfigurationSource source = securityConfig.corsConfigurationSource();
         var configuration = source.getCorsConfiguration(new org.springframework.mock.web.MockHttpServletRequest("OPTIONS", "/api/v1/secure/ping"));
 
-        assertThat(configuration.getAllowedOrigins()).containsExactly("https://frontend-teal-five-57.vercel.app", "https://frontend-z1g5f.vercel.app");
+        assertThat(configuration.getAllowedOrigins()).containsExactly(
+                "http://localhost:3000",
+                "https://frontend-teal-five-57.vercel.app",
+                "https://frontend-z1g5f.vercel.app"
+        );
         assertThat(configuration.getAllowedMethods()).containsExactly("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS");
-        assertThat(configuration.getAllowedHeaders()).containsExactly("https://frontend-teal-five-57.vercel.app", "https://frontend-z1g5f.vercel.app");
+        assertThat(configuration.getAllowedHeaders()).containsExactly(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "X-Requested-With"
+        );
     }
 
     private AnnotationConfigWebApplicationContext createContext() {
@@ -113,8 +128,16 @@ class SecurityConfigTest {
         }
 
         @Bean
-        JwtAuthenticationFilter jwtAuthenticationFilter(CustomUserDetailsService customUserDetailsService) {
-            return new JwtAuthenticationFilter(new NoopJwtUtil(), customUserDetailsService);
+        TokenBlacklistService tokenBlacklistService() {
+            return new NoopTokenBlacklistService();
+        }
+
+        @Bean
+        JwtAuthenticationFilter jwtAuthenticationFilter(
+                CustomUserDetailsService customUserDetailsService,
+                TokenBlacklistService tokenBlacklistService
+        ) {
+            return new JwtAuthenticationFilter(new NoopJwtUtil(), customUserDetailsService, tokenBlacklistService);
         }
 
         @Bean
@@ -165,6 +188,18 @@ class SecurityConfigTest {
 
         NoopCustomUserDetailsService() {
             super(null);
+        }
+    }
+
+    static class NoopTokenBlacklistService extends TokenBlacklistService {
+
+        NoopTokenBlacklistService() {
+            super(null);
+        }
+
+        @Override
+        public boolean isRevoked(String rawToken) {
+            return false;
         }
     }
 }

@@ -17,4 +17,12 @@ class SecurityExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(response.getBody()).containsEntry("message", "blocked");
     }
+
+    @Test
+    void handlesUnexpectedExceptions() {
+        var response = handler.handleUnexpected(new IllegalStateException("boom"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody()).containsEntry("message", "boom");
+    }
 }

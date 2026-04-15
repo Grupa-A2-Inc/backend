@@ -2,8 +2,15 @@ package org.elearning.backend.auth.controller;
 
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
+import org.elearning.backend.auth.dto.request.ForgotPasswordRequest;
+import org.elearning.backend.auth.dto.request.ResetPasswordRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
+import org.elearning.backend.auth.dto.response.ResetPasswordResponse;
 import org.elearning.backend.auth.service.AuthService;
+import org.elearning.backend.auth.service.PasswordResetService;
+import org.elearning.backend.auth.service.RefreshTokenService;
+import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,8 +29,20 @@ class AuthControllerTest {
     @Mock
     private AuthService authService;
 
+    @Mock
+    private PasswordResetService resetService;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private JwtUtil jwtUtil;
+
     @InjectMocks
     private AuthController authController;
+
+    @Mock
+    private TokenBlacklistService tokenBlacklistService;
 
     @Test
     void login_setsSecureRefreshCookieAndClearsTokenFromBody() {
@@ -43,7 +62,7 @@ class AuthControllerTest {
                 .contains("refresh_token=refresh-token")
                 .contains("HttpOnly")
                 .contains("Secure")
-                .contains("SameSite=none")
+                .contains("SameSite=None")
                 .contains("Path=/api/v1/auth");
         assertThat(response.getBody().getRefreshToken()).isNull();
     }
@@ -62,8 +81,51 @@ class AuthControllerTest {
 
         assertThat(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE))
                 .contains("refresh_token=refresh-token")
-                .contains("SameSite=none")
+                .contains("SameSite=None")
                 .doesNotContain("Secure");
         assertThat(response.getBody().getRefreshToken()).isNull();
+    }
+
+    @Test
+    void logout_omitsSecureAttributeWhenSecureCookiesAreDisabled() {
+        ReflectionTestUtils.setField(authController, "secureCookies", false);
+
+        ResponseEntity<Void> response = authController.logout(null, null);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE))
+                .contains("refresh_token=")
+                .contains("HttpOnly")
+                .contains("SameSite=None")
+                .contains("Path=/api/v1/auth")
+                .doesNotContain("Secure");
+    }
+
+    @Test
+    void forgotPassword_delegatesToResetService() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("user@example.com");
+
+        when(resetService.forgotPassword(request)).thenReturn(new ResetPasswordResponse("sent"));
+
+        ResponseEntity<ResetPasswordResponse> response = authController.forgotPassword(request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody().getMessage()).isEqualTo("sent");
+    }
+
+    @Test
+    void resetPassword_delegatesToResetService() {
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setToken("token");
+        request.setNewPassword("new-password");
+        request.setConfirmPassword("new-password");
+
+        when(resetService.resetPassword(request)).thenReturn(new ResetPasswordResponse("changed"));
+
+        ResponseEntity<ResetPasswordResponse> response = authController.resetPassword(request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody().getMessage()).isEqualTo("changed");
     }
 }
