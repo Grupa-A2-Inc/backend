@@ -10,7 +10,9 @@ import org.elearning.backend.enrollment.service.CourseEnrollmentService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,8 +39,9 @@ public class CourseEnrollmentController {
             @ApiResponse(responseCode = CONFLICT, description = "Student is already enrolled in the course"),
             @ApiResponse(responseCode = FORBIDDEN, description = "User does not have permission to enroll in the course")
     })
+    @PreAuthorize("@accessService.canEnrollInCourse(authentication,#id)")
     @PostMapping("/courses/{courseId}/enroll")
-    public ResponseEntity<EnrollmentDto> enrollInCourse(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID courseId) {
+    public ResponseEntity<EnrollmentDto> enrollInCourse(@AuthenticationPrincipal CustomUserDetails userDetails, @P("id") @PathVariable UUID courseId) {
         return ResponseEntity.status(HttpStatus.CREATED).body(enrollmentService.enrollStudentInCourse(userDetails.getUserId(), courseId));
     }
 
@@ -47,8 +50,9 @@ public class CourseEnrollmentController {
             @ApiResponse(responseCode = NO_CONTENT, description = "Student successfully unenrolled from the course"),
             @ApiResponse(responseCode = NOT_FOUND, description = "Course not found or student is not enrolled in the course")
     })
+    @PreAuthorize("@accessService.canUnenrollFromCourse(authentication,#id)")
     @DeleteMapping("/courses/{courseId}/unenroll")
-    public ResponseEntity<Void> unenrollFromCourse(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID courseId) {
+    public ResponseEntity<Void> unenrollFromCourse(@AuthenticationPrincipal CustomUserDetails userDetails, @P("id") @PathVariable UUID courseId) {
         enrollmentService.unenrollStudentFromCourse(userDetails.getUserId(), courseId);
         return ResponseEntity.noContent().build();
     }
@@ -57,6 +61,7 @@ public class CourseEnrollmentController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Enrolled courses successfully returned")
     })
+    @PreAuthorize("@accessService.canViewEnrolledCourses(authentication)")
     @GetMapping("/students/me/courses")
     public ResponseEntity<List<EnrolledCourseDto>> getEnrolledCourses(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(enrollmentService.getEnrolledCoursesForStudent(userDetails.getUserId()));
