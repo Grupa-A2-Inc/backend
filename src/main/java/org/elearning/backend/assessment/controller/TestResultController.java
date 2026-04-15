@@ -6,7 +6,11 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.dto.attempt_dto.AttemptReportDTO;
 import org.elearning.backend.assessment.dto.attempt_dto.AttemptStatusDTO;
 import org.elearning.backend.assessment.service.TestResultService;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,28 +22,27 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TestResultController {
     private final TestResultService testResultService;
-    private static String hardcodedId = "00000000-0000-0000-0000-000000000001";
+
     @Operation(summary = "Get the result of a test attempt, including score and question details")
     @ApiResponse(responseCode = "200", description = "Result retrieved successfully")
     @ApiResponse(responseCode = "403", description = "The attempt is still in progress")
     @ApiResponse(responseCode = "404", description = "Attempt not found or no results available")
     @GetMapping("/api/v1/attempts/{attemptId}/result")
-    public ResponseEntity<AttemptReportDTO> getResult(@PathVariable UUID attemptId) {
-        // Placeholder for JWT - to be replaced with actual authentication logic
-        UUID studentId = UUID.fromString(hardcodedId);
-
-        AttemptReportDTO response = testResultService.getTestResult(attemptId, studentId);
+    @PreAuthorize("@accessService.canViewAttemptResult(authentication,#id)")
+    public ResponseEntity<AttemptReportDTO> getResult(@P("id") @PathVariable UUID attemptId,@AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID userId = currentUser.getUserId();
+        AttemptReportDTO response = testResultService.getTestResult(attemptId, userId);
         return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Get the list of attempts for a specific test, including score and status for each attempt")
     @ApiResponse(responseCode = "200", description = "Attempts retrieved successfully")
     @GetMapping("/api/v1/tests/{testId}/my-attempts")
-    public ResponseEntity<List<AttemptStatusDTO>> getAttempts(@PathVariable UUID testId) {
-        // Placeholder for JWT - to be replaced with actual authentication logic
-        UUID studentId = UUID.fromString(hardcodedId);
+    @PreAuthorize("@accessService.canViewMyTestAttempts(authentication,#id)")
+    public ResponseEntity<List<AttemptStatusDTO>> getAttempts(@P("id") @PathVariable UUID testId ,@AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID userId = currentUser.getUserId();
 
-        List<AttemptStatusDTO> response = testResultService.getTestAttempts(testId, studentId);
+        List<AttemptStatusDTO> response = testResultService.getTestAttempts(testId, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -47,11 +50,12 @@ public class TestResultController {
     @ApiResponse(responseCode = "200", description = "Best attempt retrieved successfully")
     @ApiResponse(responseCode = "404", description = "No finished attempts found for the test")
     @GetMapping("/api/v1/tests/{testId}/my-best")
-    public ResponseEntity<AttemptStatusDTO> getBestAttempt(@PathVariable UUID testId) {
-        // Placeholder for JWT - to be replaced with actual authentication logic
-        UUID studentId = UUID.fromString(hardcodedId);
+    @PreAuthorize("@accessService.canViewMyBestTestResult(authentication,#id)")
+    public ResponseEntity<AttemptStatusDTO> getBestAttempt(@P("id") @PathVariable UUID testId,@AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID userId = currentUser.getUserId();
 
-        AttemptStatusDTO response = testResultService.getBestTestAttempt(testId, studentId);
+
+        AttemptStatusDTO response = testResultService.getBestTestAttempt(testId, userId);
         return ResponseEntity.ok(response);
     }
 }

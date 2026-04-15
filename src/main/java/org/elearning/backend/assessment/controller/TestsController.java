@@ -7,8 +7,12 @@ import org.elearning.backend.assessment.dto.question_dto.QuestionDataForUsersDto
 import org.elearning.backend.assessment.dto.assigment_dto.TestEditDto;
 import org.elearning.backend.assessment.dto.assigment_dto.TestEntityDto;
 import org.elearning.backend.assessment.service.TestService;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,8 +32,7 @@ public class TestsController {
     private static final String FORBIDDEN = "403";
     private static final String NOT_FOUND = "404";
 
-    // Placeholder for JWT - to be replaced with actual authentication logic
-    private final UUID professorId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
 
     public TestsController(TestService testService){
         this.testService = testService;
@@ -42,12 +45,14 @@ public class TestsController {
     @ApiResponse(responseCode = CONFLICT, description = "Lesson already has an associated test")
 
     @PostMapping("/lessons/{lessonId}/test")
+    @PreAuthorize("@accessService.canCreateLessonTest(authentication,#id)")
     public ResponseEntity<TestEntityDto> createTest(
-            @PathVariable UUID lessonId,
-            @RequestBody TestEditDto modifiableTestData){
+            @P("id")@PathVariable UUID lessonId,
+            @RequestBody TestEditDto modifiableTestData,@AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID userId = currentUser.getUserId();
 
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(testService.createNewTest(lessonId, modifiableTestData, professorId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(testService.createNewTest(lessonId, modifiableTestData, userId));
     }
 
     @Operation( summary = "Delete a test",
@@ -57,7 +62,8 @@ public class TestsController {
             @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test")
     })
     @DeleteMapping("/tests/{testId}")
-    public ResponseEntity<Void> deleteTest(@PathVariable UUID testId){
+    @PreAuthorize("@accessService.canDeleteTest(authentication,#id)")
+    public ResponseEntity<Void> deleteTest(@P("id") @PathVariable UUID testId){
         testService.deleteTest(testId);
         return ResponseEntity.noContent().build();
     }
@@ -68,7 +74,8 @@ public class TestsController {
     @ApiResponse(responseCode = OK, description = "Test successfully returned")
     @ApiResponse(responseCode = NOT_FOUND, description = "Lesson or test does not exist")
     @GetMapping("/lessons/{lessonId}/test")
-    public ResponseEntity<TestEntityDto> getTestFromLesson(@PathVariable UUID lessonId){
+    @PreAuthorize("@accessService.canViewLessonTest(authentication,#id)")
+    public ResponseEntity<TestEntityDto> getTestFromLesson(@P("id") @PathVariable UUID lessonId){
         return ResponseEntity.ok(testService.getTestFromLesson(lessonId));
     }
 
@@ -77,7 +84,8 @@ public class TestsController {
     @ApiResponse(responseCode = OK, description = "Test details successfully returned")
     @ApiResponse(responseCode = NOT_FOUND, description = "Test does not exist")
     @GetMapping("/tests/{testId}")
-    public ResponseEntity<TestEntityDto> getTestDetails(@PathVariable UUID testId){
+    @PreAuthorize("@accessService.canViewTest(authentication,#id)")
+    public ResponseEntity<TestEntityDto> getTestDetails(@P("id") @PathVariable UUID testId){
         return ResponseEntity.ok(testService.getTestDetails(testId));
     }
 
@@ -89,8 +97,9 @@ public class TestsController {
 
     })
     @PatchMapping("/tests/{testId}")
+    @PreAuthorize("@accessService.canEditTest(authentication,#id)")
     public ResponseEntity<TestEntityDto> editTestContent(
-            @PathVariable UUID testId,
+            @P("id") @PathVariable UUID testId,
             @RequestBody TestEditDto editableTestContent){
         return ResponseEntity.ok(testService.updateTest(editableTestContent, testId));
     }
@@ -103,8 +112,9 @@ public class TestsController {
             @ApiResponse(responseCode = CONFLICT, description = "Insufficient questions")
 
     })
+    @PreAuthorize("@accessService.canPublishTest(authentication,#id)")
     @PatchMapping("/tests/{testId}/publish")
-    public ResponseEntity<TestEntityDto> publishTest(@PathVariable UUID testId){
+    public ResponseEntity<TestEntityDto> publishTest(@P("id") @PathVariable UUID testId){
         return ResponseEntity.ok(testService.publishTest(testId));
     }
 
@@ -119,8 +129,10 @@ public class TestsController {
 
     })
     @GetMapping("/tests/{testId}/questions")
-    public ResponseEntity<List<QuestionDataForUsersDto>> getQuestions(@PathVariable UUID testId){
-        return ResponseEntity.ok(testService.getListOfQuestions(testId, professorId));
+    @PreAuthorize("@accessService.canViewTestQuestions(authentication,#id)")
+    public ResponseEntity<List<QuestionDataForUsersDto>> getQuestions(@P("id") @PathVariable UUID testId,@AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID userId = currentUser.getUserId();
+        return ResponseEntity.ok(testService.getListOfQuestions(testId, userId));
     }
 
 

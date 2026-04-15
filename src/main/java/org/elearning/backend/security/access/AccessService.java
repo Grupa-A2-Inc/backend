@@ -501,6 +501,16 @@ public class AccessService {
         return canManageCourse(authentication, lesson.getChapter().getCourse().getId());
     }
 
+    public boolean canMarkViewedLesson(Authentication authentication, UUID lessonId){
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+        if (currentUser == null) {
+            return false;
+        }
+        //TO DO : check if student is entrollerd
+        return currentUser.getRoleName() == RoleName.STUDENT;
+    }
+
+
     @Description("Returns true if the user can access the given course, false otherwise")
     private boolean canAccessCourse(Authentication authentication, UUID courseId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);

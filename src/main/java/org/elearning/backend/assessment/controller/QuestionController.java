@@ -10,7 +10,9 @@ import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.assessment.service.QuestionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,8 +36,9 @@ public class QuestionController {
             @ApiResponse(responseCode = "404", description = "Test was not found.")
     })
     @PostMapping
+    @PreAuthorize("@accessService.canCrateTestQuestion(authentication,#id)")
     public ResponseEntity<QuestionResponseDto> createQuestion(
-            @PathVariable UUID testId,
+            @P("id") @PathVariable UUID testId,
             @RequestBody QuestionRequestDto requestDto,
             @AuthenticationPrincipal UserDetails user
     ) {
@@ -51,9 +54,10 @@ public class QuestionController {
             @ApiResponse(responseCode = "404", description = "Question not found")
     })
     @GetMapping("/{questionId}")
+    @PreAuthorize("@accessService.canViewTestQuestion(authentication,#id1,#id2)")
     public ResponseEntity<QuestionResponseDto> getQuestionById(
-            @PathVariable UUID testId,
-            @PathVariable Integer questionId
+            @P("id1") @PathVariable UUID testId,
+            @P("id2") @PathVariable Integer questionId
     ) {
         return ResponseEntity.ok(questionService.getQuestionById(testId, questionId));
     }
@@ -67,8 +71,9 @@ public class QuestionController {
             @ApiResponse(responseCode = "400", description = "Invalid request parameters (e.g., wrong sorting direction or invalid enum value for question type)")
     })
     @GetMapping
+    @PreAuthorize("@accessService.canViewTestQuestions(authentication,#id)")
     public ResponseEntity<List<QuestionResponseDto>> getQuestions(
-            @PathVariable UUID testId,
+            @P("id") @PathVariable UUID testId,
             @RequestParam(required = false) QuestionType questionType,
             @RequestParam(required = false) BigDecimal difficulty,
             @RequestParam(required = false, defaultValue = "displayOrder") String sortBy,
@@ -87,9 +92,10 @@ public class QuestionController {
             @ApiResponse(responseCode = "404", description = "Question or test not found")
     })
     @PutMapping("/{questionId}")
+    @PreAuthorize("@accessService.canEditTestQuestion(authentication,#id1,#id2)")
     public ResponseEntity<QuestionResponseDto> updateQuestion(
-            @PathVariable UUID testId,
-            @PathVariable Integer questionId,
+            @P("id1") @PathVariable UUID testId,
+            @P("id2") @PathVariable Integer questionId,
             @RequestBody QuestionRequestDto requestDto,
             @AuthenticationPrincipal UserDetails user
     ) {
@@ -106,9 +112,10 @@ public class QuestionController {
             @ApiResponse(responseCode = "404", description = "Question or test not found")
     })
     @DeleteMapping("/{questionId}")
+    @PreAuthorize("@accessService.canDeleteTestQuestion(authentication,#id1,#id2)")
     public ResponseEntity<Void> deleteQuestion(
-            @PathVariable UUID testId,
-            @PathVariable Integer questionId,
+            @P("id1") @PathVariable UUID testId,
+            @P("id2") @PathVariable Integer questionId,
             @AuthenticationPrincipal UserDetails user
     ) {
         UUID professorId = UUID.fromString(user.getUsername());

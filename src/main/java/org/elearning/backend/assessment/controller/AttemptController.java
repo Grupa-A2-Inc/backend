@@ -10,7 +10,9 @@ import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
 import org.elearning.backend.assessment.service.AttemptService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -35,7 +37,8 @@ public class AttemptController {
             @ApiResponse(responseCode = NOT_FOUND, description = "Test not found")
     })
     @PostMapping("/tests/{testId}/start")
-    public ResponseEntity<StartAttemptResponseDto> startAttempt(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID testId) {
+    @PreAuthorize("@accessService.canStartTest(authentication,#id)")
+    public ResponseEntity<StartAttemptResponseDto> startAttempt(@AuthenticationPrincipal CustomUserDetails userDetails, @P("id") @PathVariable UUID testId) {
         return ResponseEntity.ok(attemptService.startAttempt(testId, userDetails.getUserId()));
     }
 
@@ -47,9 +50,10 @@ public class AttemptController {
             @ApiResponse(responseCode = GONE, description = "Timer expired")
     })
     @PostMapping("/attempts/{attemptId}/submit")
+    @PreAuthorize("@accessService.canSubmitAttempt(authentication,#id)")
     public ResponseEntity<TestResultDto> submitAttempt(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID attemptId,
+            @P("id") @PathVariable UUID attemptId,
             @RequestBody SubmitRequestDto request) {
         return ResponseEntity.ok(attemptService.submitAttempt(attemptId, userDetails.getUserId(), request));
     }
