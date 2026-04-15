@@ -1,17 +1,17 @@
 package org.elearning.backend.user.service;
 
 import lombok.AllArgsConstructor;
-import org.elearning.backend.common.exception.DuplicateResourceException;
-import org.elearning.backend.common.exception.ResourceNotFoundException;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.repository.RoleRepository;
+import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
+import org.elearning.backend.user.exception.*;
 import org.elearning.backend.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,14 +26,15 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
+    private static final String USER_NO_EXIST = "User does not exist: ";
 
     public UserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already exists: " + request.getEmail());
+            throw new UserAlreadyExistsException("Email already exists: " + request.getEmail());
         }
 
         Role role = roleRepository.findByName(request.getRoleName())
-                .orElseThrow(() -> new ResourceNotFoundException("Role does not exist: " + request.getRoleName()));
+                .orElseThrow(() -> new UserRoleNotFoundException("Role does not exist: " + request.getRoleName()));
 
         User user = new User();
         user.setEmail(request.getEmail());
@@ -44,7 +45,7 @@ public class UserService {
 
         if (request.getOrganizationId() != null) {
             Organization org = organizationRepository.findById(request.getOrganizationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Organization not found: " + request.getOrganizationId()));
+                    .orElseThrow(() -> new UserOrganizationNotFoundException("Organization not found: " + request.getOrganizationId()));
             user.setOrganization(org);
         }
         user.setStatus(UserStatus.ACTIVE);
@@ -55,7 +56,7 @@ public class UserService {
 
     public UserResponse getUserById(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User does not exist: " + id));
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + id));
         return toResponse(user);
     }
 
@@ -68,7 +69,7 @@ public class UserService {
 
     public UserResponse updateUser(UUID id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User does not exist: " + id));
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + id));
 
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
@@ -77,7 +78,7 @@ public class UserService {
 
         if (request.getOrganizationId() != null) {
             Organization org = organizationRepository.findById(request.getOrganizationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Organization not found: " + request.getOrganizationId()));
+                    .orElseThrow(() -> new UserOrganizationNotFoundException("Organization not found: " + request.getOrganizationId()));
             user.setOrganization(org);
         }
 
@@ -87,9 +88,26 @@ public class UserService {
 
     public void deleteUser(UUID id) {
         if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User does not exist: " + id);
+            throw new UserNotFoundException(USER_NO_EXIST + id);
         }
         userRepository.deleteById(id);
+    }
+
+    public void changePassword(UUID id, ChangePasswordRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + id));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new UserBadRequestException("Current password is incorrect");
+        }
+
+        if (!request.getNewPassword().equals(request.getNewPasswordConfirm())) {
+            throw new UserBadRequestException("Passwords do not match");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
     }
 
     private UserResponse toResponse(User user) {
@@ -102,6 +120,13 @@ public class UserService {
                 user.getOrganization() != null ? user.getOrganization().getId() : null,
                 user.getStatus()
         );
+    }
+
+    public List<UserResponse> getUsersByOrganizationId(UUID organizationId) {
+        return userRepository.findByOrganizationId(organizationId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private final PasswordEncoder passwordEncoder;

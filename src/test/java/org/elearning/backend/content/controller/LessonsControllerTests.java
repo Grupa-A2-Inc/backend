@@ -33,6 +33,8 @@ class LessonsControllerTests {
     private UUID chapterID;
     private UUID authenticatedUserId;
 
+    private static final String REQUEST_MAPPING = "/api/v1";
+
     @BeforeEach
     void setUp() {
         authenticatedUserId = insertAuthenticatedUser();
@@ -40,7 +42,7 @@ class LessonsControllerTests {
         UUID courseID = UUID.randomUUID();
         jdbcTemplate.execute(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
-                        "VALUES ('" + courseID + "', 'Test Course', '" + UUID.randomUUID() + "', 'DRAFT', 'PRIVATE')"
+                        "VALUES ('" + courseID + "', 'Test Course', '" + authenticatedUserId + "', 'DRAFT', 'PRIVATE')"
         );
         chapterID = UUID.randomUUID();
         jdbcTemplate.execute(
@@ -56,7 +58,11 @@ class LessonsControllerTests {
         jdbcTemplate.execute("DELETE FROM lessons");
         jdbcTemplate.execute("DELETE FROM chapters");
         jdbcTemplate.execute("DELETE FROM courses");
-        jdbcTemplate.update("DELETE FROM users WHERE id = ?", authenticatedUserId);
+
+        jdbcTemplate.execute("DELETE FROM lesson_progress"); // ADAUGAT IN SPRINT 3
+        jdbcTemplate.execute("DELETE FROM course_enrollments"); //ADAUGAT IN SPRINT 3
+
+        jdbcTemplate.execute("DELETE FROM users"); //MODIFICAT IN SPRINT 3
     }
 
     private UUID insertAuthenticatedUser() {
@@ -94,7 +100,7 @@ class LessonsControllerTests {
                         "VALUES ('" + UUID.randomUUID() + "', '" + chapterID + "', 'Lectia 1', 1)"
         );
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/chapters/" + chapterID + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + chapterID + "/lessons",
                 String.class
         );
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -108,11 +114,11 @@ class LessonsControllerTests {
     @Test
     void shouldReturnNotFoundWhenRequestingLessonsForInvalidChapter() {
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/chapters/" + UUID.randomUUID() + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + UUID.randomUUID() + "/lessons",
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -129,7 +135,7 @@ class LessonsControllerTests {
                 }
                 """;
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/chapters/" + chapterID + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + chapterID + "/lessons",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -150,11 +156,11 @@ class LessonsControllerTests {
                 }
                 """;
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/chapters/" + chapterID + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + chapterID + "/lessons",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
 
@@ -175,7 +181,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/chapters/" + chapterID + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + chapterID + "/lessons",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -204,12 +210,12 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/chapters/" + UUID.randomUUID() + "/lessons",
+                REQUEST_MAPPING + "/chapters/" + UUID.randomUUID() + "/lessons",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -224,7 +230,7 @@ class LessonsControllerTests {
                         "VALUES ('" + lessonID + "', '" + chapterID + "', 'Lectia Content', '# Continut', 1)"
         );
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + lessonID + "/content",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/content",
                 String.class
         );
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -238,11 +244,11 @@ class LessonsControllerTests {
     @Test
     void shouldReturnNotFoundWhenGettingLessonContentForMissingLesson() {
             ResponseEntity<String> response = restTemplate.getForEntity(
-                            "/api/lessons/" + UUID.randomUUID() + "/content",
+                    REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/content",
                             String.class
             );
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -254,11 +260,11 @@ class LessonsControllerTests {
             UUID lessonID = insertLesson("Lectie fara continut", 1, null);
 
             ResponseEntity<String> response = restTemplate.getForEntity(
-                            "/api/lessons/" + lessonID + "/content",
+                    REQUEST_MAPPING + "/lessons/" + lessonID + "/content",
                             String.class
             );
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     /**
@@ -270,7 +276,7 @@ class LessonsControllerTests {
         UUID lessonID = insertLesson("Lectia", 1, null);
         String newContent = "# Continut Nou";
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lessonID + "/content",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/content",
                 HttpMethod.PATCH,
                 new HttpEntity<>(newContent, textHeaders()),
                 String.class
@@ -286,13 +292,13 @@ class LessonsControllerTests {
     @Test
     void shouldReturnNotFoundWhenUpdatingContentForMissingLesson() {
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/content",
+                REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/content",
                 HttpMethod.PATCH,
                 new HttpEntity<>("# Continut", textHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -312,7 +318,7 @@ class LessonsControllerTests {
                 }
                 """;
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lessonID + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -334,13 +340,13 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -358,13 +364,13 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lessonID + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     /**
@@ -382,13 +388,13 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lessonID + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lessonID + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     /**
@@ -408,7 +414,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lesson3 + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lesson3 + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -437,7 +443,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lesson1 + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lesson1 + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -465,7 +471,7 @@ class LessonsControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + lesson1 + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + lesson1 + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -483,13 +489,13 @@ class LessonsControllerTests {
     @Test
     void shouldReturnBadRequestForInvalidMetadataPayload() {
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/metadata",
+                REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/metadata",
                 HttpMethod.PATCH,
                 new HttpEntity<>("{ invalid-json }", jsonHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     /**
@@ -500,7 +506,7 @@ class LessonsControllerTests {
     void shouldDeleteLesson() {
         UUID lessonID = insertLesson("Lectia de sters", 1, null);
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonID,
+                REQUEST_MAPPING + "/lessons/" + lessonID,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -520,13 +526,13 @@ class LessonsControllerTests {
     @Test
     void shouldReturnNotFoundWhenDeletingMissingLesson() {
             ResponseEntity<String> response = restTemplate.exchange(
-                            "/api/lessons/" + UUID.randomUUID(),
+                    REQUEST_MAPPING + "/lessons/" + UUID.randomUUID(),
                             HttpMethod.DELETE,
                             null,
                             String.class
             );
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -540,7 +546,7 @@ class LessonsControllerTests {
             UUID lesson3 = insertLesson("L3", 3, null);
 
             ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                            "/api/lessons/" + lesson2,
+                    REQUEST_MAPPING + "/lessons/" + lesson2,
                             HttpMethod.DELETE,
                             null,
                             Void.class
@@ -601,5 +607,143 @@ class LessonsControllerTests {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.TEXT_PLAIN);
         return headers;
+    }
+
+    // =========================================================================
+    // GET /api/v1/lessons/{id} - TESTE PENTRU SPRINT 3
+    // =========================================================================
+
+
+    /**
+     * Helper method to insert a STUDENT user.
+     */
+    private UUID insertAuthenticatedStudent() {
+        UUID userId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = 'STUDENT'), 'ACTIVE')",
+                userId,
+                "student-" + userId + "@test.com",
+                "password-hash",
+                "Student",
+                "User"
+        );
+        return userId;
+    }
+
+    /**
+     * Helper method to switch the current RestTemplate authentication to a specific student.
+     */
+    private void authorizeAsStudent(UUID studentId) {
+        String token = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
+        restTemplate.getRestTemplate().setInterceptors(List.of((request, body, execution) -> {
+            request.getHeaders().setBearerAuth(token);
+            return execution.execute(request, body);
+        }));
+    }
+
+    /**
+     * Helper method to insert a course enrollment.
+     */
+    private UUID insertEnrollment(UUID studentId, UUID courseId) {
+        UUID enrollmentId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO course_enrollments (id, student_id, course_id, enrolled_at) VALUES (?, ?, ?, NOW())",
+                enrollmentId, studentId, courseId
+        );
+        return enrollmentId;
+    }
+
+    /**
+     * GET /api/v1/lessons/{id}
+     * Tests that a TEACHER can get the lesson, and no progress is marked (no side-effects).
+     */
+    @Test
+    void shouldGetLessonByIdAsTeacherWithoutMarkingProgress() {
+        UUID lessonID = insertLesson("Lectia Profesor", 1, null);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + lessonID,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        Integer progressCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lesson_progress",
+                Integer.class
+        );
+        assertThat(progressCount).isZero();
+    }
+
+    /**
+     * GET /api/v1/lessons/{id}
+     * Tests that a STUDENT WITH ENROLLMENT gets the lesson, and progress is marked.
+     */
+    @Test
+    void shouldGetLessonByIdAsStudentAndMarkProgress() {
+        UUID studentId = insertAuthenticatedStudent();
+        authorizeAsStudent(studentId);
+
+        UUID courseId = jdbcTemplate.queryForObject(
+                "SELECT course_id FROM chapters WHERE id = '" + chapterID + "'",
+                UUID.class
+        );
+
+        UUID enrollmentId = insertEnrollment(studentId, courseId);
+        UUID lessonID = insertLesson("Lectia Student", 1, null);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + lessonID,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Lectia Student");
+
+        Integer progressCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lesson_progress WHERE lesson_id = ? AND student_id = ? AND enrollment_id = ?",
+                Integer.class, lessonID, studentId, enrollmentId
+        );
+        assertThat(progressCount).isEqualTo(1);
+    }
+
+    /**
+     * GET /api/v1/lessons/{id}
+     * Tests that a STUDENT WITHOUT ENROLLMENT gets the lesson, but NO progress is marked.
+     */
+    @Test
+    void shouldGetLessonByIdAsStudentWithoutEnrollment() {
+        UUID studentId = insertAuthenticatedStudent();
+        authorizeAsStudent(studentId);
+
+        UUID lessonID = insertLesson("Lectia Ne-inrolata", 1, null);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + lessonID,
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        Integer progressCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lesson_progress WHERE lesson_id = ? AND student_id = ?",
+                Integer.class, lessonID, studentId
+        );
+        assertThat(progressCount).isZero();
+    }
+
+    /**
+     * GET /api/v1/lessons/{id}
+     * Tests that requesting a missing lesson returns 404 NOT FOUND.
+     */
+    @Test
+    void shouldReturnNotFoundWhenGettingMissingLessonById() {
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + UUID.randomUUID(),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 }

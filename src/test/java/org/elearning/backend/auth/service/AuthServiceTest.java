@@ -3,9 +3,9 @@ package org.elearning.backend.auth.service;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.request.LoginRequest;
-import org.elearning.backend.common.exception.BadRequestException;
-import org.elearning.backend.common.exception.DuplicateResourceException;
-import org.elearning.backend.common.exception.InvalidCredentials;
+import org.elearning.backend.auth.exception.AuthBadRequestException;
+import org.elearning.backend.auth.exception.AuthConflictException;
+import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -58,6 +58,9 @@ class AuthServiceTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -97,7 +100,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("existent@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(DuplicateResourceException.class)
+                .isInstanceOf(AuthConflictException.class)
                 .hasMessage("Email already in use: existent@test.com");
 
         verify(userRepository, never()).save(any());
@@ -156,7 +159,7 @@ class AuthServiceTest {
         when(organizationRepository.existsByName("Scoala Ion")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(DuplicateResourceException.class)
+                .isInstanceOf(AuthConflictException.class)
                 .hasMessage("Organization name already exists: Scoala Ion");
 
         verify(organizationRepository, never()).save(any());
@@ -171,7 +174,7 @@ class AuthServiceTest {
         when(organizationRepository.existsByName(any())).thenReturn(false);
 
         assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(BadRequestException.class)
+                .isInstanceOf(AuthBadRequestException.class)
                 .hasMessage("Passwords do not match");
 
         verify(roleRepository, never()).findByName(any());
@@ -247,6 +250,7 @@ class AuthServiceTest {
         user.setPasswordHash("hashed_parola");
         user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
 
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
@@ -263,11 +267,10 @@ class AuthServiceTest {
         request.setEmail("inexistent@test.com");
         request.setPassword("parola123");
 
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(new BadCredentialsException("Bad credentials"));
+        when(userRepository.findByEmail("inexistent@test.com")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(InvalidCredentials.class)
+                .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Invalid credentials");
     }
 
@@ -277,11 +280,18 @@ class AuthServiceTest {
         request.setEmail("test@test.com");
         request.setPassword("parolaGresita");
 
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setEmail("test@test.com");
+        user.setPasswordHash("hashed_parola");
+        user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
+
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(InvalidCredentials.class)
+                .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Invalid credentials");
     }
 
@@ -297,6 +307,7 @@ class AuthServiceTest {
         user.setPasswordHash("hashed_parola");
         user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
 
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");
@@ -329,6 +340,7 @@ class AuthServiceTest {
         org.setId(organizationId);
         user.setOrganization(org);
 
+        when(userRepository.findByEmail("test@test.com")).thenReturn(Optional.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authenticatedUser(user));
         when(jwtUtil.generateAccessToken(user.getId(), RoleName.ORGANIZATION_ADMIN)).thenReturn("access-token");

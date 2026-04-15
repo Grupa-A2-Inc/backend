@@ -39,6 +39,8 @@ class LessonResourceControllerTests {
     private UUID chapterId;
     private UUID authenticatedUserId;
 
+    private static final String REQUEST_MAPPING = "/api/v1/lessons/";
+
     @BeforeEach
     void setUp() {
         authenticatedUserId = insertAuthenticatedUser();
@@ -46,7 +48,7 @@ class LessonResourceControllerTests {
         UUID courseId = UUID.randomUUID();
         jdbcTemplate.execute(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
-                        "VALUES ('" + courseId + "', 'Test Course', '" + UUID.randomUUID() + "', 'DRAFT', 'PRIVATE')"
+                        "VALUES ('" + courseId + "', 'Test Course', '" + authenticatedUserId + "', 'DRAFT', 'PRIVATE')"
         );
 
 
@@ -107,7 +109,7 @@ class LessonResourceControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/lessons/" + lessonId + "/resources",
+                REQUEST_MAPPING + lessonId + "/resources",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -137,12 +139,12 @@ class LessonResourceControllerTests {
     })
     void shouldReturnBadRequestWhenCreatingLessonResourceWithInvalidFields(String body) {
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/lessons/" + lessonId + "/resources",
+                REQUEST_MAPPING + lessonId + "/resources",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -155,12 +157,12 @@ class LessonResourceControllerTests {
                 """;
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/lessons/" + UUID.randomUUID() + "/resources",
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources",
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -168,7 +170,7 @@ class LessonResourceControllerTests {
         insertLessonResource("Resursa Test", "https://test.com");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + lessonId + "/resources",
+                REQUEST_MAPPING + lessonId + "/resources",
                 String.class
         );
 
@@ -183,7 +185,7 @@ class LessonResourceControllerTests {
         insertLessonResource("Resursa Test 3", "https://test3.com");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + lessonId + "/resources",
+                REQUEST_MAPPING + lessonId + "/resources",
                 String.class
         );
 
@@ -198,28 +200,28 @@ class LessonResourceControllerTests {
         insertLessonResource("Resursa Test", "https://test.com");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + UUID.randomUUID() + "/resources",
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources",
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
     void shouldReturnNotFoundWhenGettingResourcesForInvalidLesson() {
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/lessons/" + UUID.randomUUID() + "/resources",
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources",
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
     void shouldDeleteLessonResource() {
         UUID resourceId = insertLessonResource("Resursa de sters", "https://delete.com");
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + resourceId,
+                REQUEST_MAPPING + lessonId + "/resources/" + resourceId,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -240,7 +242,7 @@ class LessonResourceControllerTests {
         insertLessonResource("Me neither", "https://stayingtoo.com");
         UUID resourceId = insertLessonResource("Resursa de sters", "https://delete.com");
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + resourceId,
+                REQUEST_MAPPING + lessonId + "/resources/" + resourceId,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -259,25 +261,25 @@ class LessonResourceControllerTests {
     void shouldReturnNotFoundWhenDeletingWithInvalidLessonId() {
         UUID resourceId = insertLessonResource("Resursa de sters", "https://delete.com");
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/resources/" + resourceId,
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources/" + resourceId,
                 HttpMethod.DELETE,
                 null,
                 Void.class
         );
 
-        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
     void shouldReturnNotFoundWhenDeletingInvalidResource() {
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + UUID.randomUUID(),
+                REQUEST_MAPPING + lessonId + "/resources/" + UUID.randomUUID(),
                 HttpMethod.DELETE,
                 null,
                 Void.class
         );
 
-        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
 
@@ -289,7 +291,7 @@ class LessonResourceControllerTests {
 
         // Act
         ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + resourceId,
+                REQUEST_MAPPING + lessonId + "/resources/" + resourceId,
                 HttpMethod.PATCH,
                 new HttpEntity<>(requestBody, jsonHeaders()),
                 String.class
@@ -352,12 +354,12 @@ class LessonResourceControllerTests {
                 }
                 """;
         ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + UUID.randomUUID() + "/resources/" + resourceId,
+                REQUEST_MAPPING + UUID.randomUUID() + "/resources/" + resourceId,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
@@ -371,12 +373,12 @@ class LessonResourceControllerTests {
                 }
                 """;
         ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + lessonId + "/resources/" + UUID.randomUUID(),
+                REQUEST_MAPPING + lessonId + "/resources/" + UUID.randomUUID(),
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -395,13 +397,13 @@ class LessonResourceControllerTests {
                 }
                 """;
         ResponseEntity<String> updateResponse = restTemplate.exchange(
-                "/api/lessons/" + unrelatedLessonId + "/resources/" + unrelatedResourceId,
+                REQUEST_MAPPING + unrelatedLessonId + "/resources/" + unrelatedResourceId,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
 
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
     }
 

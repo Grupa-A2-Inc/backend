@@ -33,12 +33,13 @@ class CourseControllerTest {
 
     private UUID instructorId;
     private UUID authenticatedUserId;
+    private static final String REQUEST_MAPPING = "/api/v1/courses";
 
     @BeforeEach
     void setUp() {
         authenticatedUserId = insertAuthenticatedUser();
         authorizeRequests();
-        instructorId = UUID.randomUUID();
+        instructorId = authenticatedUserId;
     }
 
     private UUID insertCourseWithTitleAndDescription(String title, String description, UUID createdBy) {
@@ -92,7 +93,7 @@ class CourseControllerTest {
         insertCourseWithStatusAndVisibility("Published Private Course", UUID.randomUUID(), "PUBLISHED", "PRIVATE");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/courses/public",
+                 REQUEST_MAPPING + "/public",
                 String.class
         );
 
@@ -111,7 +112,7 @@ class CourseControllerTest {
         insertCourseWithStatusAndVisibility("Draft Course", UUID.randomUUID(), "DRAFT", "PRIVATE");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/courses/public",
+                REQUEST_MAPPING + "/public",
                 String.class
         );
 
@@ -125,13 +126,11 @@ class CourseControllerTest {
      */
     @Test
     void shouldGetOnlyMyCoursesForHardcodedUser() {
-        UUID hardcodedUserId = UUID.fromString("00000000-0000-0000-0000-000000000000");
-
-        insertCourse("My Course", hardcodedUserId);
+        insertCourse("My Course", authenticatedUserId);
         insertCourse("Other Course", UUID.randomUUID());
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/courses/my-courses",
+                REQUEST_MAPPING + "/my-courses",
                 String.class
         );
 
@@ -149,7 +148,7 @@ class CourseControllerTest {
         insertCourse("Other Course", UUID.randomUUID());
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/courses/my-courses",
+                REQUEST_MAPPING + "/my-courses",
                 String.class
         );
 
@@ -172,7 +171,7 @@ class CourseControllerTest {
             """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/courses/" + courseId,
+                REQUEST_MAPPING + "/" + courseId,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -203,7 +202,7 @@ class CourseControllerTest {
             """;
 
         restTemplate.exchange(
-                "/api/courses/" + courseId,
+                REQUEST_MAPPING + "/" + courseId,
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -229,13 +228,13 @@ class CourseControllerTest {
             """;
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/courses/" + UUID.randomUUID(),
+                REQUEST_MAPPING + "/" + UUID.randomUUID(),
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
     /**
      * POST /api/courses
@@ -254,7 +253,7 @@ class CourseControllerTest {
                 """.formatted(instructorId);
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/courses",
+                REQUEST_MAPPING,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -277,7 +276,7 @@ class CourseControllerTest {
                 """.formatted(instructorId);
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/courses",
+                REQUEST_MAPPING,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -312,7 +311,7 @@ class CourseControllerTest {
                 """.formatted(title);
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/courses",
+                REQUEST_MAPPING,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -380,7 +379,7 @@ class CourseControllerTest {
                 """.formatted(title);
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/courses",
+                REQUEST_MAPPING,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -424,7 +423,7 @@ class CourseControllerTest {
                 """.formatted(title, fakeCreatedBy);
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/courses",
+                REQUEST_MAPPING,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
@@ -436,7 +435,7 @@ class CourseControllerTest {
                 String.class
         );
         assertThat(createdByInDb)
-                        .isEqualTo("00000000-0000-0000-0000-000000000000")
+                        .isEqualTo(authenticatedUserId.toString())
                         .isNotEqualTo(fakeCreatedBy.toString());
     }
 
@@ -451,7 +450,7 @@ class CourseControllerTest {
         insertCourse("Other Course", UUID.randomUUID());
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/courses", // am scos paramaterii din URL, ca in noul controller
+                REQUEST_MAPPING, // am scos paramaterii din URL, ca in noul controller
                 String.class
         );
 
@@ -471,7 +470,7 @@ class CourseControllerTest {
         insertCourseWithStatusAndVisibility("Private Course", UUID.randomUUID(), "DRAFT", "PRIVATE");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/courses", // am scos parametrii din URL
+                REQUEST_MAPPING, // am scos parametrii din URL
                 String.class
         );
 
@@ -497,7 +496,7 @@ class CourseControllerTest {
                 """.formatted(instructorId);
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/courses/" + courseId,
+                REQUEST_MAPPING + "/" + courseId,
                 HttpMethod.PUT,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
@@ -527,13 +526,13 @@ class CourseControllerTest {
                 """.formatted(instructorId);
 
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/courses/" + UUID.randomUUID(),
+                REQUEST_MAPPING + "/" + UUID.randomUUID(),
                 HttpMethod.PUT,
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     /**
@@ -546,7 +545,7 @@ class CourseControllerTest {
         UUID courseId = insertCourse("Course to Delete", instructorId);
 
         ResponseEntity<Void> response = restTemplate.exchange(
-                "/api/courses/" + courseId,
+                REQUEST_MAPPING + "/" + courseId,
                 HttpMethod.DELETE,
                 null,
                 Void.class
@@ -568,13 +567,13 @@ class CourseControllerTest {
     @Test
     void shouldReturnNotFoundWhenDeletingInvalidCourse() {
         ResponseEntity<Void> response = restTemplate.exchange(
-                "/api/courses/" + UUID.randomUUID(),
+                REQUEST_MAPPING + "/" + UUID.randomUUID(),
                 HttpMethod.DELETE,
                 null,
                 Void.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     /**
@@ -591,7 +590,7 @@ class CourseControllerTest {
         );
 
         restTemplate.exchange(
-                "/api/courses/" + courseId,
+                REQUEST_MAPPING + "/" + courseId,
                 HttpMethod.DELETE,
                 null,
                 Void.class

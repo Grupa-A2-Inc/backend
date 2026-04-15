@@ -10,6 +10,8 @@ import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.service.ChapterService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.UUID;
 
 @Tag(name = "Chapters", description = "Chapter administration")
 @RestController
+@RequestMapping("/api/v1")
 public class ChaptersController {
     private final ChapterService chapterService;
 
@@ -29,8 +32,9 @@ public class ChaptersController {
             @ApiResponse(responseCode = "201", description = "Chapter successfully created"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
-    @PostMapping("/api/courses/{courseId}/chapters")
-    public ResponseEntity<ChapterDtoResponse> createNewChapter(@PathVariable UUID courseId,
+    @PostMapping("/courses/{courseId}/chapters")
+    @PreAuthorize("@accessService.canCreateChapter(authentication,#id)")
+    public ResponseEntity<ChapterDtoResponse> createNewChapter(@P("id") @PathVariable UUID courseId,
                                                                @RequestBody String newChapterTitle) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ChapterDtoResponse(chapterService.createNewChapter(courseId, newChapterTitle)));
@@ -41,8 +45,9 @@ public class ChaptersController {
             @ApiResponse(responseCode = "200", description = "Chapters successfully returned"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
-    @GetMapping("/api/courses/{courseId}/chapters")
-    public ResponseEntity<List<ChapterDtoResponse>> getChaptersByCourseId(@PathVariable UUID courseId) {
+    @GetMapping("/courses/{courseId}/chapters")
+    @PreAuthorize("@accessService.canViewCourseChapters(authentication,#id)")
+    public ResponseEntity<List<ChapterDtoResponse>> getChaptersByCourseId(@P("id") @PathVariable UUID courseId) {
         List<Chapter> chapters = chapterService.getAllChaptersFromCourse(courseId);
         return ResponseEntity.ok(chapters.stream().map(ChapterDtoResponse::new).toList());
     }
@@ -52,8 +57,9 @@ public class ChaptersController {
             @ApiResponse(responseCode = "204", description = "Chapter successfully deleted"),
             @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
-    @DeleteMapping("/api/chapters/{id}")
-    public ResponseEntity<Void> deleteChapter(@PathVariable UUID id) {
+    @DeleteMapping("/chapters/{id}")
+    @PreAuthorize("@accessService.canDeleteChapter(authentication,#id)")
+    public ResponseEntity<Void> deleteChapter(@P("id") @PathVariable UUID id) {
         chapterService.deleteChapter(id);
         return ResponseEntity.noContent().build();
     }
@@ -64,8 +70,9 @@ public class ChaptersController {
             @ApiResponse(responseCode = "400", description = "Order index out of range"),
             @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
-    @PatchMapping("/api/chapters/{id}")
-    public ResponseEntity<ChapterDtoResponse> updateChapter(@PathVariable UUID id,
+    @PatchMapping("/chapters/{id}")
+    @PreAuthorize("@accessService.canEditChapter(authentication,#id)")
+    public ResponseEntity<ChapterDtoResponse> updateChapter(@P("id") @PathVariable UUID id,
                                                             @RequestBody ChapterDtoPost chapterDTOPost) {
         return ResponseEntity.ok(new ChapterDtoResponse(chapterService.updateChapterMetadata(id, chapterDTOPost)));
     }

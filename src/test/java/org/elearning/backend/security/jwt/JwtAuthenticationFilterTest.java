@@ -2,6 +2,7 @@ package org.elearning.backend.security.jwt;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.ServletException;
+import org.elearning.backend.auth.service.TokenBlacklistService;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
@@ -24,7 +25,8 @@ class JwtAuthenticationFilterTest {
 
     private final StubJwtUtil jwtUtil = new StubJwtUtil();
     private final StubCustomUserDetailsService customUserDetailsService = new StubCustomUserDetailsService();
-    private final JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil, customUserDetailsService);
+    private final StubTokenBlacklistService tokenBlacklistService = new StubTokenBlacklistService();
+    private final JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil, customUserDetailsService, tokenBlacklistService);
 
     @AfterEach
     void tearDown() {
@@ -136,6 +138,40 @@ class JwtAuthenticationFilterTest {
         assertThat(filterChain.wasInvoked()).isTrue();
     }
 
+    @Test
+    void doFilterInternal_withRevokedToken_leavesSecurityContextEmpty() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setServletPath("/api/v1/users");
+        request.addHeader("Authorization", "Bearer revoked-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        TrackingFilterChain filterChain = new TrackingFilterChain();
+
+        tokenBlacklistService.revoked = true;
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(filterChain.wasInvoked()).isTrue();
+    }
+
+    @Test
+    void doFilterInternal_withValidNonRevokedToken_setsAuthentication() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setServletPath("/api/v1/users");
+        request.addHeader("Authorization", "Bearer valid-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        TrackingFilterChain filterChain = new TrackingFilterChain();
+
+        tokenBlacklistService.revoked = false;
+        jwtUtil.userId = UUID.randomUUID();
+        customUserDetailsService.user = makeUser(jwtUtil.userId, "test@test.com", RoleName.ADMIN);
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+        assertThat(filterChain.wasInvoked()).isTrue();
+    }
+
     private User makeUser(UUID id, String email, RoleName roleName) {
         User user = new User();
         user.setId(id);
@@ -190,6 +226,20 @@ class JwtAuthenticationFilterTest {
                 throw new org.springframework.security.core.userdetails.UsernameNotFoundException("missing");
             }
             return new CustomUserDetails(user);
+        }
+    }
+
+    private static final class StubTokenBlacklistService extends TokenBlacklistService {
+
+        private boolean revoked;
+
+        private StubTokenBlacklistService() {
+            super(null);
+        }
+
+        @Override
+        public boolean isRevoked(String rawToken) {
+            return revoked;
         }
     }
 }

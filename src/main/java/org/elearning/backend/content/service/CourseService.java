@@ -1,6 +1,7 @@
 package org.elearning.backend.content.service;
 
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.assessment.repository.TestRepository;
 import org.elearning.backend.content.exception.CourseNotFoundException;
 import org.elearning.backend.content.mapper.CourseFullViewMapper;
 import org.elearning.backend.content.mapper.CourseMapper;
@@ -12,6 +13,8 @@ import org.elearning.backend.content.repository.LessonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.UUID;
 import java.util.List;
 
@@ -24,6 +27,8 @@ public class CourseService {
     private final LessonRepository lessonRepository;
     private final CourseFullViewMapper courseFullViewMapper;
     private final CourseMapper courseMapper;
+
+    private final TestRepository testRepository;
 
     /**
      * Creates a new course with the provided data.
@@ -42,7 +47,7 @@ public class CourseService {
 
         linkChaptersToCourse(course);
         course = courseRepository.saveAndFlush(course);
-        return courseFullViewMapper.toCourseFullViewDTO(course);
+        return courseFullViewMapper.toCourseFullViewDTO(course, Collections.emptyMap());
     }
 
     /**
@@ -197,6 +202,23 @@ public class CourseService {
         chapterRepository.findChaptersWithLessonsByCourseId(courseId);
         lessonRepository.findLessonsWithResourcesByCourseId(courseId);
 
-        return courseFullViewMapper.toCourseFullViewDTO(course);
+        List<UUID> lessonIds = course.getChapters().stream()
+                .flatMap(chapter -> chapter.getLessons().stream())
+                .map(Lesson::getId)
+                .toList();
+
+        //lessonId: testId
+        Map<UUID, UUID> lessonToTestMap = new java.util.HashMap<>();
+
+        if (!lessonIds.isEmpty()) {
+            List<Object[]> testResults = testRepository.findTestIdsByLessonIds(lessonIds);
+            for (Object[] row : testResults) {
+                UUID lessonId = (UUID) row[0];
+                UUID testId = (UUID) row[1];
+                lessonToTestMap.put(lessonId, testId);
+            }
+        }
+
+        return courseFullViewMapper.toCourseFullViewDTO(course, lessonToTestMap);
     }
 }

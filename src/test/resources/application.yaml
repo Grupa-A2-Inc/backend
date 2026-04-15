@@ -25,3 +25,7 @@ logging:
     name: app.log
   level:
     root: INFO
+
+app:
+  mail:
+    from: test@example.com

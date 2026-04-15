@@ -1,18 +1,16 @@
 package org.elearning.backend.assessment.service;
 
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.assessment.dto.AttemptReportDTO;
-import org.elearning.backend.assessment.dto.QuestionForAttemptReportDTO;
-import org.elearning.backend.assessment.dto.TestResultDto;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptReportDTO;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptStatusDTO;
+import org.elearning.backend.assessment.dto.question_dto.QuestionForAttemptReportDTO;
+import org.elearning.backend.assessment.dto.assigment_dto.TestResultDto;
 import org.elearning.backend.assessment.exception.AttemptInProgressException;
 import org.elearning.backend.assessment.exception.TimerExpiredException;
 import org.elearning.backend.assessment.mapper.AttemptMapper;
 import org.elearning.backend.assessment.mapper.AttemptReportMapper;
 import org.elearning.backend.assessment.model.*;
-import org.elearning.backend.assessment.repository.AttemptAnswerRepository;
-import org.elearning.backend.assessment.repository.QuestionOptionRepository;
-import org.elearning.backend.assessment.repository.TestAttemptRepository;
-import org.elearning.backend.assessment.repository.TestResultRepository;
+import org.elearning.backend.assessment.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +23,7 @@ import java.util.stream.Collectors;
 public class TestResultService {
     private final TestAttemptRepository testAttemptRepository;
     private final TestResultRepository testResultRepository;
+    private final TestRepository testRepository;
     private final AttemptAnswerRepository answerRepository;
     private final QuestionOptionRepository optionRepository;
     private final AttemptMapper attemptMapper;
@@ -78,4 +77,16 @@ public class TestResultService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public List<AttemptStatusDTO> getTestAttempts(UUID testId, UUID studentId) {
+        List<TestResult> results = testResultRepository.findByStudentIdAndTestIdOrderByAttemptStartedAtDesc(studentId, testId);
+        return results.stream().map(attemptReportMapper::toAttemptStatusDTO).toList();
+    }
+
+    @Transactional
+    public AttemptStatusDTO getBestTestAttempt(UUID testId, UUID studentId) {
+        TestResult testResult = testResultRepository.findTopByStudentIdAndTestIdAndAttemptStatusOrderByScorePercentDesc(studentId, testId, AttemptStatus.DONE)
+                .orElseThrow(() -> new IllegalArgumentException("No finished attempts found for student " + studentId + " on test " + testId));
+        return attemptReportMapper.toAttemptStatusDTO(testResult);
+    }
 }

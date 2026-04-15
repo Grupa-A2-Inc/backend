@@ -46,6 +46,7 @@ public class ResponseCourseFullViewDto {
     public static class LessonFullViewDTO {
         private UUID id;
         private  UUID chapterId;
+        private UUID testId;
         private String title;
         private String contentMarkdown;
         private int orderIndex;

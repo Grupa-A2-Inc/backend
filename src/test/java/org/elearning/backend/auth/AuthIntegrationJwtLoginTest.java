@@ -2,13 +2,17 @@ package org.elearning.backend.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.auth.controller.AuthController;
+import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.response.UserDataResponse;
 import org.elearning.backend.auth.service.AuthService;
-import org.elearning.backend.common.exception.GlobalExceptionHandler;
+import org.elearning.backend.auth.service.PasswordResetService;
+import org.elearning.backend.auth.service.RefreshTokenService;
+import org.elearning.backend.auth.service.TokenBlacklistService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
+import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.UserStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import(AuthExceptionHandler.class)
 class AuthIntegrationJwtLoginTest {
 
     @Autowired
@@ -44,6 +48,18 @@ class AuthIntegrationJwtLoginTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private PasswordResetService passwordResetService;
+
+    @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
+    @MockitoBean
+    private TokenBlacklistService tokenBlacklistService;
+
+    @MockitoBean
+    private JwtUtil jwtUtil;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -102,6 +118,9 @@ class AuthIntegrationJwtLoginTest {
                         .content(objectMapper.writeValueAsString(mockLoginRequest())))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("refresh_token=refresh-token")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Path=/api/v1/auth")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=None")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Secure")))
                 .andExpect(jsonPath("$.refreshToken").isEmpty());
     }
 

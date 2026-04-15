@@ -1,10 +1,11 @@
 package org.elearning.backend.organization.service;
 
-import org.elearning.backend.common.exception.ResourceNotFoundException;
 import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
 import org.elearning.backend.organization.entity.Organization;
+import org.elearning.backend.organization.exception.OrganizationNotFoundException;
+import org.elearning.backend.organization.exception.OrganizationOwnerNotFoundException;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
@@ -63,15 +64,15 @@ class OrganizationServiceTest {
     }
 
     private CreateOrganizationRequest createOrganizationRequest(UUID ownerId) {
-        return CreateOrganizationRequest.builder()
-                .name("Scoala Nr. 1")
-                .country("Romania")
-                .city("Cluj-Napoca")
-                .organizationType("Scoala")
-                .address("Str. Principala 1")
-                .phoneNumber("0740000000")
-                .ownerId(ownerId)
-                .build();
+        return new CreateOrganizationRequest(
+                "Scoala Nr. 1",
+                "Romania",
+                "Cluj-Napoca",
+                "Scoala",
+                "Str. Principala 1",
+                "0740000000",
+                ownerId
+        );
     }
 
     @Test
@@ -99,13 +100,15 @@ class OrganizationServiceTest {
     void createOrganization_withoutOptionalFields_success() {
         User owner = createTestUser();
 
-        CreateOrganizationRequest request = CreateOrganizationRequest.builder()
-                .name("Scoala Nr. 1")
-                .country("Romania")
-                .city("Cluj-Napoca")
-                .organizationType("Scoala")
-                .ownerId(owner.getId())
-                .build();
+        CreateOrganizationRequest request = new CreateOrganizationRequest(
+                "Scoala Nr. 1",
+                "Romania",
+                "Cluj-Napoca",
+                "Scoala",
+                null,
+                null,
+                owner.getId()
+        );
 
         Organization saved = new Organization();
         saved.setId(UUID.randomUUID());
@@ -132,7 +135,7 @@ class OrganizationServiceTest {
 
         when(userRepository.findById(ownerId)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(OrganizationOwnerNotFoundException.class,
                 () -> organizationService.createOrganization(request));
     }
 
@@ -158,7 +161,7 @@ class OrganizationServiceTest {
 
         when(organizationRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(OrganizationNotFoundException.class,
                 () -> organizationService.getOrganizationById(id));
     }
 
@@ -200,14 +203,14 @@ class OrganizationServiceTest {
         User owner = createTestUser();
         Organization org = createTestOrganization(owner);
 
-        UpdateOrganizationRequest request = UpdateOrganizationRequest.builder()
-                .name("Scoala Nr. 1 Actualizata")
-                .country("Romania")
-                .city("Bucuresti")
-                .organizationType("Liceu")
-                .address("Str. Noua 5")
-                .phoneNumber("0750000000")
-                .build();
+        UpdateOrganizationRequest request = new UpdateOrganizationRequest(
+                "Scoala Nr. 1 Actualizata",
+                "Romania",
+                "Bucuresti",
+                "Liceu",
+                "Str. Noua 5",
+                "0750000000"
+        );
 
         when(organizationRepository.findById(org.getId())).thenReturn(Optional.of(org));
         when(organizationRepository.save(any(Organization.class))).thenReturn(org);
@@ -225,16 +228,18 @@ class OrganizationServiceTest {
     void updateOrganization_notFound_throwsException() {
         UUID id = UUID.randomUUID();
 
-        UpdateOrganizationRequest request = UpdateOrganizationRequest.builder()
-                .name("Scoala Nr. 1 Actualizata")
-                .country("Romania")
-                .city("Bucuresti")
-                .organizationType("Liceu")
-                .build();
+        UpdateOrganizationRequest request = new UpdateOrganizationRequest(
+                "Scoala Nr. 1 Actualizata",
+                "Romania",
+                "Bucuresti",
+                "Liceu",
+                null,
+                null
+        );
 
         when(organizationRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(OrganizationNotFoundException.class,
                 () -> organizationService.updateOrganization(id, request));
     }
 
@@ -255,7 +260,7 @@ class OrganizationServiceTest {
 
         when(organizationRepository.existsById(id)).thenReturn(false);
 
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(OrganizationNotFoundException.class,
                 () -> organizationService.deleteOrganization(id));
     }
 }

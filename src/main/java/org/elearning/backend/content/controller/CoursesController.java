@@ -10,8 +10,12 @@ import org.elearning.backend.content.dto.ResponseCourseDto;
 import org.elearning.backend.content.dto.ResponseCourseFullViewDto;
 import org.elearning.backend.content.dto.CreateCourseDto;
 import org.elearning.backend.content.service.CourseService;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +23,10 @@ import java.util.UUID;
 
 @Tag(name = "Courses", description = "Course administration")
 @RestController
-@RequestMapping("/api/courses")
+@RequestMapping("/api/v1/courses")
 @RequiredArgsConstructor
 public class CoursesController {
 
-
-    private static final UUID HARDCODED_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
     private final CourseService courseService;
 
     @Operation(summary = "Create a new course", description = "Creates a new course with its chapters, lessons and resources")
@@ -33,9 +35,15 @@ public class CoursesController {
             @ApiResponse(responseCode = "400", description = "Invalid input data")
     })
     @PostMapping
-    public ResponseEntity<ResponseCourseFullViewDto> createCourse(@RequestBody CreateCourseDto courseDto) {
+    @PreAuthorize("@accessService.canCreateCourse(authentication)")
+    public ResponseEntity<ResponseCourseFullViewDto> createCourse(
+            @RequestBody CreateCourseDto courseDto,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+
+        UUID userId = currentUser.getUserId();
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(courseService.createCourse(courseDto, HARDCODED_USER_ID));
+                .body(courseService.createCourse(courseDto, userId));
     }
 
 
@@ -44,6 +52,7 @@ public class CoursesController {
             @ApiResponse(responseCode = "200", description = "Courses successfully returned")
     })
     @GetMapping("/public")
+    @PreAuthorize("@accessService.canViewPublicCourses(authentication)")
     public ResponseEntity<List<ResponseCourseDto>> getPublicCourses() {
         return ResponseEntity.ok(courseService.getPublicCourses());
     }
@@ -53,8 +62,10 @@ public class CoursesController {
             @ApiResponse(responseCode = "200", description = "Courses successfully returned")
     })
     @GetMapping("/my-courses")
-    public ResponseEntity<List<ResponseCourseDto>> getMyCourses() {
-        return ResponseEntity.ok(courseService.getMyCourses(HARDCODED_USER_ID));
+    @PreAuthorize("@accessService.canViewMyCourses(authentication)")
+    public ResponseEntity<List<ResponseCourseDto>> getMyCourses(@AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID userId = currentUser.getUserId();
+        return ResponseEntity.ok(courseService.getMyCourses(userId));
     }
 
     @Operation(summary = "Update a course", description = "Fully updates a course given by its ID")
@@ -63,7 +74,8 @@ public class CoursesController {
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<ResponseCourseDto> updateCourse(@PathVariable UUID id, @RequestBody UpdateCourseDto updateCourseDto) {
+    @PreAuthorize("@accessService.canReplaceCourse(authentication,#id)")
+    public ResponseEntity<ResponseCourseDto> updateCourse(@P("id") @PathVariable UUID id, @RequestBody UpdateCourseDto updateCourseDto) {
         return ResponseEntity.ok(courseService.updateCourse(id, updateCourseDto));
     }
 
@@ -73,7 +85,8 @@ public class CoursesController {
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @PatchMapping("/{id}")
-    public ResponseEntity<ResponseCourseDto> patchCourse(@PathVariable UUID id, @RequestBody UpdateCourseDto updateCourseDto) {
+    @PreAuthorize("@accessService.canEditCourse(authentication,#id)")
+    public ResponseEntity<ResponseCourseDto> patchCourse(@P("id") @PathVariable UUID id, @RequestBody UpdateCourseDto updateCourseDto) {
         return ResponseEntity.ok(courseService.patchCourse(id, updateCourseDto));
     }
 
@@ -83,7 +96,8 @@ public class CoursesController {
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCourse(@PathVariable UUID id) {
+    @PreAuthorize("@accessService.canDeleteCourse(authentication,#id)")
+    public ResponseEntity<Void> deleteCourse(@P("id") @PathVariable UUID id) {
         courseService.deleteCourse(id);
         return ResponseEntity.noContent().build();
     }
@@ -94,7 +108,8 @@ public class CoursesController {
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @GetMapping("/{courseId}/full-view")
-    public ResponseEntity<ResponseCourseFullViewDto> getCourseFullView(@PathVariable UUID courseId) {
+    @PreAuthorize("@accessService.canViewCourseFullView(authentication,#id)")
+    public ResponseEntity<ResponseCourseFullViewDto> getCourseFullView(@P("id") @PathVariable UUID courseId) {
         return ResponseEntity.ok(courseService.getCourseFullView(courseId));
     }
 }

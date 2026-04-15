@@ -1,6 +1,8 @@
 package org.elearning.backend.security.config;
 
+import org.elearning.backend.auth.service.TokenBlacklistService;
 import org.elearning.backend.security.auth.CustomUserDetailsService;
+import org.elearning.backend.security.handler.JwtAccessDeniedHandler;
 import org.elearning.backend.security.handler.JwtAuthenticationEntryPoint;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.security.jwt.JwtUtil;
@@ -10,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockServletContext;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -18,12 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.filter.DelegatingFilterProxy;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 class SecurityConfigTest {
 
@@ -51,6 +56,48 @@ class SecurityConfigTest {
 
             assertThat(result.getRequest().getSession(false)).isNull();
         }
+    }
+
+    @Test
+    void methodSecurity_deniedRequest_returnsForbiddenJson() throws Exception {
+        try (AnnotationConfigWebApplicationContext context = createContext()) {
+            MockMvc mockMvc = buildMockMvc(context);
+
+            mockMvc.perform(get("/api/v1/admin-only/ping").with(user("student").roles("STUDENT")))
+                    .andExpect(status().isForbidden())
+                    .andExpect(result -> assertThat(result.getResponse().getContentAsString())
+                            .isEqualTo("{\"message\":\"Access denied\"}"));
+        }
+    }
+
+    @Test
+    void corsConfigurationSource_allowsConfiguredOriginsMethodsAndHeaders() {
+        SecurityConfig securityConfig = new SecurityConfig(
+                new JwtAuthenticationFilter(
+                        new NoopJwtUtil(),
+                        new NoopCustomUserDetailsService(),
+                        new NoopTokenBlacklistService()
+                ),
+                new JwtAccessDeniedHandler(),
+                new JwtAuthenticationEntryPoint()
+        );
+
+        CorsConfigurationSource source = securityConfig.corsConfigurationSource();
+        var configuration = source.getCorsConfiguration(new org.springframework.mock.web.MockHttpServletRequest("OPTIONS", "/api/v1/secure/ping"));
+
+        assertThat(configuration.getAllowedOrigins()).containsExactly(
+                "http://localhost:3000",
+                "https://frontend-teal-five-57.vercel.app",
+                "https://frontend-z1g5f.vercel.app"
+        );
+        assertThat(configuration.getAllowedMethods()).containsExactly("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS");
+        assertThat(configuration.getAllowedHeaders()).containsExactly(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "X-Requested-With"
+        );
     }
 
     private AnnotationConfigWebApplicationContext createContext() {
@@ -81,13 +128,26 @@ class SecurityConfigTest {
         }
 
         @Bean
-        JwtAuthenticationFilter jwtAuthenticationFilter(CustomUserDetailsService customUserDetailsService) {
-            return new JwtAuthenticationFilter(new NoopJwtUtil(), customUserDetailsService);
+        TokenBlacklistService tokenBlacklistService() {
+            return new NoopTokenBlacklistService();
+        }
+
+        @Bean
+        JwtAuthenticationFilter jwtAuthenticationFilter(
+                CustomUserDetailsService customUserDetailsService,
+                TokenBlacklistService tokenBlacklistService
+        ) {
+            return new JwtAuthenticationFilter(new NoopJwtUtil(), customUserDetailsService, tokenBlacklistService);
         }
 
         @Bean
         JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint() {
             return new JwtAuthenticationEntryPoint();
+        }
+
+        @Bean
+        JwtAccessDeniedHandler jwtAccessDeniedHandler() {
+            return new JwtAccessDeniedHandler();
         }
     }
 
@@ -102,6 +162,12 @@ class SecurityConfigTest {
         @GetMapping("/api/v1/secure/ping")
         public ResponseEntity<String> securePing() {
             return ResponseEntity.ok("secure-ok");
+        }
+
+        @PreAuthorize("hasRole('ADMIN')")
+        @GetMapping("/api/v1/admin-only/ping")
+        public ResponseEntity<String> adminPing() {
+            return ResponseEntity.ok("admin-ok");
         }
     }
 
@@ -122,6 +188,18 @@ class SecurityConfigTest {
 
         NoopCustomUserDetailsService() {
             super(null);
+        }
+    }
+
+    static class NoopTokenBlacklistService extends TokenBlacklistService {
+
+        NoopTokenBlacklistService() {
+            super(null);
+        }
+
+        @Override
+        public boolean isRevoked(String rawToken) {
+            return false;
         }
     }
 }

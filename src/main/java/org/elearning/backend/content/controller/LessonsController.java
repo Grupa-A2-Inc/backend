@@ -9,8 +9,12 @@ import org.elearning.backend.content.dto.LessonDtoEntity;
 import org.elearning.backend.content.dto.LessonDtoMetadata;
 import org.elearning.backend.content.dto.LessonDtoPost;
 import org.elearning.backend.content.service.LessonService;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +22,7 @@ import java.util.UUID;
 
 @Tag(name = "Lessons", description = "Lesson administration")
 @RestController
+@RequestMapping("/api/v1")
 public class LessonsController {
 
     private final LessonService lessonService;
@@ -32,10 +37,12 @@ public class LessonsController {
             @ApiResponse(responseCode = "400", description = "Title cannot be null"),
             @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
-    @PostMapping("/api/chapters/{chapterID}/lessons")
+
+    @PostMapping("/chapters/{chapterID}/lessons")
+    @PreAuthorize("@accessService.canCreateLessons(authentication,#id)")
     public ResponseEntity<LessonDtoEntity> createNewLesson(
             @RequestBody @Valid LessonDtoPost modifiableLessonContent,
-            @PathVariable UUID chapterID) {
+            @P("id") @PathVariable UUID chapterID) {
         return ResponseEntity.status(HttpStatus.CREATED).body(lessonService.createNewLesson(modifiableLessonContent, chapterID));
     }
 
@@ -44,8 +51,9 @@ public class LessonsController {
             @ApiResponse(responseCode = "204", description = "Lesson successfully deleted"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @DeleteMapping("/api/lessons/{id}")
-    public ResponseEntity<Void> deleteLesson(@PathVariable UUID id) {
+    @DeleteMapping("/lessons/{id}")
+    @PreAuthorize("@accessService.canDeleteLesson(authentication,#id)")
+    public ResponseEntity<Void> deleteLesson(@P("id") @PathVariable UUID id) {
         lessonService.deleteLesson(id);
         return ResponseEntity.noContent().build();
     }
@@ -55,8 +63,9 @@ public class LessonsController {
             @ApiResponse(responseCode = "200", description = "Lessons successfully returned"),
             @ApiResponse(responseCode = "404", description = "Chapter not found")
     })
-    @GetMapping("/api/chapters/{chapterID}/lessons")
-    public ResponseEntity<List<LessonDtoEntity>> getAllLessonsFromChapterID(@PathVariable UUID chapterID) {
+    @GetMapping("/chapters/{chapterID}/lessons")
+    @PreAuthorize("@accessService.canViewChapterLessons(authentication,#id)")
+    public ResponseEntity<List<LessonDtoEntity>> getAllLessonsFromChapterID(@P("id") @PathVariable UUID chapterID) {
         return ResponseEntity.ok(lessonService.getAllLessonsFromChapter(chapterID));
     }
 
@@ -65,8 +74,9 @@ public class LessonsController {
             @ApiResponse(responseCode = "200", description = "Content successfully returned"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @GetMapping("/api/lessons/{id}/content")
-    public ResponseEntity<String> getLessonContent(@PathVariable UUID id) {
+    @GetMapping("/lessons/{id}/content")
+    @PreAuthorize("@accessService.canViewLessonContent(authentication,#id)")
+    public ResponseEntity<String> getLessonContent(@P("id") @PathVariable UUID id) {
         return ResponseEntity.ok(lessonService.getLessonContent(id));
     }
 
@@ -76,9 +86,10 @@ public class LessonsController {
             @ApiResponse(responseCode = "400", description = "Order index out of range"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @PatchMapping("/api/lessons/{id}/metadata")
+    @PatchMapping("/lessons/{id}/metadata")
+    @PreAuthorize("@accessService.canEditLessonMetaData(authentication,#id)")
     public ResponseEntity<LessonDtoEntity> updateLessonMetadata(
-            @PathVariable UUID id,
+            @P("id") @PathVariable UUID id,
             @RequestBody LessonDtoMetadata lessonDTOMetadata) {
         return ResponseEntity.ok(lessonService.updateLessonMetadata(id, lessonDTOMetadata));
     }
@@ -88,10 +99,23 @@ public class LessonsController {
             @ApiResponse(responseCode = "200", description = "Content successfully updated"),
             @ApiResponse(responseCode = "404", description = "Lesson not found")
     })
-    @PatchMapping("/api/lessons/{id}/content")
+    @PatchMapping("/lessons/{id}/content")
+    @PreAuthorize("@accessService.canEditLessonContent(authentication,#id)")
     public ResponseEntity<LessonDtoEntity> updateLessonContent(
-            @PathVariable UUID id,
+            @P("id") @PathVariable UUID id,
             @RequestBody String markdownContent) {
         return ResponseEntity.ok(lessonService.updateLessonMarkdownContent(id, markdownContent));
+    }
+
+    @Operation(summary = "Get lesson by ID", description = "Returns a lesson given by its ID. If the user is a student, it will mark it as visited")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lesson successfully returned"),
+            @ApiResponse(responseCode = "404", description = "Lesson not found")
+    })
+
+    @GetMapping("/lessons/{id}")
+    @PreAuthorize("@accessService.canMarkViewedLesson(authentication,#id)")
+    public ResponseEntity<LessonDtoEntity> getLessonByID(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID id) {
+        return ResponseEntity.ok(lessonService.getLessonById(userDetails.getUserId(), userDetails.getRoleName(), id));
     }
 }

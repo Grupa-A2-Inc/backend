@@ -1,12 +1,22 @@
 package org.elearning.backend.assessment.service;
 
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.assessment.dto.*;
+import org.elearning.backend.assessment.dto.assigment_dto.TestResultDto;
+import org.elearning.backend.assessment.dto.question_dto.QuestionForStudentDto;
+import org.elearning.backend.assessment.dto.test_dto.StartAttemptResponseDto;
+import org.elearning.backend.assessment.dto.test_dto.SubmitAnswerDto;
+import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
 import org.elearning.backend.assessment.exception.*;
 import org.elearning.backend.assessment.mapper.AttemptMapper;
 import org.elearning.backend.assessment.mapper.QuestionMapper;
 import org.elearning.backend.assessment.model.*;
 import org.elearning.backend.assessment.repository.*;
+import org.elearning.backend.content.repository.ChapterRepository;
+import org.elearning.backend.content.repository.LessonRepository;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
+import org.elearning.backend.enrollment.repository.LessonProgressRepository;
+import org.elearning.backend.enrollment.service.ProgressCalculatorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +39,12 @@ public class AttemptService {
     private final TestRepository testRepository;
     private final QuestionRepository questionRepository;
     private final QuestionOptionRepository optionRepository;
+
+    private final LessonRepository lessonRepository;
+    private final ChapterRepository chapterRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
+    private final LessonProgressRepository lessonProgressRepository;
+    private final ProgressCalculatorService progressCalculatorService;
 
     private final AttemptMapper attemptMapper;
     private final QuestionMapper questionMapper;
@@ -84,7 +101,7 @@ public class AttemptService {
      * @throws TimerExpiredException            If the time limit for the attempt has expired.
      */
     private static final Logger log = LoggerFactory.getLogger(AttemptService.class);
-    @Transactional
+    @Transactional(noRollbackFor = TimerExpiredException.class)
     public TestResultDto submitAttempt(UUID attemptId, UUID studentId,
                                        SubmitRequestDto request) {
         TestAttempt attempt = attemptRepository.findById(attemptId)
@@ -108,15 +125,59 @@ public class AttemptService {
         if (LocalDateTime.now().isAfter(expireTime)) {
             attempt.setStatus(AttemptStatus.EXPIRED);
             attempt.setEndedAt(LocalDateTime.now());
-            attemptRepository.save(attempt);
+            attemptRepository.saveAndFlush(attempt);
 
             throw new TimerExpiredException("The time limit for this attempt has expired");
         }
 
+        List<TestResultDto.TestResultQuestionDto> resultQuestions = new ArrayList<>();
+
+        Set<Integer> allQuestionIds = questionRepository
+                .findByTestIdAndIsActiveTrue(test.getId())
+                .stream()
+                .map(Question::getId)
+                .collect(Collectors.toSet());
+
+        Set<Integer> submittedQuestionIds = request.getAnswers()
+                .stream()
+                .map(SubmitAnswerDto::getQuestionId)
+                .collect(Collectors.toSet());
+
         int correctCount = 0;
-        int totalCount = request.getAnswers().size();
+        int totalCount = allQuestionIds.size();
+
+        allQuestionIds.removeAll(submittedQuestionIds);
+        for(Integer questionId : allQuestionIds) {
+            Question question = questionRepository.findById(questionId).get();
+
+            TestResultDto.TestResultQuestionDto resultQuestion = new TestResultDto.TestResultQuestionDto();
+            resultQuestion.setQuestionId(questionId);
+            resultQuestion.setQuestionType(question.getQuestionType());
+            resultQuestion.setContent(question.getContent());
+            resultQuestion.setSelectedOptionIds(Collections.emptyList());
+            resultQuestion.setCorrectOptionIds(optionRepository
+                    .findByQuestionIdAndIsCorrectTrue(questionId)
+                    .stream()
+                    .map(QuestionOption::getId)
+                    .toList());
+            resultQuestion.setCorrect(false);
+            resultQuestions.add(resultQuestion);
+
+            AttemptAnswer answer = new AttemptAnswer();
+            answer.setAttempt(attempt);
+            answer.setQuestion(question);
+            answer.setSelectedOptionIds(Collections.emptyList());
+            answer.setCorrect(false);
+            answer.setTimeSpent(BigDecimal.valueOf(0));
+            answer.setAnsweredAt(LocalDateTime.now());
+
+            answerRepository.save(answer);
+        }
 
         for (SubmitAnswerDto answerDTO : request.getAnswers()) {
+            TestResultDto.TestResultQuestionDto resultQuestion = new TestResultDto.TestResultQuestionDto();
+            resultQuestion.setQuestionId(answerDTO.getQuestionId());
+
             Question question = questionRepository.findById(answerDTO.getQuestionId())
                     .orElseThrow(() -> new DoesNotExistException(
                             String.format(DOES_NOT_EXIST_MSG, "question", answerDTO.getQuestionId())));
@@ -132,6 +193,14 @@ public class AttemptService {
             if (isCorrect) {
                 correctCount++;
             }
+
+            resultQuestion.setSelectedOptionIds(answerDTO.getSelectedOptionIds());
+            resultQuestion.setCorrectOptionIds(new ArrayList<>(correctOptionIds));
+            resultQuestion.setQuestionType(question.getQuestionType());
+            resultQuestion.setContent(question.getContent());
+            resultQuestion.setCorrect(isCorrect);
+
+            resultQuestions.add(resultQuestion);
 
             AttemptAnswer answer = new AttemptAnswer();
             answer.setAttempt(attempt);
@@ -167,10 +236,46 @@ public class AttemptService {
         attempt.setEndedAt(LocalDateTime.now());
         attemptRepository.save(attempt);
 
-        if (test.getAiEnabled()) {
+        if (Boolean.TRUE.equals(test.getAiEnabled())) {
             log.debug("TODO: implement sprint3 logic");
         }
 
-        return attemptMapper.toTestResultDTO(result);
+        TestResultDto testResultDto = attemptMapper.toTestResultDTO(result);
+        testResultDto.setQuestions(resultQuestions);
+
+        //=========== Sprint 3 - Marking lesson progress and checking course completion after a test ===========
+        if (passed) {
+            markLessonAndCheckCourseCompletion(studentId, test);
+        }
+        return testResultDto;
+    }
+
+    private void markLessonAndCheckCourseCompletion(UUID studentId, Test test) {
+        UUID lessonId = test.getLessonId();
+        Optional<UUID> chapterIdOptional = lessonRepository.findChapterIdFromID(lessonId);
+        if (chapterIdOptional.isPresent())
+        {
+            UUID chapterId = chapterIdOptional.get();
+            Optional<UUID> courseIdOptional = chapterRepository.findCourseIdFromId(chapterId);
+            if (courseIdOptional.isPresent()) {
+                UUID courseId = courseIdOptional.get();
+                Optional<CourseEnrollment> enrollmentOpt = courseEnrollmentRepository
+                        .findByStudentIdAndCourseId(studentId, courseId);
+
+                if (enrollmentOpt.isPresent()) {
+                    UUID enrollmentId = enrollmentOpt.get().getId();
+
+                    lessonProgressRepository.insertProgressIdempotent(lessonId, studentId, enrollmentId);
+
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            progressCalculatorService.checkAndMarkCompletion(enrollmentId);
+                        } catch (Exception e) {
+                            log.error("Error during async progress calculation for enrollmentId: {}", enrollmentId, e);
+                        }
+                    });
+                }
+            }
+        }
     }
 }
