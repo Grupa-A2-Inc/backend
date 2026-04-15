@@ -5,6 +5,7 @@ import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.service.AuthService;
 import org.elearning.backend.auth.service.PasswordResetService;
 import org.elearning.backend.auth.service.RefreshTokenService;
+import org.elearning.backend.auth.service.TokenBlacklistService;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,9 @@ class AuthLogoutTest {
 
     @MockitoBean
     private RefreshTokenService refreshTokenService;
+
+    @MockitoBean
+    private TokenBlacklistService tokenBlacklistService;
 
     @MockitoBean
     private JwtUtil jwtUtil;

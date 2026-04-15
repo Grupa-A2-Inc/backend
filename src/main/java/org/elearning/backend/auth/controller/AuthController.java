@@ -158,9 +158,9 @@ public class AuthController {
 
     @Operation(
             summary = "Refresh access token",
-            description = "Validates the refresh token from the HttpOnly cookie and issues a new access token."
+            description = "Validates the refresh token from the HttpOnly cookie and issues a new access token and a new refresh token cookie."
     )
-    @ApiResponse(responseCode = "200", description = "New access token issued",
+    @ApiResponse(responseCode = "200", description = "New access token issued and refresh token cookie sent",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = RefreshResponse.class)))
     @ApiResponse(responseCode = "401", description = "Invalid, expired or revoked refresh token", content = @Content)
     @PostMapping("/refresh")
@@ -188,7 +188,8 @@ public class AuthController {
 
     @Operation(
             summary = "Logout user",
-            description = "Clears the refresh token cookie by returning the same cookie with an empty value and Max-Age=0."
+            description = "Clears the refresh token cookie by returning the same cookie with an empty value and Max-Age=0." +
+                    "Aditionally adds the current access token to a blacklist until expiration"
     )
     @ApiResponse(
             responseCode = "204",
