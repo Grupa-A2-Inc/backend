@@ -5,12 +5,15 @@ import org.elearning.backend.assessment.dto.question_dto.QuestionRequestDto;
 import org.elearning.backend.assessment.dto.question_dto.QuestionResponseDto;
 import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.assessment.service.QuestionService;
+import org.elearning.backend.security.access.AccessService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class QuestionControllerTest {
 
     @Autowired
@@ -38,9 +42,21 @@ class QuestionControllerTest {
     @MockitoBean
     private QuestionService questionService;
 
+    @MockitoBean
+    private AccessService accessService;
+
     private final UUID professorId = UUID.fromString("00000000-0000-0000-0000-000000000099");
     private final UUID testId = UUID.randomUUID();
     private final Integer questionId = 1;
+
+    @BeforeEach
+    void setUpAccessService() {
+        when(accessService.canCreateTestQuestion(any(), any())).thenReturn(true);
+        when(accessService.canViewTestQuestion(any(), any(), any())).thenReturn(true);
+        when(accessService.canViewTestQuestions(any(), any())).thenReturn(true);
+        when(accessService.canEditTestQuestion(any(), any(), any())).thenReturn(true);
+        when(accessService.canDeleteTestQuestion(any(), any(), any())).thenReturn(true);
+    }
 
     private QuestionResponseDto mockResponse() {
         return QuestionResponseDto.builder()

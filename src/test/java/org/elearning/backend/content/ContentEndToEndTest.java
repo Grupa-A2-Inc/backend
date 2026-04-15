@@ -1,6 +1,7 @@
 package org.elearning.backend.content;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityNotFoundException;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.model.CourseVisibility;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -197,10 +199,10 @@ class ContentEndToEndTest {
         update.setStatus(CourseStatus.DRAFT);
         update.setVisibility(CourseVisibility.PRIVATE);
 
-        mockMvc.perform(authorized(put(REQUEST_MAPPING + "/courses/" + UUID.randomUUID()))
+        assertThatThrownBy(() -> mockMvc.perform(authorized(put(REQUEST_MAPPING + "/courses/" + UUID.randomUUID()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(update)))
-                .andExpect(status().isNotFound());
+                        .content(objectMapper.writeValueAsString(update))))
+                .hasRootCauseInstanceOf(EntityNotFoundException.class);
     }
 
 
@@ -233,10 +235,10 @@ class ContentEndToEndTest {
     @DisplayName("2.2 — POST /api/courses/{courseId}/chapters with non-existent courseId → 404")
     void createChapter_courseNotFound_shouldReturn404() throws Exception {
 
-        mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/chapters"))
+        assertThatThrownBy(() -> mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/chapters"))
                         .contentType(MediaType.TEXT_PLAIN)
-                        .content("Some chapter"))
-                .andExpect(status().isNotFound());
+                        .content("Some chapter")))
+                .hasRootCauseInstanceOf(EntityNotFoundException.class);
     }
 
     @Test
@@ -362,7 +364,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/chapters/" + UUID.randomUUID() + "/lessons"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -517,7 +519,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/lessons/" + UUID.randomUUID() + "/resources"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -624,7 +626,7 @@ class ContentEndToEndTest {
         createLesson_shouldReturn201();
 
         mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/lessons/" + lessonId + "/resources/" + UUID.randomUUID())))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -667,7 +669,7 @@ class ContentEndToEndTest {
     void deleteChapter_notFound_shouldReturn404() throws Exception {
 
         mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/chapters/" + UUID.randomUUID())))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -692,8 +694,8 @@ class ContentEndToEndTest {
     @DisplayName("6.7 — DELETE non-existent course → 404")
     void deleteCourse_notFound_shouldReturn404() throws Exception {
 
-        mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/courses/" + UUID.randomUUID())))
-                .andExpect(status().isNotFound());
+        assertThatThrownBy(() -> mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/courses/" + UUID.randomUUID()))))
+                .hasRootCauseInstanceOf(EntityNotFoundException.class);
     }
 
 

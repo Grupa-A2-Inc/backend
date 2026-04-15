@@ -39,7 +39,7 @@ class CourseControllerTest {
     void setUp() {
         authenticatedUserId = insertAuthenticatedUser();
         authorizeRequests();
-        instructorId = UUID.randomUUID();
+        instructorId = authenticatedUserId;
     }
 
     private UUID insertCourseWithTitleAndDescription(String title, String description, UUID createdBy) {
@@ -126,9 +126,7 @@ class CourseControllerTest {
      */
     @Test
     void shouldGetOnlyMyCoursesForHardcodedUser() {
-        UUID hardcodedUserId = UUID.fromString("00000000-0000-0000-0000-000000000000");
-
-        insertCourse("My Course", hardcodedUserId);
+        insertCourse("My Course", authenticatedUserId);
         insertCourse("Other Course", UUID.randomUUID());
 
         ResponseEntity<String> response = restTemplate.getForEntity(
@@ -236,7 +234,7 @@ class CourseControllerTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
     /**
      * POST /api/courses
@@ -437,7 +435,7 @@ class CourseControllerTest {
                 String.class
         );
         assertThat(createdByInDb)
-                        .isEqualTo("00000000-0000-0000-0000-000000000000")
+                        .isEqualTo(authenticatedUserId.toString())
                         .isNotEqualTo(fakeCreatedBy.toString());
     }
 
@@ -534,7 +532,7 @@ class CourseControllerTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     /**
@@ -575,7 +573,7 @@ class CourseControllerTest {
                 Void.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     /**

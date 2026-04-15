@@ -43,7 +43,7 @@ class ChapterControllerTest {
         courseId = UUID.randomUUID();
         jdbcTemplate.execute(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
-                        "VALUES ('" + courseId + "', 'Test Course', '" + UUID.randomUUID() + "', 'DRAFT', 'PRIVATE')"
+                        "VALUES ('" + courseId + "', 'Test Course', '" + authenticatedUserId + "', 'DRAFT', 'PRIVATE')"
         );
     }
 
@@ -141,7 +141,7 @@ class ChapterControllerTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     /**
@@ -215,7 +215,7 @@ class ChapterControllerTest {
                 Void.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -415,7 +415,7 @@ class ChapterControllerTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**

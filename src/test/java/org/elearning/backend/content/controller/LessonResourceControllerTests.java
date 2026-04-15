@@ -48,7 +48,7 @@ class LessonResourceControllerTests {
         UUID courseId = UUID.randomUUID();
         jdbcTemplate.execute(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
-                        "VALUES ('" + courseId + "', 'Test Course', '" + UUID.randomUUID() + "', 'DRAFT', 'PRIVATE')"
+                        "VALUES ('" + courseId + "', 'Test Course', '" + authenticatedUserId + "', 'DRAFT', 'PRIVATE')"
         );
 
 
@@ -162,7 +162,7 @@ class LessonResourceControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -204,7 +204,7 @@ class LessonResourceControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -214,7 +214,7 @@ class LessonResourceControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -279,7 +279,7 @@ class LessonResourceControllerTests {
                 Void.class
         );
 
-        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
 
@@ -378,7 +378,7 @@ class LessonResourceControllerTests {
                 new HttpEntity<>(body, jsonHeaders()),
                 String.class
         );
-        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test

@@ -53,7 +53,7 @@ class TestsControllerTest {
         jdbcTemplate.update(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
                         "VALUES (?, ?, ?, CAST(? AS course_status), CAST(? AS course_visibility))",
-                courseId, "Test Course", UUID.randomUUID(), "DRAFT", "PRIVATE"
+                courseId, "Test Course", authenticatedUserId, "DRAFT", "PRIVATE"
         );
 
         chapterId = UUID.randomUUID();
@@ -175,7 +175,7 @@ class TestsControllerTest {
     }
 
     @Test
-    void shouldNotCreateNewTestIfLessonDoesNotExist(){
+    void shouldReturnForbiddenWhenCreatingTestForMissingLessonIsRejectedByPreAuth(){
         String body = """
                 {
                     "title": "Test 1",
@@ -191,7 +191,7 @@ class TestsControllerTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
     }
 
@@ -246,7 +246,7 @@ class TestsControllerTest {
     }
 
     @Test
-    void shouldNotDeleteTestThatDoesNotExist(){
+    void shouldReturnForbiddenWhenDeletingMissingTestIsRejectedByPreAuth(){
         ResponseEntity<Void> response = restTemplate.exchange(
                 REQUEST_MAPPING + TESTS + UUID.randomUUID(),
                 HttpMethod.DELETE,
@@ -254,7 +254,7 @@ class TestsControllerTest {
                 Void.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -270,13 +270,13 @@ class TestsControllerTest {
     }
 
     @Test
-    void shouldNotGetTestFromLessonThatDoesNotExist(){
+    void shouldReturnForbiddenWhenGettingTestFromMissingLessonIsRejectedByPreAuth(){
         ResponseEntity<String> response = restTemplate.getForEntity(
                 REQUEST_MAPPING + LESSONS + UUID.randomUUID() + "/test",
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -302,13 +302,13 @@ class TestsControllerTest {
     }
 
     @Test
-    void shouldNotGetTestDetailsThatDoesNotExist(){
+    void shouldReturnForbiddenWhenGettingMissingTestDetailsIsRejectedByPreAuth(){
         ResponseEntity<String> response = restTemplate.getForEntity(
                 REQUEST_MAPPING + TESTS + UUID.randomUUID(),
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -335,7 +335,7 @@ class TestsControllerTest {
     }
 
     @Test
-    void shouldNotUpdateTestThatDoesNotExist(){
+    void shouldReturnForbiddenWhenUpdatingMissingTestIsRejectedByPreAuth(){
         String body = """
             {
                 "title": "Updated Title"
@@ -349,7 +349,7 @@ class TestsControllerTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -382,7 +382,7 @@ class TestsControllerTest {
     }
 
     @Test
-    void shouldNotPublishTestThatDoesNotExist(){
+    void shouldReturnForbiddenWhenPublishingMissingTestIsRejectedByPreAuth(){
         ResponseEntity<String> response = restTemplate.exchange(
                 REQUEST_MAPPING + TESTS + UUID.randomUUID() + "/publish",
                 HttpMethod.PATCH,
@@ -390,7 +390,7 @@ class TestsControllerTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -410,13 +410,12 @@ class TestsControllerTest {
 
     @Test
     void shouldGetQuestionsIfAuthor(){
-        UUID professorId = UUID.fromString("00000000-0000-0000-0000-000000000001");
         UUID testId = UUID.randomUUID();
 
         jdbcTemplate.update(
                 "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status)" +
                         " VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? as test_status))",
-                testId, lessonId, professorId, "Test1", "description", 600, true, "DRAFT"
+                testId, lessonId, authenticatedUserId, "Test1", "description", 600, true, "DRAFT"
         );
 
         insertQuestion(testId);
@@ -429,17 +428,24 @@ class TestsControllerTest {
     }
 
     @Test
-    void shouldNotGetQuestionsIfTestDoesNotExist(){
+    void shouldReturnForbiddenWhenGettingQuestionsForMissingTestIsRejectedByPreAuth(){
         ResponseEntity<String> response = restTemplate.getForEntity(
                 REQUEST_MAPPING + TESTS + UUID.randomUUID() + "/questions",
                 String.class
         );
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
 
     @Test
     void shouldNotGetQuestionsIfIsNotAuthor(){
+        UUID otherTeacherId = insertAuthenticatedUser();
+        String token = jwtUtil.generateAccessToken(otherTeacherId, RoleName.TEACHER);
+        restTemplate.getRestTemplate().setInterceptors(List.of((request, body, execution) -> {
+            request.getHeaders().setBearerAuth(token);
+            return execution.execute(request, body);
+        }));
+
         UUID testId = insertTest("Test1", "desc", 600, false, "DRAFT");
         insertQuestion(testId);
 
@@ -448,6 +454,8 @@ class TestsControllerTest {
                 String.class
         );
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", otherTeacherId);
     }
 
 

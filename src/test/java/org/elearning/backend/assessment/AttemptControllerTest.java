@@ -268,13 +268,13 @@ class AttemptControllerTest {
     }
 
     @Test
-    void startAttempt_shouldReturn404_whenTestNotFound() throws Exception {
+    void startAttempt_shouldReturn403_whenTestNotFoundIsRejectedByPreAuth() throws Exception {
         UUID missingTestId = UUID.randomUUID();
 
         mockMvc.perform(authorized(post("/api/v1/tests/{testId}/start", missingTestId))
                         .with(csrf()))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", containsString("does not exist")));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", containsString("Access Denied")));
     }
 
     @Test
@@ -316,15 +316,15 @@ class AttemptControllerTest {
     }
 
     @Test
-    void submitAttempt_shouldReturn404_whenAttemptNotFound() throws Exception {
+    void submitAttempt_shouldReturn403_whenAttemptNotFoundIsRejectedByPreAuth() throws Exception {
         UUID missingAttemptId = UUID.randomUUID();
 
         mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", missingAttemptId))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(mockSubmitRequest())))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", containsString("does not exist")));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", containsString("Access Denied")));
     }
 
     @Test
@@ -366,7 +366,7 @@ class AttemptControllerTest {
                                 submitRequestForAnswer(context.questionId(), context.correctOptionId())
                         )))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message", containsString("does not belong")));
+                .andExpect(jsonPath("$.message", containsString("Access Denied")));
     }
 
     @Test

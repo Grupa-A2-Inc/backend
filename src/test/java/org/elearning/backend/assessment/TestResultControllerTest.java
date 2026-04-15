@@ -5,10 +5,14 @@ import org.elearning.backend.assessment.dto.attempt_dto.AttemptReportDTO;
 import org.elearning.backend.assessment.dto.attempt_dto.AttemptStatusDTO;
 import org.elearning.backend.assessment.model.AttemptStatus;
 import org.elearning.backend.assessment.service.TestResultService;
+import org.elearning.backend.security.access.AccessService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -17,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -25,6 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
+@WithMockUser(username = "00000000-0000-0000-0000-000000000001", roles = "STUDENT")
 class TestResultControllerTest {
 
     @Autowired
@@ -36,9 +43,19 @@ class TestResultControllerTest {
     @MockitoBean
     private TestResultService testResultService;
 
+    @MockitoBean
+    private AccessService accessService;
+
     private final UUID attemptId = UUID.randomUUID();
     private final UUID testId = UUID.randomUUID();
     private final UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+    @BeforeEach
+    void setUpAccessService() {
+        when(accessService.canViewAttemptResult(any(), any())).thenReturn(true);
+        when(accessService.canViewMyTestAttempts(any(), any())).thenReturn(true);
+        when(accessService.canViewMyBestTestResult(any(), any())).thenReturn(true);
+    }
 
     @Test
     void getResult_shouldReturnAttemptReport() throws Exception {
@@ -188,4 +205,3 @@ class TestResultControllerTest {
         verify(testResultService).getTestResult(attemptId, studentId);
     }
 }
-

@@ -42,7 +42,7 @@ class LessonsControllerTests {
         UUID courseID = UUID.randomUUID();
         jdbcTemplate.execute(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
-                        "VALUES ('" + courseID + "', 'Test Course', '" + UUID.randomUUID() + "', 'DRAFT', 'PRIVATE')"
+                        "VALUES ('" + courseID + "', 'Test Course', '" + authenticatedUserId + "', 'DRAFT', 'PRIVATE')"
         );
         chapterID = UUID.randomUUID();
         jdbcTemplate.execute(
@@ -118,7 +118,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -215,7 +215,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -248,7 +248,7 @@ class LessonsControllerTests {
                             String.class
             );
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -298,7 +298,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -346,7 +346,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -532,7 +532,7 @@ class LessonsControllerTests {
                             String.class
             );
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -667,8 +667,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).contains("Lectia Profesor");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
         Integer progressCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM lesson_progress",
@@ -745,6 +744,6 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 }

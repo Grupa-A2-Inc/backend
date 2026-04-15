@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,8 +30,8 @@ public class TestResultController {
     @ApiResponse(responseCode = "404", description = "Attempt not found or no results available")
     @GetMapping("/api/v1/attempts/{attemptId}/result")
     @PreAuthorize("@accessService.canViewAttemptResult(authentication,#id)")
-    public ResponseEntity<AttemptReportDTO> getResult(@P("id") @PathVariable UUID attemptId,@AuthenticationPrincipal CustomUserDetails currentUser) {
-        UUID userId = currentUser.getUserId();
+    public ResponseEntity<AttemptReportDTO> getResult(@P("id") @PathVariable UUID attemptId,@AuthenticationPrincipal UserDetails currentUser) {
+        UUID userId = extractUserId(currentUser);
         AttemptReportDTO response = testResultService.getTestResult(attemptId, userId);
         return ResponseEntity.ok(response);
     }
@@ -39,8 +40,8 @@ public class TestResultController {
     @ApiResponse(responseCode = "200", description = "Attempts retrieved successfully")
     @GetMapping("/api/v1/tests/{testId}/my-attempts")
     @PreAuthorize("@accessService.canViewMyTestAttempts(authentication,#id)")
-    public ResponseEntity<List<AttemptStatusDTO>> getAttempts(@P("id") @PathVariable UUID testId ,@AuthenticationPrincipal CustomUserDetails currentUser) {
-        UUID userId = currentUser.getUserId();
+    public ResponseEntity<List<AttemptStatusDTO>> getAttempts(@P("id") @PathVariable UUID testId ,@AuthenticationPrincipal UserDetails currentUser) {
+        UUID userId = extractUserId(currentUser);
 
         List<AttemptStatusDTO> response = testResultService.getTestAttempts(testId, userId);
         return ResponseEntity.ok(response);
@@ -51,11 +52,19 @@ public class TestResultController {
     @ApiResponse(responseCode = "404", description = "No finished attempts found for the test")
     @GetMapping("/api/v1/tests/{testId}/my-best")
     @PreAuthorize("@accessService.canViewMyBestTestResult(authentication,#id)")
-    public ResponseEntity<AttemptStatusDTO> getBestAttempt(@P("id") @PathVariable UUID testId,@AuthenticationPrincipal CustomUserDetails currentUser) {
-        UUID userId = currentUser.getUserId();
+    public ResponseEntity<AttemptStatusDTO> getBestAttempt(@P("id") @PathVariable UUID testId,@AuthenticationPrincipal UserDetails currentUser) {
+        UUID userId = extractUserId(currentUser);
 
 
         AttemptStatusDTO response = testResultService.getBestTestAttempt(testId, userId);
         return ResponseEntity.ok(response);
+    }
+
+    private UUID extractUserId(UserDetails currentUser) {
+        if (currentUser instanceof CustomUserDetails customUserDetails) {
+            return customUserDetails.getUserId();
+        }
+
+        return UUID.fromString(currentUser.getUsername());
     }
 }

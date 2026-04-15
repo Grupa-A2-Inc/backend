@@ -10,6 +10,7 @@ import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.model.LessonResource;
 import org.elearning.backend.content.repository.ChapterRepository;
+import org.elearning.backend.content.repository.CourseRepository;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.content.repository.LessonResourceRepository;
 import org.elearning.backend.organization.entity.Organization;
@@ -53,6 +54,9 @@ class AccessServiceCoverageTest {
     private LessonResourceRepository lessonResourceRepository;
 
     @Mock
+    private CourseRepository courseRepository;
+
+    @Mock
     private TestRepository testRepository;
 
     @Mock
@@ -79,12 +83,15 @@ class AccessServiceCoverageTest {
     void chapterPermissions_coverMissingAuthenticatedAndManagedPaths() {
         UUID chapterId = UUID.randomUUID();
         UUID missingChapterId = UUID.randomUUID();
-        Chapter chapter = chapter(chapterId, UUID.randomUUID());
+        UUID courseId = UUID.randomUUID();
+        Chapter chapter = chapter(chapterId, courseId);
 
         when(chapterRepository.findById(chapterId)).thenReturn(Optional.of(chapter));
         when(chapterRepository.findById(missingChapterId)).thenReturn(Optional.empty());
 
-        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+        User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
+        Authentication teacher = authenticationFor(teacherUser);
+        stubManagedCourse(courseId, teacherUser.getId());
 
         assertThat(accessService.canViewChapterLessons(null, chapterId)).isFalse();
         assertThat(accessService.canViewChapterLessons(teacher, chapterId)).isTrue();
@@ -101,12 +108,15 @@ class AccessServiceCoverageTest {
     void lessonPermissions_coverEditAndDeleteDelegates() {
         UUID lessonId = UUID.randomUUID();
         UUID missingLessonId = UUID.randomUUID();
-        Lesson lesson = lesson(lessonId, UUID.randomUUID());
+        UUID courseId = UUID.randomUUID();
+        Lesson lesson = lesson(lessonId, courseId);
 
         when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
         when(lessonRepository.findById(missingLessonId)).thenReturn(Optional.empty());
 
-        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+        User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
+        Authentication teacher = authenticationFor(teacherUser);
+        stubManagedCourse(courseId, teacherUser.getId());
 
         assertThat(accessService.canEditLessonMetaData(teacher, lessonId)).isTrue();
         assertThat(accessService.canEditLessonMetaData(teacher, missingLessonId)).isFalse();
@@ -120,13 +130,16 @@ class AccessServiceCoverageTest {
     void lessonViewAndCreatePermissions_coverStudentAndTeacherPaths() {
         UUID lessonId = UUID.randomUUID();
         UUID missingLessonId = UUID.randomUUID();
-        Lesson lesson = lesson(lessonId, UUID.randomUUID());
+        UUID courseId = UUID.randomUUID();
+        Lesson lesson = lesson(lessonId, courseId);
 
         when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
         when(lessonRepository.findById(missingLessonId)).thenReturn(Optional.empty());
 
         Authentication student = authenticationFor(user(RoleName.STUDENT, UUID.randomUUID()));
-        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+        User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
+        Authentication teacher = authenticationFor(teacherUser);
+        stubManagedCourse(courseId, teacherUser.getId());
 
         assertThat(accessService.canViewLessonResources(student, lessonId)).isTrue();
         assertThat(accessService.canViewLessonResources(student, missingLessonId)).isFalse();
@@ -142,13 +155,16 @@ class AccessServiceCoverageTest {
     void lessonResourcePermissions_coverAdminMissingAndManagedResource() {
         UUID resourceId = UUID.randomUUID();
         UUID missingResourceId = UUID.randomUUID();
-        LessonResource resource = lessonResource(resourceId, UUID.randomUUID());
+        UUID courseId = UUID.randomUUID();
+        LessonResource resource = lessonResource(resourceId, courseId);
 
         when(lessonResourceRepository.findById(resourceId)).thenReturn(Optional.of(resource));
         when(lessonResourceRepository.findById(missingResourceId)).thenReturn(Optional.empty());
 
         Authentication admin = authenticationFor(user(RoleName.ADMIN, UUID.randomUUID()));
-        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+        User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
+        Authentication teacher = authenticationFor(teacherUser);
+        stubManagedCourse(courseId, teacherUser.getId());
 
         assertThat(accessService.canEditLessonResource(admin, resourceId)).isTrue();
         assertThat(accessService.canEditLessonResource(null, resourceId)).isFalse();
@@ -161,8 +177,10 @@ class AccessServiceCoverageTest {
         UUID courseId = UUID.randomUUID();
 
         Authentication admin = authenticationFor(user(RoleName.ADMIN, UUID.randomUUID()));
-        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+        User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
+        Authentication teacher = authenticationFor(teacherUser);
         Authentication student = authenticationFor(user(RoleName.STUDENT, UUID.randomUUID()));
+        stubManagedCourse(courseId, teacherUser.getId());
 
         assertThat(accessService.canCreateCourse(null)).isFalse();
         assertThat(accessService.canCreateCourse(admin)).isTrue();
@@ -191,7 +209,8 @@ class AccessServiceCoverageTest {
 
         org.elearning.backend.assessment.model.Test orphanedTest = test(orphanedTestId, missingLessonId);
         org.elearning.backend.assessment.model.Test managedTest = test(managedTestId, managedLessonId);
-        Lesson managedLesson = lesson(managedLessonId, UUID.randomUUID());
+        UUID courseId = UUID.randomUUID();
+        Lesson managedLesson = lesson(managedLessonId, courseId);
 
         when(testRepository.findById(missingTestId)).thenReturn(Optional.empty());
         when(testRepository.findById(orphanedTestId)).thenReturn(Optional.of(orphanedTest));
@@ -199,8 +218,10 @@ class AccessServiceCoverageTest {
         when(lessonRepository.findById(missingLessonId)).thenReturn(Optional.empty());
         when(lessonRepository.findById(managedLessonId)).thenReturn(Optional.of(managedLesson));
 
-        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+        User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
+        Authentication teacher = authenticationFor(teacherUser);
         Authentication student = authenticationFor(user(RoleName.STUDENT, UUID.randomUUID()));
+        stubManagedCourse(courseId, teacherUser.getId());
 
         assertThat(accessService.canViewTest(teacher, missingTestId)).isFalse();
         assertThat(accessService.canDeleteTest(teacher, orphanedTestId)).isFalse();
@@ -218,6 +239,7 @@ class AccessServiceCoverageTest {
         UUID targetTestId = UUID.randomUUID();
         UUID otherTestId = UUID.randomUUID();
         UUID lessonId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
         int missingQuestionId = 10;
         int nullTestQuestionId = 11;
         int nullTestIdQuestionId = 12;
@@ -227,7 +249,7 @@ class AccessServiceCoverageTest {
         org.elearning.backend.assessment.model.Test targetTest = test(targetTestId, lessonId);
         org.elearning.backend.assessment.model.Test otherTest = test(otherTestId, lessonId);
         org.elearning.backend.assessment.model.Test noIdTest = new org.elearning.backend.assessment.model.Test();
-        Lesson lesson = lesson(lessonId, UUID.randomUUID());
+        Lesson lesson = lesson(lessonId, courseId);
 
         Question nullTestQuestion = new Question();
         nullTestQuestion.setId(nullTestQuestionId);
@@ -254,7 +276,9 @@ class AccessServiceCoverageTest {
         when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
 
         Authentication admin = authenticationFor(user(RoleName.ADMIN, UUID.randomUUID()));
-        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+        User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
+        Authentication teacher = authenticationFor(teacherUser);
+        stubManagedCourse(courseId, teacherUser.getId());
 
         assertThat(accessService.canViewTestQuestion(null, targetTestId, validQuestionId)).isFalse();
         assertThat(accessService.canEditTestQuestion(admin, targetTestId, validQuestionId)).isTrue();
@@ -410,6 +434,17 @@ class AccessServiceCoverageTest {
         test.setId(testId);
         test.setLessonId(lessonId);
         return test;
+    }
+
+    private void stubManagedCourse(UUID courseId, UUID teacherId) {
+        when(courseRepository.getReferenceById(courseId)).thenReturn(course(courseId, teacherId));
+    }
+
+    private Course course(UUID courseId, UUID teacherId) {
+        Course course = new Course();
+        course.setId(courseId);
+        course.setCreatedBy(teacherId);
+        return course;
     }
 
     private TestAttempt attempt(UUID attemptId, UUID studentId) {

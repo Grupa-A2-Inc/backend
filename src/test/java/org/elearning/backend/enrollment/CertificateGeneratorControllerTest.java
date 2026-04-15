@@ -1,5 +1,6 @@
 package org.elearning.backend.enrollment;
 
+import org.elearning.backend.auth.service.TokenBlacklistService;
 import org.elearning.backend.enrollment.controller.CertificateGeneratorController;
 import org.elearning.backend.enrollment.exception.*;
 import org.elearning.backend.enrollment.service.CertificateGeneratorService;
@@ -38,6 +39,9 @@ class CertificateGeneratorControllerTest {
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
+
+    @MockitoBean
+    private TokenBlacklistService tokenBlacklistService;
 
     private UUID enrollmentId;
     private UUID studentId;

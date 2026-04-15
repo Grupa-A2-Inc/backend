@@ -8,6 +8,7 @@ import org.elearning.backend.assessment.dto.question_dto.QuestionRequestDto;
 import org.elearning.backend.assessment.dto.question_dto.QuestionResponseDto;
 import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.assessment.service.QuestionService;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,13 +37,13 @@ public class QuestionController {
             @ApiResponse(responseCode = "404", description = "Test was not found.")
     })
     @PostMapping
-    @PreAuthorize("@accessService.canCrateTestQuestion(authentication,#id)")
+    @PreAuthorize("@accessService.canCreateTestQuestion(authentication,#id)")
     public ResponseEntity<QuestionResponseDto> createQuestion(
             @P("id") @PathVariable UUID testId,
             @RequestBody QuestionRequestDto requestDto,
             @AuthenticationPrincipal UserDetails user
     ) {
-        UUID professorId = UUID.fromString(user.getUsername());
+        UUID professorId = extractUserId(user);
         QuestionResponseDto createdQuestion = questionService.createQuestion(testId, requestDto, professorId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdQuestion);
     }
@@ -99,7 +100,7 @@ public class QuestionController {
             @RequestBody QuestionRequestDto requestDto,
             @AuthenticationPrincipal UserDetails user
     ) {
-        UUID professorId = UUID.fromString(user.getUsername());
+        UUID professorId = extractUserId(user);
         QuestionResponseDto updatedQuestion = questionService.updateQuestion(testId, questionId, requestDto, professorId);
         return ResponseEntity.ok(updatedQuestion);
     }
@@ -118,8 +119,16 @@ public class QuestionController {
             @P("id2") @PathVariable Integer questionId,
             @AuthenticationPrincipal UserDetails user
     ) {
-        UUID professorId = UUID.fromString(user.getUsername());
+        UUID professorId = extractUserId(user);
         questionService.deleteQuestion(testId, questionId, professorId);
         return ResponseEntity.noContent().build();
+    }
+
+    private UUID extractUserId(UserDetails user) {
+        if (user instanceof CustomUserDetails customUserDetails) {
+            return customUserDetails.getUserId();
+        }
+
+        return UUID.fromString(user.getUsername());
     }
 }
