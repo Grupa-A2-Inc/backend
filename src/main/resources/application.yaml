@@ -37,3 +37,11 @@ server:
 app:
   mail:
     from: ${MAIL_FROM}
+
+ai:
+  api:
+    base-url: ${AI_API_BASE_URL}
+    key: ${AI_API_KEY}
+    timeout-generate-ms: 10000
+    timeout-feedback-ms: 5000
+    timeout-adaptive-ms: 10000
