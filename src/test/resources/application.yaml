@@ -29,3 +29,11 @@ logging:
 app:
   mail:
     from: test@example.com
+
+ai:
+  api:
+    base-url: "http://localhost:8080"
+    key: "test-key"
+    timeout-generate-ms: 10000
+    timeout-feedback-ms: 5000
+    timeout-adaptive-ms: 10000
