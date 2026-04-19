@@ -18,10 +18,11 @@ import java.util.UUID;
 public class ParentService {
     private final ParentRepository parentRepository;
     private final StudentRepository studentRepository;
+    private static final String PARENT_NOT_FOUND = "Parent not found";
 
     public ParentDTO getParent(UUID parentId) {
         Parent parent = parentRepository.findById(parentId)
-                .orElseThrow(()-> new EntityNotFoundException("Parent not found"));
+                .orElseThrow(()-> new EntityNotFoundException(PARENT_NOT_FOUND));
 
         return ParentDTO.builder()
                 .id(parent.getId())
@@ -44,7 +45,7 @@ public class ParentService {
 
     public List<StudentDTO> getStudents(UUID parentId) {
         Parent parent = parentRepository.findById(parentId)
-                .orElseThrow(() -> new EntityNotFoundException("Parent not found"));
+                .orElseThrow(() -> new EntityNotFoundException(PARENT_NOT_FOUND));
 
         return parent.getStudents().stream()
                 .map(student -> StudentDTO.builder()
@@ -58,7 +59,7 @@ public class ParentService {
 
     public void addStudent(UUID parentId, UUID studentId) {
         Parent parent = parentRepository.findById(parentId)
-                .orElseThrow(()-> new EntityNotFoundException("Parent not found"));
+                .orElseThrow(()-> new EntityNotFoundException(PARENT_NOT_FOUND));
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(()-> new EntityNotFoundException("Student not found"));
 
@@ -72,7 +73,7 @@ public class ParentService {
 
     public void removeStudent(UUID parentId, UUID studentId) {
         Parent parent = parentRepository.findById(parentId)
-                .orElseThrow(()-> new EntityNotFoundException("Parent not found"));
+                .orElseThrow(()-> new EntityNotFoundException(PARENT_NOT_FOUND));
 
         parent.getStudents().removeIf(s -> s.getId().equals(studentId));
         parentRepository.save(parent);

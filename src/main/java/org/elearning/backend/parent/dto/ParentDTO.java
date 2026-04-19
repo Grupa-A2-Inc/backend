@@ -2,7 +2,6 @@ package org.elearning.backend.parent.dto;
 
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.elearning.backend.student.dto.StudentDTO;
 

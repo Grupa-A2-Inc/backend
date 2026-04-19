@@ -3,8 +3,11 @@ package org.elearning.backend.user.service;
 import lombok.AllArgsConstructor;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
+import org.elearning.backend.parent.entity.Parent;
 import org.elearning.backend.role.entity.Role;
+import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
+import org.elearning.backend.student.entity.Student;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
@@ -36,7 +39,7 @@ public class UserService {
         Role role = roleRepository.findByName(request.getRoleName())
                 .orElseThrow(() -> new UserRoleNotFoundException("Role does not exist: " + request.getRoleName()));
 
-        User user = new User();
+        User user = createUserEntityForRole(request.getRoleName());
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFirstName(request.getFirstName());
@@ -130,4 +133,12 @@ public class UserService {
     }
 
     private final PasswordEncoder passwordEncoder;
+
+    private User createUserEntityForRole(RoleName roleName) {
+        return switch (roleName) {
+            case PARENT -> new Parent();
+            case STUDENT -> new Student();
+            default -> new User();
+        };
+    }
 }

@@ -56,7 +56,7 @@ public class SecurityConfig {
                 "https://frontend-teal-five-57.vercel.app",
                 "https://frontend-z1g5f.vercel.app"
         ));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true); //flag ca sa poate primi/seta cookies
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
