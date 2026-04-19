@@ -29,4 +29,6 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
             @Param("difficulty") BigDecimal difficulty,
             Sort sort // spring transforma asta in order by pentru query
     );
+
+    int countByTestId(UUID testId);
 }
