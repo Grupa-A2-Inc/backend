@@ -210,7 +210,9 @@ public class AuthController {
             try {
                 LocalDateTime expiresAt = jwtUtil.extractExpiration(rawAccessToken);
                 tokenBlacklistService.revokeAccessToken(rawAccessToken, expiresAt);
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+                //Exceptions ignored
+            }
         }
 
         ResponseCookie expiredCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, "")

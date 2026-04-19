@@ -69,10 +69,12 @@ class ParentServiceTest {
 
     @Test
     void getParent_notFound_throwsException() {
+        UUID parentId = UUID.randomUUID();
+
         when(parentRepository.findById(any()))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> parentService.getParent(UUID.randomUUID()))
+        assertThatThrownBy(() -> parentService.getParent(parentId))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Parent not found");
     }
@@ -115,10 +117,12 @@ class ParentServiceTest {
 
     @Test
     void getStudents_parentNotFound_throwsException() {
+        UUID parentId = UUID.randomUUID();
+
         when(parentRepository.findById(any()))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> parentService.getStudents(UUID.randomUUID()))
+        assertThatThrownBy(() -> parentService.getStudents(parentId))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Parent not found");
     }
@@ -148,10 +152,13 @@ class ParentServiceTest {
 
     @Test
     void addStudent_parentNotFound_throwsException() {
+        UUID parentId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
         when(parentRepository.findById(any()))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> parentService.addStudent(UUID.randomUUID(), UUID.randomUUID()))
+        assertThatThrownBy(() -> parentService.addStudent(parentId, studentId))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Parent not found");
 
@@ -160,12 +167,15 @@ class ParentServiceTest {
 
     @Test
     void addStudent_studentNotFound_throwsException() {
-        when(parentRepository.findById(parent.getId()))
+        UUID studentId = UUID.randomUUID();
+        UUID parentId = parent.getId();
+
+        when(parentRepository.findById(parentId))
                 .thenReturn(Optional.of(parent));
         when(studentRepository.findById(any()))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> parentService.addStudent(parent.getId(), UUID.randomUUID()))
+        assertThatThrownBy(() -> parentService.addStudent(parentId, studentId))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Student not found");
 
@@ -176,17 +186,20 @@ class ParentServiceTest {
     void addStudent_alreadyHas2Parents_throwsException() {
         Parent parent1 = new Parent();
         Parent parent2 = new Parent();
+        UUID parentId = parent.getId();
+        UUID studentId = student.getId();
+
         student.getParents().add(parent1);
         student.getParents().add(parent2);
 
-        when(parentRepository.findById(parent.getId()))
+        when(parentRepository.findById(parentId))
                 .thenReturn(Optional.of(parent));
-        when(studentRepository.findById(student.getId()))
+        when(studentRepository.findById(studentId))
                 .thenReturn(Optional.of(student));
 
-        assertThatThrownBy(() -> parentService.addStudent(parent.getId(), student.getId()))
+        assertThatThrownBy(() -> parentService.addStudent(parentId, studentId))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Student already has two parents"); // exact mesajul din service
+                .hasMessage("Student already has two parents");
 
         verify(parentRepository, never()).save(any());
     }
@@ -205,10 +218,13 @@ class ParentServiceTest {
 
     @Test
     void removeStudent_parentNotFound_throwsException() {
+        UUID parentId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
         when(parentRepository.findById(any()))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> parentService.removeStudent(UUID.randomUUID(), UUID.randomUUID()))
+        assertThatThrownBy(() -> parentService.removeStudent(parentId, studentId))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Parent not found");
 

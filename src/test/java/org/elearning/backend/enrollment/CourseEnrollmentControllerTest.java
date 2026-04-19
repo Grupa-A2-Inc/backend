@@ -81,14 +81,15 @@ class CourseEnrollmentControllerTest {
 
     private void insertStudent(UUID userId) {
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
                 userId,
                 "student-" + userId + "@test.com",
                 "password-hash",
                 "Test",
                 "Student",
                 RoleName.STUDENT.name(),
+                "STUDENT",
                 "ACTIVE"
         );
     }

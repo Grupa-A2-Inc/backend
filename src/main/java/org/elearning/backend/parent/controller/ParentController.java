@@ -2,7 +2,6 @@ package org.elearning.backend.parent.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.parent.dto.ParentDTO;
-import org.elearning.backend.parent.repository.ParentRepository;
 import org.elearning.backend.parent.service.ParentService;
 import org.elearning.backend.student.dto.StudentDTO;
 import org.springframework.http.ResponseEntity;

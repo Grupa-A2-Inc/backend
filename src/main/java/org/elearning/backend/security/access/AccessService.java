@@ -40,6 +40,7 @@ public class AccessService {
     private final TestAttemptRepository testAttemptRepository;
     private final QuestionRepository questionRepository;
     private final CourseRepository courseRepository;
+
     public boolean canCreateUser(Authentication authentication, CreateUserRequest request) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
