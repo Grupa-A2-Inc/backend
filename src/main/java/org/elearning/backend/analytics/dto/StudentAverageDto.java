@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -14,9 +15,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class StudentAverageDto {
     private UUID studentId;
-    private Double averageScore;
-    private Double minScore;
-    private Double maxScore;
+    private BigDecimal averageScore;
+    private BigDecimal minScore;
+    private BigDecimal maxScore;
     private Integer testCount;
     private Integer passedTests;
     private Integer failedTests;

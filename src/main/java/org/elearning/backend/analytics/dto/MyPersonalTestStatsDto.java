@@ -10,16 +10,13 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
-public class ClassAverageDto {
+@NoArgsConstructor
+public class MyPersonalTestStatsDto {
     private UUID testId;
     private String testTitle;
-    private Integer totalAttempts;
-    private Integer passedCount;
-    private Integer failedCount;
-    private BigDecimal averageScore;
-    private BigDecimal minScore;
-    private BigDecimal maxScore;
-    private Double failureRate;
+    private Integer totalAttemptCount;
+    private BigDecimal bestScore;
+    private BigDecimal lowestScore;
+    private Double averageScore;
 }
