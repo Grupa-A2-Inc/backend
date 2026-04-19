@@ -20,6 +20,7 @@ CREATE TABLE users (
    first_name    VARCHAR(100) NOT NULL,
    last_name     VARCHAR(100) NOT NULL,
    role_id       BIGINT       NOT NULL REFERENCES roles(id),
+   role_type VARCHAR(50),
    organization_id UUID,
    status        user_status  NOT NULL DEFAULT 'ACTIVE',
    created_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
@@ -30,7 +31,15 @@ CREATE TABLE users (
    locked_until     TIMESTAMP NULL--??? nu stiu daca e ok
 );
 
+CREATE TABLE parent_student (
+    id_parent    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    id_student   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (id_parent, id_student)
+);
+
 CREATE INDEX idx_users_email   ON users(email);
 CREATE INDEX idx_users_role_id ON users(role_id);
 CREATE INDEX idx_users_status  ON users(status);
 CREATE INDEX idx_users_organization_id ON users(organization_id);
+CREATE INDEX idx_parent_student_parent_id ON parent_student(id_parent);
+CREATE INDEX idx_parent_student_student_id ON parent_student(id_student);
