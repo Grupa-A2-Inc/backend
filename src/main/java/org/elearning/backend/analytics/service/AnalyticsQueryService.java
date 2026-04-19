@@ -1,7 +1,6 @@
 package org.elearning.backend.analytics.service;
 
-import org.elearning.backend.analytics.dto.ClassAverageDto;
-import org.elearning.backend.analytics.dto.StudentAverageDto;
+import org.elearning.backend.analytics.dto.*;
 import org.elearning.backend.analytics.exception.AccessDeniedException;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.model.Test;
@@ -29,6 +28,10 @@ public class AnalyticsQueryService {
         this.testResultRepository = testResultRepository;
     }
 
+    /** ProfessorId can be removed once the proper pre-authorization for teachers to view the stats of a class are
+     * implemented
+     */
+
     public ClassAverageDto getClassAverage(UUID testId, UUID professorId){
         Test test = testRepository.findById(testId)
                 .orElseThrow( () -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
@@ -49,4 +52,6 @@ public class AnalyticsQueryService {
 
         return testResultRepository.getStudentAverages(courseId, pageable);
     }
+
+
 }
