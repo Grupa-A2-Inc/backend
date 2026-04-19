@@ -34,3 +34,5 @@ services:
       - MAIL_USERNAME
       - MAIL_PASSWORD
       - MAIL_FROM
+      - AI_API_BASE_URL
+      - AI_API_KEY

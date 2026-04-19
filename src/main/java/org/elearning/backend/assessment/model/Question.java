@@ -3,6 +3,7 @@ package org.elearning.backend.assessment.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.elearning.backend.analytics.model.QuestionSource;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -92,6 +93,10 @@ public class Question {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "source")
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    private QuestionSource source;
 
     /**
      * This is a one-to-many relationship, as a question can have multiple options.
