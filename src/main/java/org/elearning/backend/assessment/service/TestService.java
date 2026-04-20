@@ -13,6 +13,7 @@ import org.elearning.backend.assessment.repository.QuestionOptionRepository;
 import org.elearning.backend.assessment.repository.QuestionRepository;
 import org.elearning.backend.assessment.repository.TestRepository;
 import org.elearning.backend.content.repository.LessonRepository;
+import org.elearning.backend.role.entity.RoleName;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -182,30 +183,17 @@ public class TestService {
      * of correct answers as well, IF they are the author of the test. Students have access to the list of question
      * data, minus the correct options ONLY IF they are enrolled to the course related to the question
      * @param testId - the given testId for the wanted test
-     * @param userId - the userId of the person calling the method
+     * @param roleName - the role of the person making the call
      * @return Question data that changes depending on the user who calls it, if they have access to it.
      */
 
-    public List<QuestionDataForUsersDto> getListOfQuestions(UUID testId, UUID userId){
-        boolean isTeacher = true;
+    public List<QuestionDataForUsersDto> getListOfQuestions(UUID testId, RoleName roleName){
 
         if(!testRepository.existsById(testId)){
             throw new DoesNotExistException(TEST_DOES_NOT_EXIST);
         }
 
-        /* It's true by default, the scrum masters will write the logic to verify if the user calling is a teacher
-          or a student
-        */
-
-        if(isTeacher){
-
-            /*
-            Might be modified by the scrum masters if they don't think this is a good way to handle it
-             */
-
-            if(!testRepository.existsByIdAndCreatedBy(testId,userId)){
-                throw new UserHasNoPermissionException("Only the test's author can access this field");
-            }
+        if(roleName.equals(RoleName.TEACHER)){
             return professorGetListOfQuestions(testId);
         }
         return studentGetListOfQuestions(testId);
