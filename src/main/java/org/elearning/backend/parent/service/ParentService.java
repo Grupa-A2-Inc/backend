@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.parent.dto.ParentDTO;
 import org.elearning.backend.parent.entity.Parent;
 import org.elearning.backend.parent.repository.ParentRepository;
+import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.student.dto.StudentDTO;
 import org.elearning.backend.student.entity.Student;
 import org.elearning.backend.student.repository.StudentRepository;
@@ -59,11 +60,25 @@ public class ParentService {
 
     public void addStudent(UUID parentId, UUID studentId) {
         Parent parent = parentRepository.findById(parentId)
-                .orElseThrow(()-> new EntityNotFoundException(PARENT_NOT_FOUND));
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(()-> new EntityNotFoundException("Student not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Parent not found"));
 
-        if(student.getParents().size() >= 2) {
+        if (!parent.getRole().getName().equals(RoleName.PARENT)) {
+            throw new IllegalArgumentException("User is not a parent");
+        }
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new EntityNotFoundException("Student not found"));
+
+        if (!student.getRole().getName().equals(RoleName.STUDENT)) {
+            throw new IllegalArgumentException("User is not a student");
+        }
+
+        if (parent.getOrganization() == null || student.getOrganization() == null ||
+                !parent.getOrganization().getId().equals(student.getOrganization().getId())) {
+            throw new IllegalArgumentException("Parent and student are not in the same organization");
+        }
+
+        if (student.getParents().size() >= 2) {
             throw new IllegalStateException("Student already has two parents");
         }
 
