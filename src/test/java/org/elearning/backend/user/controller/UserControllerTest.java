@@ -2,8 +2,11 @@ package org.elearning.backend.user.controller;
 
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
+import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
+import org.elearning.backend.user.dto.response.BulkImportResponse;
+import org.elearning.backend.user.dto.response.UserImportResult;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.service.UserService;
@@ -149,5 +152,32 @@ class UserControllerTest {
         verify(userService).changePassword(id, request);
         assertEquals(204, response.getStatusCode().value());
         assertNull(response.getBody());
+    }
+
+    @Test
+    void importUsers_returns200Ok() {
+        UserResponse userResponse = new UserResponse(
+                UUID.randomUUID(), "ion@scoala.ro", "Ion", "Pop",
+                RoleName.STUDENT, null, UserStatus.ACTIVE
+        );
+        List<UserImportResult> results = List.of(UserImportResult.succeeded(userResponse));
+        BulkImportResponse bulkResponse = new BulkImportResponse(results);
+
+        CreateUserBulkRequest request = new CreateUserBulkRequest(
+                List.of(CreateUserRequest.builder()
+                        .email("ion@scoala.ro").password("parola123")
+                        .firstName("Ion").lastName("Pop").roleName(RoleName.STUDENT).build())
+        );
+
+        when(userService.importUsers(request)).thenReturn(bulkResponse);
+
+        ResponseEntity<BulkImportResponse> response = userController.importUsers(request);
+
+        verify(userService).importUsers(request);
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().getTotal());
+        assertEquals(1, response.getBody().getSucceeded());
+        assertEquals(0, response.getBody().getFailed());
     }
 }

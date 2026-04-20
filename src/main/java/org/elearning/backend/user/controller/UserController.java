@@ -5,10 +5,13 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
+import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
+import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -55,9 +58,43 @@ public class UserController {
     )
     @PreAuthorize("@accessService.canCreateUser(authentication, #request)")
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(@P("request")@RequestBody CreateUserRequest request) {
+    public ResponseEntity<UserResponse> createUser(@P("request") @Valid @RequestBody CreateUserRequest request) {
         UserResponse response = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(
+            summary = "Bulk import users",
+            description = "Creates multiple users in a single request. Uses partial success — " +
+                    "each user is processed independently and the response contains a full report."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Import processed — check 'results' for individual outcomes",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = BulkImportResponse.class)
+            )
+    )
+    @ApiResponse(
+            responseCode = "400",
+            description = "Request body invalid",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = @Content)
+
+    @ApiResponse(
+            responseCode = "403",
+            description = "Access denied",
+            content = @Content)
+    @PreAuthorize("@accessService.canImportUsers(authentication, #request)")
+    @PostMapping("/import")
+    public ResponseEntity<BulkImportResponse> importUsers(@Valid @RequestBody CreateUserBulkRequest request) {
+        BulkImportResponse response = userService.importUsers(request);
+        return ResponseEntity.ok(response);
     }
 
     @Operation(
