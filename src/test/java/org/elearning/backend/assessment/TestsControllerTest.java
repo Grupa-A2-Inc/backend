@@ -73,6 +73,9 @@ class TestsControllerTest {
     @AfterEach
     void tearDown() {
         restTemplate.getRestTemplate().setInterceptors(List.of());
+        jdbcTemplate.execute("DELETE FROM course_enrollments");
+        jdbcTemplate.execute("DELETE FROM question_options");
+        jdbcTemplate.execute("DELETE FROM questions");
         jdbcTemplate.execute("DELETE FROM lesson_resources");
         jdbcTemplate.execute("DELETE FROM lessons");
         jdbcTemplate.execute("DELETE FROM chapters");
@@ -479,6 +482,39 @@ class TestsControllerTest {
                 LocalDateTime.class, testId
         );
         assertThat(updatedAt).isNotNull();
+    }
+
+    @Test
+    void shouldGetQuestionsForAuthorTeacherIncludingCorrectAnswers(){
+        UUID testId = insertTest("Test1", "desc", 600, false, "DRAFT");
+        insertQuestion(testId);
+
+        jdbcTemplate.update(
+                "INSERT INTO question_options (question_id, text, is_correct) " +
+                        "SELECT id, 'Correct option', true FROM questions WHERE test_id = ?",
+                testId
+        );
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + TESTS + testId + "/questions",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("correctAnswers");
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenTestHasNoQuestions(){
+        UUID testId = insertTest("TestEmpty", "no questions", 300, false, "DRAFT");
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + TESTS + testId + "/questions",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("[]");
     }
 
     @ParameterizedTest
