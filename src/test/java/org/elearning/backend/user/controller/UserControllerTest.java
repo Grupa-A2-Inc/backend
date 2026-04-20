@@ -4,6 +4,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
+import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.service.UserService;
@@ -13,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.util.List;
 import java.util.UUID;
