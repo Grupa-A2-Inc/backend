@@ -82,6 +82,30 @@ public class AccessService {
         return canViewUser(authentication, targetUserId);
     }
 
+    public boolean canUpdateUserStatus(Authentication authentication, UUID targetUserId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
+            return false;
+        }
+
+        User targetUser = userRepository.findById(targetUserId).orElse(null);
+
+        if (targetUser == null || targetUser.getOrganization() == null) {
+            return false;
+        }
+
+        return currentUser.getOrganizationId().equals(targetUser.getOrganization().getId());
+    }
+
     public boolean canViewOrganization(Authentication authentication, UUID organizationId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 

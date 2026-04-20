@@ -21,8 +21,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AccessServiceTest {
@@ -390,5 +391,115 @@ class AccessServiceTest {
         }
 
         return user;
+    }
+
+    @Test
+    void canUpdateUserStatus_shouldReturnTrue_forOrganizationAdminFromSameOrganization() {
+        UUID orgId = UUID.randomUUID();
+        UUID targetUserId = UUID.randomUUID();
+
+        Authentication authentication = mock(Authentication.class);
+        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(orgId);
+
+        Organization organization = mock(Organization.class);
+        when(organization.getId()).thenReturn(orgId);
+
+        User targetUser = new User();
+        targetUser.setId(targetUserId);
+        targetUser.setOrganization(organization);
+
+        when(userRepository.findById(targetUserId)).thenReturn(Optional.of(targetUser));
+
+        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void canUpdateUserStatus_shouldReturnFalse_forOrganizationAdminFromDifferentOrganization() {
+        UUID currentOrgId = UUID.randomUUID();
+        UUID targetOrgId = UUID.randomUUID();
+        UUID targetUserId = UUID.randomUUID();
+
+        Authentication authentication = mock(Authentication.class);
+        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(currentOrgId);
+
+        Organization organization = mock(Organization.class);
+        when(organization.getId()).thenReturn(targetOrgId);
+
+        User targetUser = new User();
+        targetUser.setId(targetUserId);
+        targetUser.setOrganization(organization);
+
+        when(userRepository.findById(targetUserId)).thenReturn(Optional.of(targetUser));
+
+        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void canUpdateUserStatus_shouldReturnFalse_forRegularUser() {
+        UUID targetUserId = UUID.randomUUID();
+
+        Authentication authentication = mock(Authentication.class);
+        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.STUDENT);
+
+        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void canUpdateUserStatus_shouldReturnFalse_whenTargetUserDoesNotExist() {
+        UUID orgId = UUID.randomUUID();
+        UUID targetUserId = UUID.randomUUID();
+
+        Authentication authentication = mock(Authentication.class);
+        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(orgId);
+
+        when(userRepository.findById(targetUserId)).thenReturn(Optional.empty());
+
+        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void canUpdateUserStatus_shouldReturnFalse_whenTargetUserHasNoOrganization() {
+        UUID orgId = UUID.randomUUID();
+        UUID targetUserId = UUID.randomUUID();
+
+        Authentication authentication = mock(Authentication.class);
+        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(orgId);
+
+        User targetUser = new User();
+        targetUser.setId(targetUserId);
+        targetUser.setOrganization(null);
+
+        when(userRepository.findById(targetUserId)).thenReturn(Optional.of(targetUser));
+
+        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+
+        assertFalse(result);
     }
 }
