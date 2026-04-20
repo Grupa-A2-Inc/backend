@@ -103,12 +103,21 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     @Query("SELECT l FROM Lesson l LEFT JOIN FETCH l.lessonResources WHERE l.chapter.course.id = :courseId ORDER BY l.orderIndex ASC")
     List<Lesson> findLessonsWithResourcesByCourseId(@Param("courseId") UUID courseId);
 
-
-
-
     @Query("""
         SELECT l.id FROM Lesson l
         WHERE l.chapter.course.id = :courseId
     """)
     List<UUID> findAllLessonIdsByCourseId(@Param("courseId") UUID courseId);
+
+    @Query("SELECT COUNT(l) > 0 FROM Lesson l " +
+            "JOIN l.chapter ch " +
+            "JOIN ch.course c " +
+            "WHERE l.id = :lessonId AND c.createdBy = :professorId")
+    boolean isLessonOwnedByProfessor(@Param("lessonId") UUID lessonId, @Param("professorId") UUID professorId);
+
+    @Query("SELECT COUNT(l) > 0 FROM Lesson l " +
+            "JOIN l.chapter ch " +
+            "JOIN CourseEnrollment ce ON ce.courseId = ch.course.id " +
+            "WHERE l.id = :lessonId AND ce.studentId = :studentId")
+    boolean isStudentEnrolledInLessonCourse(@Param("lessonId") UUID lessonId, @Param("studentId") UUID studentId);
 }

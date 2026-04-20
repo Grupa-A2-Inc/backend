@@ -66,12 +66,10 @@ public class AiApiClient {
     // ==========================================
     // FLUX 1: Generare Test
     // ==========================================
-    public AiGenerateResponse generateTest(UUID requestId, UUID studentId, int subjectId, int topicId) {
+    public AiGenerateResponse generateTest(UUID requestId, UUID lessonId) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("requestId", requestId);
-        payload.put("studentId", studentId);
-        payload.put("subjectId", subjectId);
-        payload.put("topicId", topicId);
+        payload.put("lessonId", lessonId);
 
         log.info("Trimit request generare test la AI pentru requestId: {}", requestId);
 
@@ -83,7 +81,7 @@ public class AiApiClient {
                     .header("X-Request-Id", requestId.toString())
                     .body(payload)
                     .retrieve()
-                    // Gestionează elegant erorile HTTP 4xx și 5xx
+                    // Gestioneaza elegant erorile HTTP 4xx și 5xx
                     .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
                             (request, response) -> {
                                 log.error("Eroare de la API-ul AI: Status {}", response.getStatusCode());
