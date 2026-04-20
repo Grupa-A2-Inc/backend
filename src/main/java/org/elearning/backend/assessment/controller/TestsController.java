@@ -121,18 +121,18 @@ public class TestsController {
 
     @Operation( summary = "Get questions",
             description = "Returns the list of each question associated with a given test. Includes the correct options" +
-                    "if the user is a teacher (WORK IN PROGRESS)")
+                    "if the user is a teacher")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Questions successfully returned"),
             @ApiResponse(responseCode = FORBIDDEN, description = "Access denied"),
             @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test")
 
     })
+
     @GetMapping("/tests/{testId}/questions")
     @PreAuthorize("@accessService.canViewTestQuestions(authentication,#id)")
     public ResponseEntity<List<QuestionDataForUsersDto>> getQuestions(@P("id") @PathVariable UUID testId,@AuthenticationPrincipal CustomUserDetails currentUser) {
-        UUID userId = currentUser.getUserId();
-        return ResponseEntity.ok(testService.getListOfQuestions(testId, userId));
+        return ResponseEntity.ok(testService.getListOfQuestions(testId, currentUser.getRoleName()));
     }
 
 
