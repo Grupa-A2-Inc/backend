@@ -1,6 +1,7 @@
 package org.elearning.backend.analytics.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.elearning.backend.analytics.dto.statistics.teacher.FailureRateDTO;
 import org.elearning.backend.analytics.model.AnalyticsAlert;
 import org.elearning.backend.analytics.repository.AnalyticsAlertRepository;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AlertCheckService {
@@ -50,7 +52,7 @@ public class AlertCheckService {
             analyticsAlertRepository.save(alert);
 
         } catch (Exception exception) {
-            System.err.println("Failed to check alerts for testId: " + testId + ". " + exception);
+            log.error("Failed to check alerts for testId: {}", testId, exception);
         }
     }
 }

@@ -22,13 +22,18 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class FailureRateController {
+    private static final String OK = "200";
+
+    private static final String FORBIDDEN = "403";
+    private static final String NOT_FOUND = "404";
+
     private final FailureRateService failureRateService;
 
     @Operation(summary = "Get the failure rate for a specific test",
             description = "A teacher can get the failure rate for a specific test they created, along with the threshold and whether an alert is triggered.")
-    @ApiResponse(responseCode = "200", description = "Failure rate data returned successfully")
-    @ApiResponse(responseCode = "403", description = "User does not have permission to view the test analytics")
-    @ApiResponse(responseCode = "404", description = "Test not found")
+    @ApiResponse(responseCode = OK, description = "Failure rate data returned successfully")
+    @ApiResponse(responseCode = FORBIDDEN, description = "User does not have permission to view the test analytics")
+    @ApiResponse(responseCode = NOT_FOUND, description = "Test not found")
     @GetMapping("/tests/{testId}/analytics/failure-rate")
     @PreAuthorize("@accessService.canViewTest(authentication,#id)")
     public ResponseEntity<FailureRateDTO> getTestFailureRate(@P("id") @PathVariable UUID testId, @AuthenticationPrincipal UserDetails currentUser) {
@@ -36,6 +41,11 @@ public class FailureRateController {
         return ResponseEntity.ok(failureRateService.getTestFailureRate(testId, professorId));
     }
 
+    @Operation(summary = "Get the failure rate for a specific lesson",
+            description = "A teacher can get the failure rate for a specific lesson they created, along with the threshold and whether an alert is triggered.")
+    @ApiResponse(responseCode = OK, description = "Failure rate data returned successfully")
+    @ApiResponse(responseCode = FORBIDDEN, description = "User does not have permission to view the lesson analytics")
+    @ApiResponse(responseCode = NOT_FOUND, description = "Lesson not found")
     @GetMapping("/lessons/{lessonId}/analytics/failure-rate")
     @PreAuthorize("@accessService.canViewLessonContent(authentication,#id)")
     public ResponseEntity<FailureRateDTO> getLessonFailureRate(@P("id") @PathVariable UUID lessonId, @AuthenticationPrincipal UserDetails currentUser) {
