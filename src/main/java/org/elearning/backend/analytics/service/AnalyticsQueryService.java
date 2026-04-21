@@ -1,6 +1,7 @@
 package org.elearning.backend.analytics.service;
 
-import org.elearning.backend.analytics.dto.*;
+import org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto;
+import org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto;
 import org.elearning.backend.analytics.exception.AccessDeniedException;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.model.Test;

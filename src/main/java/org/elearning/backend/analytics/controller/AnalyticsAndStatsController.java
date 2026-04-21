@@ -1,8 +1,10 @@
 package org.elearning.backend.analytics.controller;
 
-import org.elearning.backend.analytics.dto.ClassAverageDto;
-import org.elearning.backend.analytics.dto.MyTestStatsDto;
-import org.elearning.backend.analytics.dto.StudentAverageDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto;
+import org.elearning.backend.analytics.dto.statistics.student.MyTestStatsDto;
+import org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto;
 import org.elearning.backend.analytics.service.AnalyticsQueryService;
 import org.elearning.backend.analytics.service.StudentsStatsService;
 
@@ -24,6 +26,11 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 public class AnalyticsAndStatsController {
 
+    private static final String OK = "200";
+
+    private static final String FORBIDDEN = "403";
+    private static final String NOT_FOUND = "404";
+
     private final AnalyticsQueryService analyticsQueryService;
     private final StudentsStatsService studentsStatsService;
 
@@ -31,6 +38,12 @@ public class AnalyticsAndStatsController {
         this.analyticsQueryService = analyticsQueryService;
         this.studentsStatsService = studentsStatsService;
     }
+
+    @Operation(summary = "Get class average",
+            description = "A teacher can get the results of their class at a given test they created.")
+    @ApiResponse(responseCode = OK, description = "Data returned")
+    @ApiResponse(responseCode = NOT_FOUND, description = "Test does not exist")
+    @ApiResponse(responseCode = FORBIDDEN, description = "User does not have the permissions to view test data")
 
     @GetMapping("/tests/{testId}/analytics/class-average")
     @PreAuthorize("@accessService.canViewTest(authentication,#id)")
@@ -42,6 +55,12 @@ public class AnalyticsAndStatsController {
         return ResponseEntity.ok().body(analyticsQueryService.getClassAverage(testId, userId));
     }
 
+    @Operation(summary = "Get individual student data",
+            description = "A teacher can get individual results from each student at a course from a given page.")
+    @ApiResponse(responseCode = OK, description = "Data returned")
+    @ApiResponse(responseCode = NOT_FOUND, description = "Course does not exist")
+    @ApiResponse(responseCode = FORBIDDEN, description = "User does not have the permissions to view student data")
+
     @GetMapping("/courses/{courseId}/analytics/student-averages")
     @PreAuthorize("@accessService.canViewCourseFullView(authentication,#id)")
     public ResponseEntity<Page<StudentAverageDto>> getStudentAverages(
@@ -51,6 +70,12 @@ public class AnalyticsAndStatsController {
         UUID userId = currentUser.getUserId();
         return ResponseEntity.ok().body(analyticsQueryService.getStudentAverages(courseId, userId, pageable));
     }
+
+    @Operation(summary = "Get personal test data",
+            description = "A student can view their own statistics from a given test.")
+    @ApiResponse(responseCode = OK, description = "Data returned")
+    @ApiResponse(responseCode = NOT_FOUND, description = "Test does not exist")
+    @ApiResponse(responseCode = FORBIDDEN, description = "User does not have the permissions to view data from given test")
 
     @GetMapping("/students/me/tests/{testId}/stats")
     @PreAuthorize("@accessService.canViewTest(authentication,#id)")
