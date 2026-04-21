@@ -74,7 +74,7 @@ public class TestResultService {
                             .correctOptionIds(correctOptionIds)
                             .build();
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional
