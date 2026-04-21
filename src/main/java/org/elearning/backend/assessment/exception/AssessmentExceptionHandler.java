@@ -52,6 +52,11 @@ public class AssessmentExceptionHandler extends GlobalExceptionHandler {
         return buildErrorResponse(exception, HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(TestMustBeDraftException.class)
+    public ResponseEntity<Map<String, Object>> handlePublished(TestMustBeDraftException exception) {
+        return buildErrorResponse(exception, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(TimerExpiredException.class)
     public ResponseEntity<Map<String, Object>> handleTimerExpired(TimerExpiredException exception) {
         return buildErrorResponse(exception, HttpStatus.GONE);

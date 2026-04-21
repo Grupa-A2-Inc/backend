@@ -59,7 +59,8 @@ public class TestsController {
             description = "Deletes the test with a given ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = NO_CONTENT, description = "Test successfully deleted"),
-            @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test")
+            @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test"),
+            @ApiResponse(responseCode = CONFLICT, description = "Test is not a draft"),
     })
     @DeleteMapping("/tests/{testId}")
     @PreAuthorize("@accessService.canDeleteTest(authentication,#id)")
@@ -90,10 +91,12 @@ public class TestsController {
     }
 
     @Operation( summary = "Update test data",
-            description = "Updates the title, description, time duration and toggles the Ai usage of a given test via its ID")
+            description = "Updates the title, description, time duration and toggles the Ai usage of a given test" +
+                    " via its ID, as long as it's a draft")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Test successfully updated"),
-            @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test")
+            @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test"),
+            @ApiResponse(responseCode = CONFLICT, description = "Test is not a draft"),
 
     })
     @PatchMapping("/tests/{testId}")
