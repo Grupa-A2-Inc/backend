@@ -1,6 +1,5 @@
 package org.elearning.backend.assessment.repository;
 
-import org.elearning.backend.analytics.dto.statistics.entity.DifficultyLessonDto;
 import org.elearning.backend.analytics.dto.statistics.student.MyClassTestAverageDto;
 import org.elearning.backend.analytics.dto.statistics.student.MyClassTestBestResultsDto;
 import org.elearning.backend.analytics.dto.statistics.student.MyPersonalTestStatsDto;
@@ -134,7 +133,12 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
             """)
     List<MyClassTestBestResultsDto> getAllByTestOrderByScorePercentAsc(Test test);
 
-
+    @Query(value = """
+        SELECT DISTINCT ON (student_id) * FROM test_results 
+        WHERE test_id = :testId 
+        ORDER BY student_id, score DESC, completed_at DESC
+        """, nativeQuery = true)
+    List<TestResult> findBestAttemptsByTestId(@Param("testId") UUID testId);
 
 
 }
