@@ -1,13 +1,17 @@
 package org.elearning.backend.parent;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.parent.dto.ParentDTO;
 import org.elearning.backend.parent.entity.Parent;
 import org.elearning.backend.parent.repository.ParentRepository;
 import org.elearning.backend.parent.service.ParentService;
+import org.elearning.backend.role.entity.Role;
+import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.student.dto.StudentDTO;
 import org.elearning.backend.student.entity.Student;
 import org.elearning.backend.student.repository.StudentRepository;
+import org.elearning.backend.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,17 +45,32 @@ class ParentServiceTest {
 
     @BeforeEach
     void setUp() {
+        User owner = new User();
+        owner.setId(UUID.randomUUID());
+
+        Organization organization = new Organization();
+        organization.setId(UUID.randomUUID());
+        organization.setName("Scoala 1");
+        organization.setCountry("Romania");
+        organization.setCity("Iasi");
+        organization.setOrganizationType("SCHOOL");
+        organization.setOwner(owner);
+
         parent = new Parent();
         parent.setId(UUID.randomUUID());
         parent.setFirstName("Ion");
         parent.setLastName("Popescu");
         parent.setEmail("ion@test.com");
+        parent.setRole(new Role(RoleName.PARENT));
+        parent.setOrganization(organization);
 
         student = new Student();
         student.setId(UUID.randomUUID());
         student.setFirstName("Maria");
         student.setLastName("Popescu");
         student.setEmail("maria@test.com");
+        student.setRole(new Role(RoleName.STUDENT));
+        student.setOrganization(organization);
     }
 
     @Test
@@ -240,5 +259,64 @@ class ParentServiceTest {
 
         assertThat(parent.getStudents()).isEmpty();
         verify(parentRepository).save(parent);
+    }
+
+    @Test
+    void addStudent_parentNotHaveParentRole_throwsException() {
+        Role teacherRole = new Role(RoleName.TEACHER);
+        parent.setRole(teacherRole);
+
+        when(parentRepository.findById(parent.getId()))
+                .thenReturn(Optional.of(parent));
+
+        assertThatThrownBy(() -> parentService.addStudent(parent.getId(), student.getId()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("User is not a parent");
+
+        verify(parentRepository, never()).save(any());
+    }
+
+    @Test
+    void addStudent_studentNotHaveStudentRole_throwsException() {
+        Role teacherRole = new Role(RoleName.TEACHER);
+        parent.setRole(new Role(RoleName.PARENT));
+        student.setRole(teacherRole);
+
+        when(parentRepository.findById(parent.getId()))
+                .thenReturn(Optional.of(parent));
+        when(studentRepository.findById(student.getId()))
+                .thenReturn(Optional.of(student));
+
+        assertThatThrownBy(() -> parentService.addStudent(parent.getId(), student.getId()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("User is not a student");
+
+        verify(parentRepository, never()).save(any());
+    }
+
+    @Test
+    void addStudent_differentOrganization_throwsException() {
+        Organization org1 = new Organization();
+        org1.setId(UUID.randomUUID());
+
+        Organization org2 = new Organization();
+        org2.setId(UUID.randomUUID());
+
+        parent.setRole(new Role(RoleName.PARENT));
+        parent.setOrganization(org1);
+
+        student.setRole(new Role(RoleName.STUDENT));
+        student.setOrganization(org2);
+
+        when(parentRepository.findById(parent.getId()))
+                .thenReturn(Optional.of(parent));
+        when(studentRepository.findById(student.getId()))
+                .thenReturn(Optional.of(student));
+
+        assertThatThrownBy(() -> parentService.addStudent(parent.getId(), student.getId()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Parent and student are not in the same organization");
+
+        verify(parentRepository, never()).save(any());
     }
 }

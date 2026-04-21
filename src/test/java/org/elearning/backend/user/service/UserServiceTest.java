@@ -9,6 +9,7 @@ import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserImportResult;
+import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
@@ -709,5 +710,79 @@ class UserServiceTest {
         assertEquals("ion@scoala.ro", result.getEmail());
         assertNull(result.getUser());
         assertNotNull(result.getErrorMessage());
+    void updateUserStatus_shouldSetStatusToActive() {
+        UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setId(userId);
+        user.setStatus(UserStatus.INACTIVE);
+
+        UpdateUserStatusRequest request = UpdateUserStatusRequest.builder()
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        userService.updateUserStatus(userId, request);
+
+        assertEquals(UserStatus.ACTIVE, user.getStatus());
+        assertNotNull(user.getUpdatedAt());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateUserStatus_shouldSetStatusToInactive() {
+        UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setId(userId);
+        user.setStatus(UserStatus.ACTIVE);
+
+        UpdateUserStatusRequest request = UpdateUserStatusRequest.builder()
+                .status(UserStatus.INACTIVE)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        userService.updateUserStatus(userId, request);
+
+        assertEquals(UserStatus.INACTIVE, user.getStatus());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateUserStatus_shouldSetStatusToBlocked() {
+        UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setId(userId);
+        user.setStatus(UserStatus.ACTIVE);
+
+        UpdateUserStatusRequest request = UpdateUserStatusRequest.builder()
+                .status(UserStatus.BLOCKED)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        userService.updateUserStatus(userId, request);
+
+        assertEquals(UserStatus.BLOCKED, user.getStatus());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateUserStatus_shouldThrowWhenUserDoesNotExist() {
+        UUID userId = UUID.randomUUID();
+
+        UpdateUserStatusRequest request = UpdateUserStatusRequest.builder()
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class,
+                () -> userService.updateUserStatus(userId, request));
+
+        verify(userRepository, never()).save(any());
     }
 }
