@@ -6,6 +6,7 @@ import org.elearning.backend.ai.dto.AiGenerateResponse;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -22,9 +23,8 @@ import java.util.UUID;
 @Service
 public class AiApiClient {
 
-    private final String baseUrl;
     private final String apiKey;
-
+    private static String API_KEY = "X-Api-Key";
     private final RestClient generateRestClient;
     private final RestClient feedbackRestClient;
     private final RestClient adaptiveRestClient;
@@ -37,7 +37,6 @@ public class AiApiClient {
             @Value("${ai.api.timeout-feedback-ms:5000}") int feedbackTimeout,
             @Value("${ai.api.timeout-adaptive-ms:10000}") int adaptiveTimeout) {
 
-        this.baseUrl = baseUrl;
         this.apiKey = apiKey;
 
         this.generateRestClient = restClientBuilder.clone()
@@ -77,7 +76,7 @@ public class AiApiClient {
             return generateRestClient.post()
                     .uri("/api/generate")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .header("X-Api-Key", apiKey)
+                    .header(API_KEY, apiKey)
                     .header("X-Request-Id", requestId.toString())
                     .body(payload)
                     .retrieve()
@@ -109,10 +108,10 @@ public class AiApiClient {
             return adaptiveRestClient.post()
                     .uri("/api/adaptive/exercises")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .header("X-Api-Key", apiKey)
+                    .header(API_KEY, apiKey)
                     .body(payload)
                     .retrieve()
-                    .onStatus(status -> status.isError(), (request, response) -> {
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
                         throw new AiApiException("Serviciul AI indisponibil: Status " + response.getStatusCode());
                     })
                     .body(AiAdaptiveResponse.class);
@@ -131,7 +130,7 @@ public class AiApiClient {
             feedbackRestClient.post()
                     .uri("/api/adaptive/feedback")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .header("X-Api-Key", apiKey)
+                    .header(API_KEY, apiKey)
                     .body(payload)
                     .retrieve()
                     .toBodilessEntity();

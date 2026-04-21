@@ -63,12 +63,10 @@ public class AiGenerationService {
                 throw new AccessDeniedException(userId);
             }
         }
-        else if (role==RoleName.STUDENT)
+        else if (role==RoleName.STUDENT && !lessonRepository.isStudentEnrolledInLessonCourse(lessonId, userId))
         {
-            if (!lessonRepository.isStudentEnrolledInLessonCourse(lessonId, userId))
-            {
-                throw new AccessDeniedException(userId);
-            }
+            throw new AccessDeniedException(userId);
+
         }
     }
 }
