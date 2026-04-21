@@ -31,7 +31,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ============================================================
  *  FULL END-TO-END TEST — Content Module
  * ============================================================
- *
  *  Coverage:
  *  1.  COURSE    — create, list, update, full-view
  *  2.  CHAPTER   — create, list, update title, update order, delete
@@ -39,7 +38,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *  4.  RESOURCE  — create, list, update, delete
  *  5.  DELETIONS — piece-by-piece (resource → lesson → chapter → course)
  *                  + full delete (course with cascade)
- *
  *  Each test runs in its own transaction and rolls back automatically
  *  => the database stays clean after each run.
  * ============================================================
@@ -191,7 +189,7 @@ class ContentEndToEndTest {
     @Test
     @Order(5)
     @DisplayName("1.5 — PUT /api/courses/{id} with non-existent ID → 404")
-    void updateCourse_notFound_shouldReturn404() throws Exception {
+    void updateCourse_notFound_shouldReturn404()  {
 
         Course update = new Course();
         update.setTitle("X");
@@ -233,7 +231,7 @@ class ContentEndToEndTest {
     @Test
     @Order(11)
     @DisplayName("2.2 — POST /api/courses/{courseId}/chapters with non-existent courseId → 404")
-    void createChapter_courseNotFound_shouldReturn404() throws Exception {
+    void createChapter_courseNotFound_shouldReturn404() {
 
         assertThatThrownBy(() -> mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/chapters"))
                         .contentType(MediaType.TEXT_PLAIN)
@@ -692,7 +690,7 @@ class ContentEndToEndTest {
     @Test
     @Order(56)
     @DisplayName("6.7 — DELETE non-existent course → 404")
-    void deleteCourse_notFound_shouldReturn404() throws Exception {
+    void deleteCourse_notFound_shouldReturn404() {
 
         assertThatThrownBy(() -> mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/courses/" + UUID.randomUUID()))))
                 .hasRootCauseInstanceOf(EntityNotFoundException.class);
