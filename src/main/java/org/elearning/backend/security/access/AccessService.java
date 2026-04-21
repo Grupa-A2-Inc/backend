@@ -20,6 +20,7 @@ import org.elearning.backend.content.repository.LessonResourceRepository;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
+import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.repository.UserRepository;
@@ -54,6 +55,25 @@ public class AccessService {
 
         return currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN && currentUser.getOrganizationId() != null
                 && currentUser.getOrganizationId().equals(request.getOrganizationId());
+    }
+
+    public boolean canImportUsers(Authentication authentication, CreateUserBulkRequest request) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
+            return false;
+        }
+
+        return request.getUsers().stream()
+                .allMatch(u -> currentUser.getOrganizationId().equals(u.getOrganizationId()));
     }
 
     public boolean canViewUser(Authentication authentication, UUID targetUserId) {

@@ -10,8 +10,11 @@ import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.student.entity.Student;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
+import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
+import org.elearning.backend.user.dto.response.BulkImportResponse;
+import org.elearning.backend.user.dto.response.UserImportResult;
 import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
@@ -21,6 +24,8 @@ import org.elearning.backend.user.repository.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -176,5 +181,23 @@ public class UserService {
             case STUDENT -> new Student();
             default -> new User();
         };
+    }
+
+    public BulkImportResponse importUsers(CreateUserBulkRequest request) {
+        List<UserImportResult> results = request.getUsers().stream()
+                .map(this::tryCreateSingleUser)
+                .toList();
+
+        return new BulkImportResponse(results);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public UserImportResult tryCreateSingleUser(CreateUserRequest request) {
+        try {
+            UserResponse created = createUser(request);
+            return UserImportResult.succeeded(created);
+        } catch (Exception e) {
+            return UserImportResult.failed(request.getEmail(), e.getMessage());
+        }
     }
 }

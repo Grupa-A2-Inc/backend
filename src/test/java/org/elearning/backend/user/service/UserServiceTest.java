@@ -5,7 +5,10 @@ import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
+import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
+import org.elearning.backend.user.dto.response.BulkImportResponse;
+import org.elearning.backend.user.dto.response.UserImportResult;
 import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
@@ -563,6 +566,150 @@ class UserServiceTest {
     }
 
     @Test
+    void importUsers_allSuccess_returnsFullSuccessReport() {
+        Role role = new Role(RoleName.TEACHER);
+
+        CreateUserRequest req1 = CreateUserRequest.builder()
+                .email("ion@scoala.ro").password("parola123")
+                .firstName("Ion").lastName("Pop").roleName(RoleName.TEACHER).build();
+
+        CreateUserRequest req2 = CreateUserRequest.builder()
+                .email("ana@scoala.ro").password("parola123")
+                .firstName("Ana").lastName("Pop").roleName(RoleName.TEACHER).build();
+
+        CreateUserBulkRequest bulkRequest = new CreateUserBulkRequest(List.of(req1, req2));
+
+        User savedUser1 = new User();
+        savedUser1.setId(UUID.randomUUID());
+        savedUser1.setEmail("ion@scoala.ro");
+        savedUser1.setFirstName("Ion");
+        savedUser1.setLastName("Pop");
+        savedUser1.setRole(role);
+        savedUser1.setStatus(UserStatus.ACTIVE);
+
+        User savedUser2 = new User();
+        savedUser2.setId(UUID.randomUUID());
+        savedUser2.setEmail("ana@scoala.ro");
+        savedUser2.setFirstName("Ana");
+        savedUser2.setLastName("Pop");
+        savedUser2.setRole(role);
+        savedUser2.setStatus(UserStatus.ACTIVE);
+
+        when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(false);
+        when(userRepository.existsByEmail("ana@scoala.ro")).thenReturn(false);
+        when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
+        when(userRepository.save(any(User.class)))
+                .thenReturn(savedUser1)
+                .thenReturn(savedUser2);
+
+        BulkImportResponse response = userService.importUsers(bulkRequest);
+
+        assertEquals(2, response.getTotal());
+        assertEquals(2, response.getSucceeded());
+        assertEquals(0, response.getFailed());
+        assertTrue(response.getResults().stream().allMatch(UserImportResult::isSuccess));
+    }
+
+    @Test
+    void importUsers_partialSuccess_returnsCorrectReport() {
+        Role role = new Role(RoleName.TEACHER);
+
+        CreateUserRequest validReq = CreateUserRequest.builder()
+                .email("ion@scoala.ro").password("parola123")
+                .firstName("Ion").lastName("Pop").roleName(RoleName.TEACHER).build();
+
+        CreateUserRequest duplicateReq = CreateUserRequest.builder()
+                .email("duplicat@scoala.ro").password("parola123")
+                .firstName("Ana").lastName("Pop").roleName(RoleName.TEACHER).build();
+
+        CreateUserBulkRequest bulkRequest = new CreateUserBulkRequest(List.of(validReq, duplicateReq));
+
+        User savedUser = new User();
+        savedUser.setId(UUID.randomUUID());
+        savedUser.setEmail("ion@scoala.ro");
+        savedUser.setFirstName("Ion");
+        savedUser.setLastName("Pop");
+        savedUser.setRole(role);
+        savedUser.setStatus(UserStatus.ACTIVE);
+
+        when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(false);
+        when(userRepository.existsByEmail("duplicat@scoala.ro")).thenReturn(true);
+        when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        BulkImportResponse response = userService.importUsers(bulkRequest);
+
+        assertEquals(2, response.getTotal());
+        assertEquals(1, response.getSucceeded());
+        assertEquals(1, response.getFailed());
+
+        UserImportResult failedResult = response.getResults().stream()
+                .filter(r -> !r.isSuccess()).findFirst().orElseThrow();
+        assertEquals("duplicat@scoala.ro", failedResult.getEmail());
+        assertNotNull(failedResult.getErrorMessage());
+    }
+
+    @Test
+    void importUsers_allFailed_returnsFullFailureReport() {
+        CreateUserRequest req1 = CreateUserRequest.builder()
+                .email("ion@scoala.ro").build();
+        CreateUserRequest req2 = CreateUserRequest.builder()
+                .email("ana@scoala.ro").build();
+
+        CreateUserBulkRequest bulkRequest = new CreateUserBulkRequest(List.of(req1, req2));
+
+        when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(true);
+        when(userRepository.existsByEmail("ana@scoala.ro")).thenReturn(true);
+
+        BulkImportResponse response = userService.importUsers(bulkRequest);
+
+        assertEquals(2, response.getTotal());
+        assertEquals(0, response.getSucceeded());
+        assertEquals(2, response.getFailed());
+        assertTrue(response.getResults().stream().noneMatch(UserImportResult::isSuccess));
+    }
+
+    @Test
+    void tryCreateSingleUser_success_returnsSucceededResult() {
+        Role role = new Role(RoleName.STUDENT);
+
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("ion@scoala.ro").password("parola123")
+                .firstName("Ion").lastName("Pop").roleName(RoleName.STUDENT).build();
+
+        User savedUser = new User();
+        savedUser.setId(UUID.randomUUID());
+        savedUser.setEmail("ion@scoala.ro");
+        savedUser.setFirstName("Ion");
+        savedUser.setLastName("Pop");
+        savedUser.setRole(role);
+        savedUser.setStatus(UserStatus.ACTIVE);
+
+        when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(false);
+        when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(role));
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        UserImportResult result = userService.tryCreateSingleUser(request);
+
+        assertTrue(result.isSuccess());
+        assertEquals("ion@scoala.ro", result.getEmail());
+        assertNotNull(result.getUser());
+        assertNull(result.getErrorMessage());
+    }
+
+    @Test
+    void tryCreateSingleUser_duplicateEmail_returnsFailedResult() {
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("ion@scoala.ro").build();
+
+        when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(true);
+
+        UserImportResult result = userService.tryCreateSingleUser(request);
+
+        assertFalse(result.isSuccess());
+        assertEquals("ion@scoala.ro", result.getEmail());
+        assertNull(result.getUser());
+        assertNotNull(result.getErrorMessage());
     void updateUserStatus_shouldSetStatusToActive() {
         UUID userId = UUID.randomUUID();
         User user = new User();
