@@ -37,7 +37,7 @@ public class FailureRateController {
     }
 
     @GetMapping("/lessons/{lessonId}/analytics/failure-rate")
-    @PreAuthorize("@accessService.canViewLesson(authentication,#id)")
+    @PreAuthorize("@accessService.canViewLessonContent(authentication,#id)")
     public ResponseEntity<FailureRateDTO> getLessonFailureRate(@P("id") @PathVariable UUID lessonId, @AuthenticationPrincipal UserDetails currentUser) {
         UUID professorId = extractUserId(currentUser);
         return ResponseEntity.ok(failureRateService.getLessonFailureRate(lessonId, professorId));

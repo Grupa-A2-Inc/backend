@@ -31,9 +31,9 @@ public class FailureRateService {
             throw new AccessDeniedException(professorId);
         }
 
-        BigDecimal threshold = analyticsAlertRepository.findByTestId(testId)
+        BigDecimal threshold = analyticsAlertRepository.findByTestIdAndIsActiveTrue(testId)
                 .map(AnalyticsAlert::getFailureThreshold)
-                .orElse(new BigDecimal("50.0"));
+                .orElseThrow(() -> new DoesNotExistException("No analytics alert found for test with id " + testId));
 
         double failedCount = 0.0;
         List<TestResult> bestAttempts = testResultRepository.findBestAttemptsByTestId(testId);
@@ -50,7 +50,7 @@ public class FailureRateService {
         return new FailureRateDTO(BigDecimal.valueOf(failureRate), threshold, alertTriggered);
     }
 
-    public FailureRateDTO getLessonFailureRate(UUID lessonId, UUID professorId) {
+    public FailureRateDTO getLessonFailureRate(UUID lessonId, UUID professorId) throws DoesNotExistException, AccessDeniedException {
         Test test = testRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new DoesNotExistException("No test found for lesson with id " + lessonId));
         if (test.getCreatedBy() != professorId) {
