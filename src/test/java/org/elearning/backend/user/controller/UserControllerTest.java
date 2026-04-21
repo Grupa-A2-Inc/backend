@@ -39,7 +39,6 @@ class UserControllerTest {
     void createUser_returns201Created() {
         CreateUserRequest request = CreateUserRequest.builder()
                 .email("ana@example.com")
-                .password("parola123")
                 .firstName("Ana")
                 .lastName("Pop")
                 .roleName(RoleName.STUDENT)
@@ -167,7 +166,7 @@ class UserControllerTest {
 
         CreateUserBulkRequest request = new CreateUserBulkRequest(
                 List.of(CreateUserRequest.builder()
-                        .email("ion@scoala.ro").password("parola123")
+                        .email("ion@scoala.ro")
                         .firstName("Ion").lastName("Pop").roleName(RoleName.STUDENT).build())
         );
 

@@ -1,6 +1,8 @@
 package org.elearning.backend.user.service;
 
 import lombok.AllArgsConstructor;
+import org.elearning.backend.auth.service.ActivationTokenService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.parent.entity.Parent;
@@ -37,8 +39,11 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
+    private final ActivationTokenService activationTokenService;
+    private final EmailService emailService;
     private static final String USER_NO_EXIST = "User does not exist: ";
 
+    @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already exists: " + request.getEmail());
@@ -49,19 +54,23 @@ public class UserService {
 
         User user = createUserEntityForRole(request.getRoleName());
         user.setEmail(request.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setPasswordHash(null);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setRole(role);
+        user.setStatus(UserStatus.PENDING);
 
         if (request.getOrganizationId() != null) {
             Organization org = organizationRepository.findById(request.getOrganizationId())
                     .orElseThrow(() -> new UserOrganizationNotFoundException("Organization not found: " + request.getOrganizationId()));
             user.setOrganization(org);
         }
-        user.setStatus(UserStatus.ACTIVE);
 
         User saved = userRepository.save(user);
+
+        String rawToken = activationTokenService.generateActivationToken(saved);
+        emailService.sendActivationEmail(saved.getEmail(), saved.getFirstName(), rawToken);
+
         return toResponse(saved);
     }
 

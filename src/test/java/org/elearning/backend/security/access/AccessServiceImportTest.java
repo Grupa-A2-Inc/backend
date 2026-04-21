@@ -59,7 +59,6 @@ class AccessServiceImportTest {
         List<CreateUserRequest> users = java.util.Arrays.stream(orgIds)
                 .map(orgId -> CreateUserRequest.builder()
                         .email("user@test.ro")
-                        .password("parola123")
                         .firstName("Ion")
                         .lastName("Pop")
                         .roleName(RoleName.STUDENT)
