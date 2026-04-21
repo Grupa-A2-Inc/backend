@@ -1,9 +1,9 @@
 package org.elearning.backend.analytics.service;
 
-import org.elearning.backend.analytics.dto.MyClassTestAverageDto;
-import org.elearning.backend.analytics.dto.MyClassTestBestResultsDto;
-import org.elearning.backend.analytics.dto.MyPersonalTestStatsDto;
-import org.elearning.backend.analytics.dto.MyTestStatsDto;
+import org.elearning.backend.analytics.dto.statistics.student.MyClassTestAverageDto;
+import org.elearning.backend.analytics.dto.statistics.student.MyClassTestBestResultsDto;
+import org.elearning.backend.analytics.dto.statistics.student.MyPersonalTestStatsDto;
+import org.elearning.backend.analytics.dto.statistics.student.MyTestStatsDto;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.repository.TestRepository;

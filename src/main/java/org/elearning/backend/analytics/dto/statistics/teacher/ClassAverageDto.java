@@ -1,4 +1,4 @@
-package org.elearning.backend.analytics.dto;
+package org.elearning.backend.analytics.dto.statistics.teacher;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

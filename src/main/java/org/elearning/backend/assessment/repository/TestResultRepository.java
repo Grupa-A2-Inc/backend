@@ -1,6 +1,11 @@
 package org.elearning.backend.assessment.repository;
 
-import org.elearning.backend.analytics.dto.*;
+import org.elearning.backend.analytics.dto.statistics.entity.DifficultyLessonDto;
+import org.elearning.backend.analytics.dto.statistics.student.MyClassTestAverageDto;
+import org.elearning.backend.analytics.dto.statistics.student.MyClassTestBestResultsDto;
+import org.elearning.backend.analytics.dto.statistics.student.MyPersonalTestStatsDto;
+import org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto;
+import org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto;
 import org.elearning.backend.assessment.model.AttemptStatus;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.model.TestResult;
@@ -38,7 +43,7 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
                                   @Param("lessonIds") List<UUID> lessonIds);
 
     @Query(value = """
-            SELECT new org.elearning.backend.analytics.dto.ClassAverageDto (
+            SELECT new org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto (
             tr.test.id,
             tr.test.title,
             CAST(COUNT(tr) as integer),
@@ -56,7 +61,7 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
     ClassAverageDto getClassAverages(@Param("test") Test test);
 
     @Query(value = """
-            SELECT new org.elearning.backend.analytics.dto.StudentAverageDto(tr.studentId,
+            SELECT new org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto(tr.studentId,
             CAST(AVG(tr.scorePercent) AS bigdecimal),
             CAST(MIN(tr.scorePercent) AS bigdecimal),
             CAST(MAX(tr.scorePercent) AS bigdecimal),
@@ -87,7 +92,7 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
 
 
     @Query( value = """
-           SELECT new org.elearning.backend.analytics.dto.MyPersonalTestStatsDto(
+           SELECT new org.elearning.backend.analytics.dto.statistics.student.MyPersonalTestStatsDto(
            tr.test.id,
            tr.test.title,
            CAST(COUNT(tr) AS integer),
@@ -109,7 +114,7 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
     TestResult findTopByStudentIdAndTestOrderByCompletedAtDesc(UUID studentId, Test test);
 
     @Query( value = """
-           SELECT new org.elearning.backend.analytics.dto.MyClassTestAverageDto(
+           SELECT new org.elearning.backend.analytics.dto.statistics.student.MyClassTestAverageDto(
            AVG(tr.scorePercent),
            CAST(COUNT(tr) as integer)
            )
@@ -120,7 +125,7 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
     MyClassTestAverageDto getMyClassAverageStats(@Param("test") Test test);
 
     @Query( value = """
-            SELECT new org.elearning.backend.analytics.dto.MyClassTestBestResultsDto
+            SELECT new org.elearning.backend.analytics.dto.statistics.student.MyClassTestBestResultsDto
             (tr.studentId,
             MAX(tr.scorePercent))
             FROM TestResult tr
