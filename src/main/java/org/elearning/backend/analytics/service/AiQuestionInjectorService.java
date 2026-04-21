@@ -38,6 +38,24 @@ public class AiQuestionInjectorService {
     private final TestRepository testRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * This method injects AI-generated questions into a test based on a completed AI question generation request. It performs the following steps:
+     * 1. Validates that the AI question request exists and is successful.
+     * 2. Validates that the associated lesson exists and that the professor has permission to modify it.
+     * 3. If a test ID is provided, it validates that the test exists; otherwise, it creates a new test in DRAFT status.
+     * 4. Parses the generated questions from the AI request and validates each question's content, options, and correct answers.
+     * 5. Saves the valid questions to the database, associating them with the test.
+     * 6. Updates the AI question request with the test ID and returns an InjectionResultDto containing details of the injection outcome.
+     *
+     * @param requestId The ID of the AI question generation request containing the generated questions.
+     * @param professorId The ID of the professor attempting to inject the questions (used for access control).
+     * @param testIdOpt An optional ID of an existing test to inject questions into; if null, a new test will be created.
+     * @return An InjectionResultDto containing the ID of the test, whether a new test was created, the number of questions injected, and the new total number of questions in the test.
+     * @throws DoesNotExistException if the AI question request, lesson, or specified test does not exist.
+     * @throws AccessDeniedException if the professor does not have permission to modify the lesson or test.
+     * @throws ResourceConflictException if the AI generation is not successful or if there is an error parsing generated questions.
+     * @throws ValidationException if any of the generated questions fail validation checks (e.g., empty text, insufficient options, incorrect answer definitions).
+     */
     @Transactional
     public InjectionResultDto injectQuestions(UUID requestId, UUID professorId, UUID testIdOpt) {
         AiQuestionRequest aiQuestionRequest = aiQuestionRequestRepository.findById(requestId)
@@ -78,7 +96,7 @@ public class AiQuestionInjectorService {
                     new TypeReference<List<AiQuestionDto>>() {}
             );
         } catch (JsonProcessingException e) {
-            throw new ResourceConflictException("Error at parsing generated questions. Create questions manually or retry later.");
+            throw new ValidationException("Error at parsing generated questions. Create questions manually or retry later.");
         }
 
         List<Question> questionsToSave = new ArrayList<>();
@@ -110,10 +128,19 @@ public class AiQuestionInjectorService {
                 test.getId(),
                 isTestCreated,
                 questionsToSave.size(),
-                newTotal
+                newTotal,
+                lesson.getId()
         );
     }
 
+    /**
+     * Validates the AI-generated question DTO to ensure it meets the necessary criteria for injection.
+     * This includes checks for non-empty text, a minimum number of options, and correct answer definitions based on question type.
+     *
+     * @param dto The AI question DTO to validate.
+     * @param index The index of the question in the list (used for error messages).
+     * @throws ValidationException if any validation rule is violated.
+     */
     private void validateAiQuestion(AiQuestionDto dto, int index) {
         if (dto.getText() == null || dto.getText().trim().isEmpty()) {
             throw new ValidationException(String.format("Question %d: The text can't be empty", index));

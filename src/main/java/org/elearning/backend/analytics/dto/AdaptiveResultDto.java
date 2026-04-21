@@ -5,14 +5,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-public class InjectionResultDto {
-    private UUID testId;
-    private boolean testCreated;
-    private int injectedCount;
-    private int newTotalQuestions;
-    private UUID lessonId;
+public class AdaptiveResultDto {
+    private UUID sessionId;
+    private double totalScore;
+    private List<ClientResultDto> clientResults;
+    private boolean feedbackSent;
 }
