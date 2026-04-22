@@ -9,6 +9,7 @@ import org.elearning.backend.analytics.dto.*;
 import org.elearning.backend.analytics.exception.ResourceConflictException;
 import org.elearning.backend.analytics.exception.ValidationException;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
+import org.elearning.backend.assessment.exception.TimerExpiredException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +40,7 @@ public class AdaptiveSubmitService {
      * @param studentAnswers The answers provided by the student for each exercise in the session.
      * @return An AdaptiveResultDto containing the total score, detailed results for each exercise, and whether AI feedback was sent.
      */
-    @Transactional
+    @Transactional(noRollbackFor = ResourceConflictException.class)
     public AdaptiveResultDto submitSession(UUID sessionId, UUID studentId, AdaptiveSubmitRequestDto studentAnswers) {
 
         String sessionSql = "SELECT subject_id, topic_id, status, expires_at FROM adaptive_sessions WHERE id = ? AND student_id = ?";
@@ -162,8 +163,7 @@ public class AdaptiveSubmitService {
             intersection.retainAll(correctSet);
 
             // If the user selected only correct options but not all of them (e.g., selected 1 out of 2 correct) -> 0.5
-            // If the user selected any incorrect option (given size > intersection size) -> 0.0
-            if (!intersection.isEmpty() && givenSet.size() == intersection.size() && givenSet.size() < correctSet.size()) {
+            if (!intersection.isEmpty() && givenSet.size() == intersection.size()) {
                 return 0.5;
             }
 

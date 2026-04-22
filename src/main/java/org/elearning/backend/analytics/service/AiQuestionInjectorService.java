@@ -171,6 +171,10 @@ public class AiQuestionInjectorService {
             throw new ValidationException(String.format("Question %d: Must have at least 1 correct answer defined.", index));
         }
 
+        if (dto.getType() == null) {
+            throw new ValidationException(String.format("Question %d: Unknown question type.", index));
+        }
+
         switch (dto.getType()) {
             case SINGLE_CHOICE:
                 if (correctOptions.size() != 1) {
@@ -189,9 +193,6 @@ public class AiQuestionInjectorService {
 
             case MULTIPLE_CHOICE:
                 break;
-
-            default:
-                throw new ValidationException(String.format("Question %d: Unknown question type.", index));
         }
     }
 }
