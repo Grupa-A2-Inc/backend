@@ -144,26 +144,6 @@ public class TestService {
     }
 
     /**
-     * Returns a list of questions with all the options
-     * @param testId - the id of the test we want the questions from
-     * @return - a list of questions with data the student can see
-     */
-
-    private List<QuestionDataForUsersDto> studentGetListOfQuestions(UUID testId){
-
-        List<QuestionDataForUsersDto> questionsWithCorrectOptions = questionRepository.findByTestIdWithOptions(testId).stream()
-                .map(QuestionDataForUsersDto::new)
-                .toList();
-
-        questionsWithCorrectOptions
-                .forEach(instance -> instance.setOptions(questionOptionMapper
-                        .toDataForUsersDto(questionOptionRepository.findByQuestionId(instance.getId()))));
-
-        return questionsWithCorrectOptions;
-
-    }
-
-    /**
      * Returns a list of questions that includes the correct answers as well, only a teacher can see
      * @param testId - the id of the test we want the questions from
      * @return - a list of questions that includes the correct answers for each question
@@ -204,7 +184,10 @@ public class TestService {
         if(roleName.equals(RoleName.TEACHER)){
             return professorGetListOfQuestions(testId);
         }
-        return studentGetListOfQuestions(testId);
+        else{
+            throw new UserHasNoPermissionException("User must be the teacher of the course to view this");
+        }
+
     }
 
 
