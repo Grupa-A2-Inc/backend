@@ -2,7 +2,7 @@ package org.elearning.backend.analytics.service;
 
 import org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto;
 import org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto;
-import org.elearning.backend.analytics.exception.AccessDeniedException;
+import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.repository.TestRepository;
@@ -37,7 +37,7 @@ public class AnalyticsQueryService {
         Test test = testRepository.findById(testId)
                 .orElseThrow( () -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
         if(!test.getCreatedBy().equals(professorId)){
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
         return testResultRepository.getClassAverages(test);
@@ -48,7 +48,7 @@ public class AnalyticsQueryService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new DoesNotExistException(COURSE_DOES_NOT_EXIST));
         if(!course.getCreatedBy().equals(professorId)){
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
         return testResultRepository.getStudentAverages(courseId, pageable);
