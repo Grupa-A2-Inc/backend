@@ -24,10 +24,15 @@ import java.util.UUID;
 public class TestResultController {
     private final TestResultService testResultService;
 
+    private static final String OK = "200";
+
+    private static final String FORBIDDEN = "403";
+    private static final String NOT_FOUND = "404";
+
     @Operation(summary = "Get the result of a test attempt, including score and question details")
-    @ApiResponse(responseCode = "200", description = "Result retrieved successfully")
-    @ApiResponse(responseCode = "403", description = "The attempt is still in progress")
-    @ApiResponse(responseCode = "404", description = "Attempt not found or no results available")
+    @ApiResponse(responseCode = OK, description = "Result retrieved successfully")
+    @ApiResponse(responseCode = FORBIDDEN, description = "The attempt is still in progress")
+    @ApiResponse(responseCode = NOT_FOUND, description = "Attempt not found or no results available")
     @GetMapping("/api/v1/attempts/{attemptId}/result")
     @PreAuthorize("@accessService.canViewAttemptResult(authentication,#id)")
     public ResponseEntity<AttemptReportDTO> getResult(@P("id") @PathVariable UUID attemptId,@AuthenticationPrincipal UserDetails currentUser) {
@@ -37,7 +42,7 @@ public class TestResultController {
     }
 
     @Operation(summary = "Get the list of attempts for a specific test, including score and status for each attempt")
-    @ApiResponse(responseCode = "200", description = "Attempts retrieved successfully")
+    @ApiResponse(responseCode = OK, description = "Attempts retrieved successfully")
     @GetMapping("/api/v1/tests/{testId}/my-attempts")
     @PreAuthorize("@accessService.canViewMyTestAttempts(authentication,#id)")
     public ResponseEntity<List<AttemptStatusDTO>> getAttempts(@P("id") @PathVariable UUID testId ,@AuthenticationPrincipal UserDetails currentUser) {
@@ -48,8 +53,8 @@ public class TestResultController {
     }
 
     @Operation(summary = "Get the best finished attempt for a specific test by score percentage")
-    @ApiResponse(responseCode = "200", description = "Best attempt retrieved successfully")
-    @ApiResponse(responseCode = "404", description = "No finished attempts found for the test")
+    @ApiResponse(responseCode = OK, description = "Best attempt retrieved successfully")
+    @ApiResponse(responseCode = NOT_FOUND, description = "No finished attempts found for the test")
     @GetMapping("/api/v1/tests/{testId}/my-best")
     @PreAuthorize("@accessService.canViewMyBestTestResult(authentication,#id)")
     public ResponseEntity<AttemptStatusDTO> getBestAttempt(@P("id") @PathVariable UUID testId,@AuthenticationPrincipal UserDetails currentUser) {
