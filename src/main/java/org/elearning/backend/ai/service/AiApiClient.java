@@ -24,7 +24,7 @@ import java.util.UUID;
 public class AiApiClient {
 
     private final String apiKey;
-    private static String API_KEY = "X-Api-Key";
+    private static final String API_KEY = "X-Api-Key";
     private final RestClient generateRestClient;
     private final RestClient feedbackRestClient;
     private final RestClient adaptiveRestClient;
