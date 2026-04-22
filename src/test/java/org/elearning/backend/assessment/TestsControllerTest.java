@@ -249,6 +249,20 @@ class TestsControllerTest {
     }
 
     @Test
+    void shouldReturnConflictWhenDeletingPublicTest(){
+        UUID testId = insertTest("PublicTestBad", "Testing tests", 600, false, "PUBLISHED");
+
+        ResponseEntity<Void> response = restTemplate.exchange(
+                REQUEST_MAPPING + TESTS + testId,
+                HttpMethod.DELETE,
+                new HttpEntity<>(jsonHeaders()),
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
     void shouldReturnForbiddenWhenDeletingMissingTestIsRejectedByPreAuth(){
         ResponseEntity<Void> response = restTemplate.exchange(
                 REQUEST_MAPPING + TESTS + UUID.randomUUID(),
@@ -335,6 +349,29 @@ class TestsControllerTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void shouldReturnConflictWhenUpdatingPublicTest(){
+        UUID testId = insertTest("PublicTest", "Testing tests", 600, false, "PUBLISHED");
+
+        String body = """
+            {
+                "title": "Updated Title",
+                "description": "Updated description",
+                "timeLimitSec": 300,
+                "aiEnabled": true
+            }
+            """;
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                REQUEST_MAPPING + TESTS + testId,
+                HttpMethod.PATCH,
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     }
 
     @Test

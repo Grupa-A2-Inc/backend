@@ -30,6 +30,7 @@ public class TestService {
 
     private static final String LESSON_DOES_NOT_EXIST = "Lesson does not exist";
     private static final String TEST_DOES_NOT_EXIST = "Test does not exist";
+    private static final String TEST_MUST_BE_DRAFT = "Test must be a draft for this operation";
 
 
 
@@ -113,6 +114,10 @@ public class TestService {
         Test test = testRepository.findById(testId)
                 .orElseThrow(() -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
 
+        if(!test.getStatus().equals(TestStatus.DRAFT)){
+            throw new TestMustBeDraftException(TEST_MUST_BE_DRAFT);
+        }
+
         if(editableContent.getTitle() != null)
             test.setTitle(editableContent.getTitle());
         if(editableContent.getDescription() != null)
@@ -127,8 +132,11 @@ public class TestService {
 
     @Transactional
     public void deleteTest(UUID testId){
-        if(!testRepository.existsById(testId)){
-            throw new DoesNotExistException(TEST_DOES_NOT_EXIST);
+        Test test = testRepository.findById(testId)
+                        .orElseThrow(() -> new TestNotPublishedException(TEST_DOES_NOT_EXIST));
+
+        if(!test.getStatus().equals(TestStatus.DRAFT)){
+            throw new TestMustBeDraftException(TEST_MUST_BE_DRAFT);
         }
 
         testRepository.deleteTest(testId);
