@@ -1,5 +1,7 @@
 package org.elearning.backend.user.service;
 
+import org.elearning.backend.auth.service.ActivationTokenService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
@@ -51,11 +53,16 @@ class UserServiceTest {
     @Mock
     private OrganizationRepository organizationRepository;
 
+    @Mock
+    private ActivationTokenService activationTokenService;
+
+    @Mock
+    private EmailService emailService;
+
     @Test
     void createUser_success() {
         CreateUserRequest request = CreateUserRequest.builder()
                 .email("ion@scoala.ro")
-                .password("parola123")
                 .firstName("Ion")
                 .lastName("Pop")
                 .roleName(RoleName.TEACHER)
@@ -69,18 +76,19 @@ class UserServiceTest {
         savedUser.setFirstName("Ion");
         savedUser.setLastName("Pop");
         savedUser.setRole(role);
-        savedUser.setStatus(UserStatus.ACTIVE);
+        savedUser.setStatus(UserStatus.PENDING); // ACTIVE -> PENDING
 
         when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(false);
         when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(activationTokenService.generateActivationToken(any(User.class))).thenReturn("raw-token");
 
         UserResponse response = userService.createUser(request);
 
         assertEquals("ion@scoala.ro", response.getEmail());
         assertEquals("Ion", response.getFirstName());
         assertEquals(RoleName.TEACHER, response.getRoleName());
-        assertEquals(UserStatus.ACTIVE, response.getStatus());
+        assertEquals(UserStatus.PENDING, response.getStatus()); // ACTIVE -> PENDING
     }
 
     @Test
@@ -226,7 +234,6 @@ class UserServiceTest {
     void createUser_roleNotFound_throwsException() {
         CreateUserRequest request = CreateUserRequest.builder()
                 .email("ion@scoala.ro")
-                .password("parola123")
                 .firstName("Ion")
                 .lastName("Pop")
                 .roleName(RoleName.TEACHER)
@@ -240,10 +247,9 @@ class UserServiceTest {
     }
 
     @Test
-    void createUser_hashesPassword_andSavesUser() {
+    void createUser_setsNullPasswordHashAndPendingStatus() {
         CreateUserRequest request = CreateUserRequest.builder()
                 .email("ana@example.com")
-                .password("parola123")
                 .firstName("Ana")
                 .lastName("Pop")
                 .roleName(RoleName.STUDENT)
@@ -252,43 +258,35 @@ class UserServiceTest {
         Role role = new Role();
         role.setName(RoleName.STUDENT);
 
-        when(userRepository.existsByEmail("ana@example.com")).thenReturn(false);
-        when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(role));
-        when(passwordEncoder.encode("parola123")).thenReturn("HASHED_PASSWORD");
-
         User savedUser = new User();
         savedUser.setId(UUID.randomUUID());
         savedUser.setEmail("ana@example.com");
-        savedUser.setPasswordHash("HASHED_PASSWORD");
+        savedUser.setPasswordHash(null);
         savedUser.setFirstName("Ana");
         savedUser.setLastName("Pop");
         savedUser.setRole(role);
-        savedUser.setStatus(UserStatus.ACTIVE);
+        savedUser.setStatus(UserStatus.PENDING);
 
+        when(userRepository.existsByEmail("ana@example.com")).thenReturn(false);
+        when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(role));
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(activationTokenService.generateActivationToken(any(User.class))).thenReturn("raw-token");
 
-        UserResponse response = userService.createUser(request);
+        userService.createUser(request);
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
 
         User persistedUser = captor.getValue();
-
-        assertEquals("HASHED_PASSWORD", persistedUser.getPasswordHash());
-        assertNotEquals("parola123", persistedUser.getPasswordHash());
-        verify(passwordEncoder).encode("parola123");
-
-        assertEquals("ana@example.com", response.getEmail());
-        assertEquals("Ana", response.getFirstName());
-        assertEquals("Pop", response.getLastName());
-        assertEquals(UserStatus.ACTIVE, response.getStatus());
+        assertNull(persistedUser.getPasswordHash());
+        assertEquals(UserStatus.PENDING, persistedUser.getStatus());
+        verify(passwordEncoder, never()).encode(anyString());
     }
 
     @Test
     void createUser_throwsDuplicateResourceException_whenEmailAlreadyExists() {
         CreateUserRequest request = CreateUserRequest.builder()
                 .email("ana@example.com")
-                .password("parola123")
                 .firstName("Ana")
                 .lastName("Pop")
                 .roleName(RoleName.STUDENT)
@@ -306,7 +304,6 @@ class UserServiceTest {
     void createUser_throwsResourceNotFoundException_whenRoleDoesNotExist() {
         CreateUserRequest request = CreateUserRequest.builder()
                 .email("ana@example.com")
-                .password("parola123")
                 .firstName("Ana")
                 .lastName("Pop")
                 .roleName(RoleName.STUDENT)
@@ -328,7 +325,6 @@ class UserServiceTest {
 
         CreateUserRequest request = CreateUserRequest.builder()
                 .email("ion@scoala.ro")
-                .password("parola123")
                 .firstName("Ion")
                 .lastName("Pop")
                 .roleName(RoleName.TEACHER)
@@ -363,7 +359,6 @@ class UserServiceTest {
 
         CreateUserRequest request = CreateUserRequest.builder()
                 .email("ion@scoala.ro")
-                .password("parola123")
                 .firstName("Ion")
                 .lastName("Pop")
                 .roleName(RoleName.TEACHER)
@@ -570,11 +565,11 @@ class UserServiceTest {
         Role role = new Role(RoleName.TEACHER);
 
         CreateUserRequest req1 = CreateUserRequest.builder()
-                .email("ion@scoala.ro").password("parola123")
+                .email("ion@scoala.ro")
                 .firstName("Ion").lastName("Pop").roleName(RoleName.TEACHER).build();
 
         CreateUserRequest req2 = CreateUserRequest.builder()
-                .email("ana@scoala.ro").password("parola123")
+                .email("ana@scoala.ro")
                 .firstName("Ana").lastName("Pop").roleName(RoleName.TEACHER).build();
 
         CreateUserBulkRequest bulkRequest = new CreateUserBulkRequest(List.of(req1, req2));
@@ -615,11 +610,11 @@ class UserServiceTest {
         Role role = new Role(RoleName.TEACHER);
 
         CreateUserRequest validReq = CreateUserRequest.builder()
-                .email("ion@scoala.ro").password("parola123")
+                .email("ion@scoala.ro")
                 .firstName("Ion").lastName("Pop").roleName(RoleName.TEACHER).build();
 
         CreateUserRequest duplicateReq = CreateUserRequest.builder()
-                .email("duplicat@scoala.ro").password("parola123")
+                .email("duplicat@scoala.ro")
                 .firstName("Ana").lastName("Pop").roleName(RoleName.TEACHER).build();
 
         CreateUserBulkRequest bulkRequest = new CreateUserBulkRequest(List.of(validReq, duplicateReq));
@@ -674,7 +669,7 @@ class UserServiceTest {
         Role role = new Role(RoleName.STUDENT);
 
         CreateUserRequest request = CreateUserRequest.builder()
-                .email("ion@scoala.ro").password("parola123")
+                .email("ion@scoala.ro")
                 .firstName("Ion").lastName("Pop").roleName(RoleName.STUDENT).build();
 
         User savedUser = new User();
@@ -710,6 +705,9 @@ class UserServiceTest {
         assertEquals("ion@scoala.ro", result.getEmail());
         assertNull(result.getUser());
         assertNotNull(result.getErrorMessage());
+    }
+
+    @Test
     void updateUserStatus_shouldSetStatusToActive() {
         UUID userId = UUID.randomUUID();
         User user = new User();
@@ -784,5 +782,35 @@ class UserServiceTest {
                 () -> userService.updateUserStatus(userId, request));
 
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createUser_generatesActivationTokenAndSendsEmail() {
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("ion@scoala.ro")
+                .firstName("Ion")
+                .lastName("Pop")
+                .roleName(RoleName.TEACHER)
+                .build();
+
+        Role role = new Role(RoleName.TEACHER);
+
+        User savedUser = new User();
+        savedUser.setId(UUID.randomUUID());
+        savedUser.setEmail("ion@scoala.ro");
+        savedUser.setFirstName("Ion");
+        savedUser.setLastName("Pop");
+        savedUser.setRole(role);
+        savedUser.setStatus(UserStatus.PENDING);
+
+        when(userRepository.existsByEmail("ion@scoala.ro")).thenReturn(false);
+        when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(role));
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(activationTokenService.generateActivationToken(savedUser)).thenReturn("raw-token");
+
+        userService.createUser(request);
+
+        verify(activationTokenService).generateActivationToken(savedUser);
+        verify(emailService).sendActivationEmail("ion@scoala.ro", "Ion", "raw-token");
     }
 }
