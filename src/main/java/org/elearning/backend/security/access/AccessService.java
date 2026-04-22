@@ -395,6 +395,22 @@ public class AccessService {
         return currentUser.getUserId().equals(attempt.getStudentId());
     }
 
+    @Description("Defines who can submit an adaptive session. Returns true only for students")
+    public boolean canSubmitAdaptiveSession(Authentication authentication, UUID sessionId) {
+        return isStudent(authentication);
+    }
+
+    @Description("Defines who can inject AI-generated questions. Returns true only for teachers")
+    public boolean canInjectAiQuestions(Authentication authentication, UUID requestId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        return currentUser.getRoleName() == RoleName.TEACHER;
+    }
+
     private boolean canManageChapterCourse(Authentication authentication, UUID targetChapterId) {
         Chapter chapter = chapterRepository.findById(targetChapterId).orElse(null);
         if (chapter == null) {

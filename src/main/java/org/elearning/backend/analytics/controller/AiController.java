@@ -9,7 +9,9 @@ import org.elearning.backend.analytics.dto.InjectionResultDto;
 import org.elearning.backend.analytics.service.AiQuestionInjectorService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -36,7 +38,8 @@ public class AiController {
     })
 
     @PostMapping("/ai/request/{requestId}/inject")
-    public ResponseEntity<InjectionResultDto> injectAiQuestions(@PathVariable UUID requestId,
+    @PreAuthorize("@accessService.canInjectAiQuestions(authentication,#id)")
+    public ResponseEntity<InjectionResultDto> injectAiQuestions(@P("id") @PathVariable UUID requestId,
                                                                 @RequestBody(required = false) InjectRequestDto requestBody,
                                                                 @AuthenticationPrincipal CustomUserDetails currentUser) {
         UUID professorId = currentUser.getUserId();
