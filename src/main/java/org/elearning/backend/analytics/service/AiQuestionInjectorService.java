@@ -81,6 +81,7 @@ public class AiQuestionInjectorService {
             test.setLessonId(lesson.getId());
             test.setTitle("Test AI - " + lesson.getTitle());
             test.setCreatedBy(professorId);
+            test.setTimeLimitSec(1800);
             test.setStatus(TestStatus.DRAFT);
             test = testRepository.save(test);
             isTestCreated = true;
@@ -109,11 +110,23 @@ public class AiQuestionInjectorService {
             q.setTest(test);
             q.setContent(dto.getText());
             q.setQuestionType(dto.getType());
-
-            q.setOptions(dto.getOptions());
+            q.setIsActive(true);
             q.setSource(QuestionSource.AI_GENERATED);
 
+            List<QuestionOption> mappedOptions = dto.getOptions().stream()
+                    .map(opt -> {
+                        QuestionOption qo = new QuestionOption();
+                        qo.setText(opt.getText());
+                        qo.setDisplayOrder(opt.getDisplayOrder());
+                        qo.setIsCorrect(opt.getIsCorrect());
+                        qo.setQuestion(q);
+                        return qo;
+                    })
+                    .toList();
+            q.setOptions(mappedOptions);
+
             questionsToSave.add(q);
+
             index++;
         }
 
@@ -150,17 +163,17 @@ public class AiQuestionInjectorService {
             throw new ValidationException(String.format("Question %d: Must have at least 2 answer options.", index));
         }
 
-        List<QuestionOption> correctQuestionOptions = dto.getOptions().stream()
-                .filter(QuestionOption::getIsCorrect)
+        List<AiQuestionDto.OptionDto> correctOptions = dto.getOptions().stream()
+                .filter(opt -> opt.getIsCorrect() != null && opt.getIsCorrect())
                 .toList();
 
-        if (correctQuestionOptions == null || correctQuestionOptions.isEmpty()) {
+        if (correctOptions.isEmpty()) {
             throw new ValidationException(String.format("Question %d: Must have at least 1 correct answer defined.", index));
         }
 
         switch (dto.getType()) {
             case SINGLE_CHOICE:
-                if (correctQuestionOptions.size() != 1) {
+                if (correctOptions.size() != 1) {
                     throw new ValidationException(String.format("Question %d: Being SINGLE_CHOICE type, it must have exactly 1 correct answer.", index));
                 }
                 break;
@@ -169,7 +182,7 @@ public class AiQuestionInjectorService {
                 if (dto.getOptions().size() != 2) {
                     throw new ValidationException(String.format("Question %d: Being TRUE_FALSE type, it must have exactly 2 options (e.g., True/False).", index));
                 }
-                if (correctQuestionOptions.size() != 1) {
+                if (correctOptions.size() != 1) {
                     throw new ValidationException(String.format("Question %d: Being TRUE_FALSE type, it must have exactly 1 correct answer.", index));
                 }
                 break;

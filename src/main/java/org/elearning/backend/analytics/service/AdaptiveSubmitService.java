@@ -67,7 +67,7 @@ public class AdaptiveSubmitService {
         Integer subjectId = (Integer) session.get("subject_id");
         Integer topicId = (Integer) session.get("topic_id");
 
-        String exercisesSql = "SELECT id, ml_exercise_id, exercise_type, correct_answers_raw FROM adaptive_session_exercises WHERE session_id = ?";
+        String exercisesSql = "SELECT id, ml_exercise_id, exercise_type, correct_answers_raw::text FROM adaptive_session_exercises WHERE session_id = ?";
         List<Map<String, Object>> dbExercises = jdbcTemplate.queryForList(exercisesSql, sessionId);
 
         List<FeedbackResultDto> mlFeedbackResults = new ArrayList<>();

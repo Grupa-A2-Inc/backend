@@ -10,7 +10,6 @@ import org.elearning.backend.analytics.service.AiQuestionInjectorService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;

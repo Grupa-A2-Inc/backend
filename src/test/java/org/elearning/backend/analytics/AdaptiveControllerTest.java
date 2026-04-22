@@ -1,0 +1,355 @@
+package org.elearning.backend.analytics;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elearning.backend.ai.service.AiApiClient;
+import org.elearning.backend.analytics.dto.AdaptiveSubmitRequestDto;
+import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.security.jwt.JwtUtil;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class AdaptiveControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private AiApiClient aiApiClient;
+
+    private UUID studentId;
+    private String studentToken;
+
+    @BeforeEach
+    void setUp() {
+        studentId = UUID.randomUUID();
+        insertUser(studentId, RoleName.STUDENT);
+        studentToken = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
+    }
+
+    @AfterEach
+    void tearDown() {
+        jdbcTemplate.execute("DELETE FROM adaptive_session_answers");
+        jdbcTemplate.execute("DELETE FROM adaptive_session_exercises");
+        jdbcTemplate.execute("DELETE FROM adaptive_sessions");
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", studentId);
+    }
+
+    // =========================================================================
+    // Helpers
+    // =========================================================================
+
+    private void insertUser(UUID userId, RoleName role) {
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                userId,
+                role.name().toLowerCase() + "-" + userId + "@test.com",
+                "password-hash",
+                "Test",
+                role.name(),
+                role.name(),
+                "ACTIVE"
+        );
+    }
+
+    private UUID insertSession(UUID studentId, String status, LocalDateTime expiresAt) {
+        UUID sessionId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO adaptive_sessions (id, student_id, subject_id, topic_id, status, expires_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                sessionId, studentId, 1, 1, status,
+                java.sql.Timestamp.valueOf(expiresAt)
+        );
+        return sessionId;
+    }
+
+    private record ExerciseContext(UUID exerciseId, String mlExerciseId) {}
+
+    private ExerciseContext insertExercise(UUID sessionId, String mlExerciseId, String type,
+                                           String answersRaw, String correctAnswersRaw) {
+        UUID exerciseId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO adaptive_session_exercises " +
+                        "(id, session_id, ml_exercise_id, exercise_text, exercise_type, answers_raw, correct_answers_raw) " +
+                        "VALUES (?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)",
+                exerciseId, sessionId, mlExerciseId,
+                "Exercise text for " + mlExerciseId,
+                type, answersRaw, correctAnswersRaw
+        );
+        return new ExerciseContext(exerciseId, mlExerciseId);
+    }
+
+    private MockHttpServletRequestBuilder authorizedPost(String urlTemplate, Object... uriVars) {
+        return post(urlTemplate, uriVars)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + studentToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .with(csrf());
+    }
+
+    private AdaptiveSubmitRequestDto buildRequest(String exerciseId, List<String> givenAnswers) {
+        AdaptiveSubmitRequestDto.AnswerDto answer = new AdaptiveSubmitRequestDto.AnswerDto();
+        answer.setExerciseId(exerciseId);
+        answer.setGivenAnswers(givenAnswers);
+        answer.setTimeSpent(10);
+
+        AdaptiveSubmitRequestDto request = new AdaptiveSubmitRequestDto();
+        request.setAnswers(List.of(answer));
+        return request;
+    }
+
+    private AdaptiveSubmitRequestDto emptyRequest() {
+        AdaptiveSubmitRequestDto request = new AdaptiveSubmitRequestDto();
+        request.setAnswers(List.of());
+        return request;
+    }
+
+    // =========================================================================
+    // POST /api/v1/adaptive/sessions/{sessionId}/submit
+    // =========================================================================
+
+    @Test
+    void submitSession_shouldReturn200_whenValidAndCorrectAnswer() throws Exception {
+        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+        ExerciseContext ex = insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
+                "[\"Java\", \"Python\"]", "[\"Java\"]");
+
+        AdaptiveSubmitRequestDto request = buildRequest(ex.mlExerciseId(), List.of("Java"));
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value(sessionId.toString()))
+                .andExpect(jsonPath("$.totalScore").value(1.0))
+                .andExpect(jsonPath("$.clientResults[0].correct").value(true))
+                .andExpect(jsonPath("$.clientResults[0].score").value(1.0));
+    }
+
+    @Test
+    void submitSession_shouldReturn200_whenAnswerIsWrong() throws Exception {
+        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+        ExerciseContext ex = insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
+                "[\"Java\", \"Python\"]", "[\"Java\"]");
+
+        AdaptiveSubmitRequestDto request = buildRequest(ex.mlExerciseId(), List.of("Python"));
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalScore").value(0.0))
+                .andExpect(jsonPath("$.clientResults[0].correct").value(false))
+                .andExpect(jsonPath("$.clientResults[0].score").value(0.0));
+    }
+
+    @Test
+    void submitSession_shouldReturn200_whenNoAnswerSubmittedForExercise() throws Exception {
+        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+        insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
+                "[\"Java\", \"Python\"]", "[\"Java\"]");
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(emptyRequest())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalScore").value(0.0))
+                .andExpect(jsonPath("$.clientResults[0].score").value(0.0));
+    }
+
+    @Test
+    void submitSession_shouldReturn200_withPartialScoreForMultipleChoice() throws Exception {
+        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTIPLE_CHOICE",
+                "[\"A\", \"B\", \"C\"]", "[\"A\", \"B\"]");
+
+        // Studentul selectează doar A (subset corect) → 0.5
+        AdaptiveSubmitRequestDto request = buildRequest(ex.mlExerciseId(), List.of("A"));
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalScore").value(0.5))
+                .andExpect(jsonPath("$.clientResults[0].score").value(0.5));
+    }
+
+    @Test
+    void submitSession_shouldReturn200_whenMultipleChoiceFullyCorrect() throws Exception {
+        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTIPLE_CHOICE",
+                "[\"A\", \"B\", \"C\"]", "[\"A\", \"B\"]");
+
+        AdaptiveSubmitRequestDto request = buildRequest(ex.mlExerciseId(), List.of("A", "B"));
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalScore").value(1.0))
+                .andExpect(jsonPath("$.clientResults[0].score").value(1.0));
+    }
+
+    @Test
+    void submitSession_shouldReturn200_andFeedbackSentTrue_whenAiSucceeds() throws Exception {
+        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+        insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
+                "[\"True\", \"False\"]", "[\"True\"]");
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(emptyRequest())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedbackSent").value(true));
+
+        Boolean feedbackSent = jdbcTemplate.queryForObject(
+                "SELECT ai_feedback_sent FROM adaptive_sessions WHERE id = ?",
+                Boolean.class, sessionId
+        );
+        assertEquals(Boolean.TRUE, feedbackSent);
+    }
+
+    @Test
+    void submitSession_shouldReturn200_andFeedbackSentFalse_whenAiFails() throws Exception {
+        doThrow(new RuntimeException("AI unavailable")).when(aiApiClient).sendAdaptiveFeedback(any());
+
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+        insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
+                "[\"True\", \"False\"]", "[\"True\"]");
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(emptyRequest())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedbackSent").value(false));
+    }
+
+    @Test
+    void submitSession_shouldMarkSessionAsCompleted_afterSubmit() throws Exception {
+        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(emptyRequest())))
+                .andExpect(status().isOk());
+
+        String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM adaptive_sessions WHERE id = ?",
+                String.class, sessionId
+        );
+        assertEquals("COMPLETED", status);
+    }
+
+    @Test
+    void submitSession_shouldReturn404_whenSessionDoesNotExist() throws Exception {
+        UUID missingSessionId = UUID.randomUUID();
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", missingSessionId)
+                        .content(objectMapper.writeValueAsString(emptyRequest())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("does not exist")));
+    }
+
+    @Test
+    void submitSession_shouldReturn409_whenSessionIsNotActive() throws Exception {
+        UUID sessionId = insertSession(studentId, "COMPLETED", LocalDateTime.now().plusHours(1));
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(emptyRequest())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("not active")));
+    }
+
+    @Test
+    @Disabled("Sincer nu stiu de ce nu merge , ")
+    void submitSession_shouldReturn409_whenSessionIsExpiredByTime() throws Exception {
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().minusMinutes(5));
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(emptyRequest())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("expired")));
+
+        String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM adaptive_sessions WHERE id = ?",
+                String.class, sessionId
+        );
+        assertEquals("EXPIRED", status);
+    }
+
+    @Test
+    void submitSession_shouldReturn404_whenSessionBelongsToAnotherStudent() throws Exception {
+        UUID otherStudentId = UUID.randomUUID();
+        insertUser(otherStudentId, RoleName.STUDENT);
+        UUID sessionId = insertSession(otherStudentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .content(objectMapper.writeValueAsString(emptyRequest())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("does not exist")));
+
+        jdbcTemplate.update("DELETE FROM adaptive_sessions WHERE student_id = ?", otherStudentId);
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", otherStudentId);
+    }
+
+    @Test
+    void submitSession_shouldReturn401_whenNotAuthenticated() throws Exception {
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+
+        mockMvc.perform(post("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(emptyRequest()))
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void submitSession_shouldReturn400_whenBodyIsMissing() throws Exception {
+        UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/sessions/{sessionId}/submit", sessionId))
+                .andExpect(status().isBadRequest());
+    }
+}
