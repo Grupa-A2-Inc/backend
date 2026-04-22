@@ -7,7 +7,7 @@ import org.elearning.backend.ai.dto.AiGenerateResponse;
 import org.elearning.backend.ai.dto.AiQuestionDto;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
-import org.elearning.backend.analytics.exception.AccessDeniedException;
+import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.analytics.model.AiQuestionRequest;
 import org.elearning.backend.analytics.model.AiRequestStatus;
 import org.elearning.backend.analytics.repository.AiQuestionRequestRepository;
@@ -60,12 +60,12 @@ public class AiGenerationService {
         {
             if (!lessonRepository.isLessonOwnedByProfessor(lessonId, userId))
             {
-                throw new AccessDeniedException(userId);
+                throw new WithoutAccessException(userId);
             }
         }
         else if (role==RoleName.STUDENT && !lessonRepository.isStudentEnrolledInLessonCourse(lessonId, userId))
         {
-            throw new AccessDeniedException(userId);
+            throw new WithoutAccessException(userId);
 
         }
     }

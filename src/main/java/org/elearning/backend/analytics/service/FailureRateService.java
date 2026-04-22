@@ -2,7 +2,7 @@ package org.elearning.backend.analytics.service;
 
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.analytics.dto.statistics.teacher.FailureRateDTO;
-import org.elearning.backend.analytics.exception.AccessDeniedException;
+import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.analytics.model.AnalyticsAlert;
 import org.elearning.backend.analytics.repository.AnalyticsAlertRepository;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
@@ -10,7 +10,6 @@ import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.model.TestResult;
 import org.elearning.backend.assessment.repository.TestRepository;
 import org.elearning.backend.assessment.repository.TestResultRepository;
-import org.elearning.backend.assessment.service.TestResultService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -28,7 +27,7 @@ public class FailureRateService {
         Test test = testRepository.findById(testId)
                 .orElseThrow(() -> new DoesNotExistException("Test with id " + testId + " does not exist"));
         if (test.getCreatedBy() != professorId) {
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
         BigDecimal threshold = analyticsAlertRepository.findByTestIdAndIsActiveTrue(testId)
@@ -50,11 +49,11 @@ public class FailureRateService {
         return new FailureRateDTO(BigDecimal.valueOf(failureRate), threshold, alertTriggered);
     }
 
-    public FailureRateDTO getLessonFailureRate(UUID lessonId, UUID professorId) throws DoesNotExistException, AccessDeniedException {
+    public FailureRateDTO getLessonFailureRate(UUID lessonId, UUID professorId) throws DoesNotExistException, WithoutAccessException {
         Test test = testRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new DoesNotExistException("No test found for lesson with id " + lessonId));
         if (test.getCreatedBy() != professorId) {
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
         UUID testId = test.getId();

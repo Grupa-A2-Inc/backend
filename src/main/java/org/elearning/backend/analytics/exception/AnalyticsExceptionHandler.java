@@ -12,8 +12,8 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = "org.elearning.backend.analytics")
 public class AnalyticsExceptionHandler extends GlobalExceptionHandler {
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(AccessDeniedException exception) {
+    @ExceptionHandler(WithoutAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(WithoutAccessException exception) {
         return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
     }
 

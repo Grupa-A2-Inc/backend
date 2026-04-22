@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.analytics.dto.AiQuestionDto;
 import org.elearning.backend.analytics.dto.InjectionResultDto;
-import org.elearning.backend.analytics.exception.AccessDeniedException;
+import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.analytics.exception.ResourceConflictException;
 import org.elearning.backend.analytics.exception.ValidationException;
 import org.elearning.backend.analytics.model.AiQuestionRequest;
@@ -52,7 +52,7 @@ public class AiQuestionInjectorService {
      * @param testIdOpt An optional ID of an existing test to inject questions into; if null, a new test will be created.
      * @return An InjectionResultDto containing the ID of the test, whether a new test was created, the number of questions injected, and the new total number of questions in the test.
      * @throws DoesNotExistException if the AI question request, lesson, or specified test does not exist.
-     * @throws AccessDeniedException if the professor does not have permission to modify the lesson or test.
+     * @throws WithoutAccessException if the professor does not have permission to modify the lesson or test.
      * @throws ResourceConflictException if the AI generation is not successful or if there is an error parsing generated questions.
      * @throws ValidationException if any of the generated questions fail validation checks (e.g., empty text, insufficient options, incorrect answer definitions).
      */
@@ -66,7 +66,7 @@ public class AiQuestionInjectorService {
 
         UUID courseCreatorId = lesson.getChapter().getCourse().getCreatedBy();
         if(!courseCreatorId.equals(professorId)){
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
         if(aiQuestionRequest.getStatus() != AiRequestStatus.SUCCESS){
