@@ -1,7 +1,6 @@
 package org.elearning.backend.content;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityNotFoundException;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.model.CourseVisibility;
@@ -22,7 +21,6 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -191,8 +189,8 @@ class ContentEndToEndTest {
 
     @Test
     @Order(5)
-    @DisplayName("1.5 — PUT /api/courses/{id} with non-existent ID → 404")
-    void updateCourse_notFound_shouldReturn404() throws Exception {
+    @DisplayName("1.5 — PUT /api/courses/{id} with non-existent ID → 403")
+    void updateCourse_notFound_shouldReturn403() throws Exception {
 
         Course update = new Course();
         update.setTitle("X");
@@ -200,10 +198,10 @@ class ContentEndToEndTest {
         update.setStatus(CourseStatus.DRAFT);
         update.setVisibility(CourseVisibility.PRIVATE);
 
-        assertThatThrownBy(() -> mockMvc.perform(authorized(put(REQUEST_MAPPING + "/courses/" + UUID.randomUUID()))
+        mockMvc.perform(authorized(put(REQUEST_MAPPING + "/courses/" + UUID.randomUUID()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(update))))
-                .hasRootCauseInstanceOf(EntityNotFoundException.class);
+                        .content(objectMapper.writeValueAsString(update)))
+                .andExpect(status().isForbidden());
     }
 
 
@@ -233,13 +231,13 @@ class ContentEndToEndTest {
 
     @Test
     @Order(11)
-    @DisplayName("2.2 — POST /api/courses/{courseId}/chapters with non-existent courseId → 404")
-    void createChapter_courseNotFound_shouldReturn404() throws Exception {
+    @DisplayName("2.2 — POST /api/courses/{courseId}/chapters with non-existent courseId → 403")
+    void createChapter_courseNotFound_shouldReturn403() throws Exception {
 
-        assertThatThrownBy(() -> mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/chapters"))
+        mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/chapters"))
                         .contentType(MediaType.TEXT_PLAIN)
-                        .content("Some chapter")))
-                .hasRootCauseInstanceOf(EntityNotFoundException.class);
+                        .content("Some chapter"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -590,11 +588,11 @@ class ContentEndToEndTest {
 
     @Test
     @Order(41)
-    @DisplayName("5.2 — GET /api/courses/{courseId}/full-view non-existent course → 404")
-    void getCourseFullView_notFound_shouldReturn404() throws Exception {
+    @DisplayName("5.2 — GET /api/courses/{courseId}/full-view non-existent course → 403")
+    void getCourseFullView_notFound_shouldReturn403() throws Exception {
 
         mockMvc.perform(authorized(get(REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/full-view")))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
 
@@ -675,8 +673,8 @@ class ContentEndToEndTest {
 
     @Test
     @Order(55)
-    @DisplayName("6.6 — DELETE course → 204, GET full-view returns 404")
-    void deleteCourse_shouldReturn204_thenFullViewIs404() throws Exception {
+    @DisplayName("6.6 — DELETE course → 204, GET chapters is forbidden")
+    void deleteCourse_shouldReturn204_thenChaptersAreForbidden() throws Exception {
 
         createCourse_shouldReturn201();
 
@@ -684,19 +682,18 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/courses/" + courseId)))
                 .andExpect(status().isNoContent());
 
-        // Verify that the chapter list returns 404 (full-view cannot be verified
-        // in the same Hibernate session after delete — TransientObjectException)
+        // The access check now rejects missing courses before the controller reaches the service.
         mockMvc.perform(authorized(get(REQUEST_MAPPING + "/courses/" + courseId + "/chapters")))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
     @Order(56)
-    @DisplayName("6.7 — DELETE non-existent course → 404")
-    void deleteCourse_notFound_shouldReturn404() throws Exception {
+    @DisplayName("6.7 — DELETE non-existent course → 403")
+    void deleteCourse_notFound_shouldReturn403() throws Exception {
 
-        assertThatThrownBy(() -> mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/courses/" + UUID.randomUUID()))))
-                .hasRootCauseInstanceOf(EntityNotFoundException.class);
+        mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/courses/" + UUID.randomUUID())))
+                .andExpect(status().isForbidden());
     }
 
 

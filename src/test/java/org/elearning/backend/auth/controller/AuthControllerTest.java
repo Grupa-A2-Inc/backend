@@ -102,6 +102,13 @@ class AuthControllerTest {
     }
 
     @Test
+    void logout_ignoresNonBearerAuthorizationHeader() {
+        ResponseEntity<Void> response = authController.logout(null, "Basic credentials");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+    }
+
+    @Test
     void forgotPassword_delegatesToResetService() {
         ForgotPasswordRequest request = new ForgotPasswordRequest();
         request.setEmail("user@example.com");

@@ -1,6 +1,7 @@
 package org.elearning.backend.content.controller;
 
 
+import org.elearning.backend.auth.service.AccountActivationService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -16,6 +17,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
 import java.util.List;
 import java.util.stream.Stream;
 import java.util.UUID;
@@ -34,6 +37,9 @@ class LessonResourceControllerTests {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private AccountActivationService accountActivationService;
 
     private UUID lessonId;
     private UUID chapterId;

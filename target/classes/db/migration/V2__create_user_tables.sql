@@ -25,10 +25,8 @@ CREATE TABLE users (
    status        user_status  NOT NULL DEFAULT 'ACTIVE',
    created_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
    updated_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
-
-    --astea 2 le am adaugat acum pentru taskul cu timeout
    failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-   locked_until     TIMESTAMP NULL--??? nu stiu daca e ok
+   locked_until     TIMESTAMP NULL
 );
 
 CREATE TABLE parent_student (

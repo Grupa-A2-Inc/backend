@@ -3,9 +3,16 @@ package org.elearning.backend.user.controller;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
+import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
+<<<<<<< Updated upstream
+=======
+import org.elearning.backend.user.dto.response.BulkImportResponse;
+import org.elearning.backend.user.dto.response.UserImportResult;
+>>>>>>> Stashed changes
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.UserStatus;
+import org.elearning.backend.user.service.UserImportService;
 import org.elearning.backend.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +33,9 @@ class UserControllerTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private UserImportService userImportService;
 
     @InjectMocks
     private UserController userController;
@@ -125,6 +135,20 @@ class UserControllerTest {
     }
 
     @Test
+    void updateUserStatus_returns204NoContent() {
+        UUID id = UUID.randomUUID();
+        UpdateUserStatusRequest request = UpdateUserStatusRequest.builder()
+                .status(UserStatus.BLOCKED)
+                .build();
+
+        ResponseEntity<Void> response = userController.updateUserStatus(id, request);
+
+        verify(userService).updateUserStatus(id, request);
+        assertEquals(204, response.getStatusCode().value());
+        assertNull(response.getBody());
+    }
+
+    @Test
     void deleteUser_returns204NoContent() {
         UUID id = UUID.randomUUID();
 
@@ -150,4 +174,43 @@ class UserControllerTest {
         assertEquals(204, response.getStatusCode().value());
         assertNull(response.getBody());
     }
+<<<<<<< Updated upstream
+=======
+
+    @Test
+    void importUsers_returns200Ok() {
+        UserResponse userResponse = new UserResponse(
+                UUID.randomUUID(),
+                "ion@scoala.ro",
+                "Ion",
+                "Pop",
+                RoleName.STUDENT,
+                null,
+                UserStatus.ACTIVE
+        );
+
+        List<UserImportResult> results = List.of(UserImportResult.succeeded(userResponse));
+        BulkImportResponse bulkResponse = new BulkImportResponse(results);
+
+        CreateUserBulkRequest request = new CreateUserBulkRequest(
+                List.of(CreateUserRequest.builder()
+                        .email("ion@scoala.ro")
+                        .firstName("Ion")
+                        .lastName("Pop")
+                        .roleName(RoleName.STUDENT)
+                        .build())
+        );
+
+        when(userImportService.importUsers(request)).thenReturn(bulkResponse);
+
+        ResponseEntity<BulkImportResponse> response = userController.importUsers(request);
+
+        verify(userImportService).importUsers(request);
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().getTotal());
+        assertEquals(1, response.getBody().getSucceeded());
+        assertEquals(0, response.getBody().getFailed());
+    }
+>>>>>>> Stashed changes
 }

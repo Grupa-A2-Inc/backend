@@ -59,7 +59,16 @@ public class ParentService {
 
     public void addStudent(UUID parentId, UUID studentId) {
         Parent parent = parentRepository.findById(parentId)
+<<<<<<< Updated upstream
                 .orElseThrow(()-> new EntityNotFoundException(PARENT_NOT_FOUND));
+=======
+                .orElseThrow(() -> new EntityNotFoundException(PARENT_NOT_FOUND));
+
+        if (!parent.getRole().getName().equals(RoleName.PARENT)) {
+            throw new IllegalArgumentException("User is not a parent");
+        }
+
+>>>>>>> Stashed changes
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(()-> new EntityNotFoundException("Student not found"));
 

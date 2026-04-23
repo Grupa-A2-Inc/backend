@@ -6,10 +6,7 @@ import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.dto.request.LoginRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.response.UserDataResponse;
-import org.elearning.backend.auth.service.AuthService;
-import org.elearning.backend.auth.service.PasswordResetService;
-import org.elearning.backend.auth.service.RefreshTokenService;
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.*;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.security.jwt.JwtUtil;
@@ -63,6 +60,9 @@ class AuthIntegrationJwtLoginTest {
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private AccountActivationService accountActivationService;
 
     private AuthResponse mockAuthResponse() {
         UUID organizationId = UUID.randomUUID();

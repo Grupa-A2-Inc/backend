@@ -26,6 +26,14 @@ logging:
   level:
     root: INFO
 
+<<<<<<< Updated upstream
 app:
   mail:
     from: test@example.com
+=======
+  app:
+    mail:
+      from: test@example.com
+    frontend:
+      url: http://localhost:3000
+>>>>>>> Stashed changes

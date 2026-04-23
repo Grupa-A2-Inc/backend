@@ -11,6 +11,10 @@ import org.elearning.backend.student.entity.Student;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
+<<<<<<< Updated upstream
+=======
+import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
+>>>>>>> Stashed changes
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
@@ -18,6 +22,10 @@ import org.elearning.backend.user.exception.*;
 import org.elearning.backend.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+<<<<<<< Updated upstream
+=======
+import org.springframework.transaction.annotation.Transactional;
+>>>>>>> Stashed changes
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +37,13 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
+<<<<<<< Updated upstream
+=======
+    private final ActivationTokenService activationTokenService;
+    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+
+>>>>>>> Stashed changes
     private static final String USER_NO_EXIST = "User does not exist: ";
 
     public UserResponse createUser(CreateUserRequest request) {
@@ -65,6 +80,30 @@ public class UserService {
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll()
+<<<<<<< Updated upstream
+=======
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public List<UserResponse> getCurrentOrganizationUsers() {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        UUID currentUserId = userDetails.getUserId();
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + currentUserId));
+
+        Organization organization = currentUser.getOrganization();
+        if (organization == null) {
+            throw new UserOrganizationNotFoundException("Organization not found.");
+        }
+
+        UUID organizationId = organization.getId();
+
+        return userRepository.findByOrganizationId(organizationId)
+>>>>>>> Stashed changes
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -89,6 +128,19 @@ public class UserService {
         return toResponse(saved);
     }
 
+<<<<<<< Updated upstream
+=======
+    public void updateUserStatus(UUID userId, UpdateUserStatusRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + userId));
+
+        user.setStatus(request.getStatus());
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+    }
+
+>>>>>>> Stashed changes
     public void deleteUser(UUID id) {
         if (!userRepository.existsById(id)) {
             throw new UserNotFoundException(USER_NO_EXIST + id);
@@ -113,6 +165,13 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public List<UserResponse> getUsersByOrganizationId(UUID organizationId) {
+        return userRepository.findByOrganizationId(organizationId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private UserResponse toResponse(User user) {
         return new UserResponse(
                 user.getId(),
@@ -125,15 +184,6 @@ public class UserService {
         );
     }
 
-    public List<UserResponse> getUsersByOrganizationId(UUID organizationId) {
-        return userRepository.findByOrganizationId(organizationId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
-    }
-
-    private final PasswordEncoder passwordEncoder;
-
     private User createUserEntityForRole(RoleName roleName) {
         return switch (roleName) {
             case PARENT -> new Parent();
@@ -141,4 +191,8 @@ public class UserService {
             default -> new User();
         };
     }
+<<<<<<< Updated upstream
 }
+=======
+}
+>>>>>>> Stashed changes
