@@ -36,3 +36,4 @@ services:
       - MAIL_USERNAME
       - MAIL_PASSWORD
       - MAIL_FROM
+      - APP_FRONTEND_URL=http://localhost:3000

@@ -121,4 +121,11 @@ class JwtUtilTest {
         String token = jwtUtil.generateAccessToken(TEST_ID, TEST_ROLE);
         assertThat(jwtUtil.extractRole(token)).isEqualTo(TEST_ROLE);
     }
+
+    @Test
+    void extractExpiration_shouldReturnFutureExpiration() {
+        String token = jwtUtil.generateAccessToken(TEST_ID, TEST_ROLE);
+
+        assertThat(jwtUtil.extractExpiration(token)).isAfter(java.time.LocalDateTime.now());
+    }
 }

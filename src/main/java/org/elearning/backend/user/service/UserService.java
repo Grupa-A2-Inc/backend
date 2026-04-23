@@ -12,11 +12,8 @@ import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.student.entity.Student;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
-import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
-import org.elearning.backend.user.dto.response.BulkImportResponse;
-import org.elearning.backend.user.dto.response.UserImportResult;
 import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
@@ -26,7 +23,6 @@ import org.elearning.backend.user.repository.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -41,6 +37,8 @@ public class UserService {
     private final OrganizationRepository organizationRepository;
     private final ActivationTokenService activationTokenService;
     private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+
     private static final String USER_NO_EXIST = "User does not exist: ";
 
     @Transactional
@@ -81,28 +79,26 @@ public class UserService {
     }
 
     public List<UserResponse> getAllUsers() {
-
         return userRepository.findAll()
-            .stream()
-            .map(this::toResponse)
-            .toList();
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public List<UserResponse> getCurrentOrganizationUsers() {
-
         CustomUserDetails userDetails =
                 (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        UUID currentUserId=userDetails.getUserId();
+        UUID currentUserId = userDetails.getUserId();
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + currentUserId));
 
-        Organization organization=currentUser.getOrganization();
-        if(organization==null){
+        Organization organization = currentUser.getOrganization();
+        if (organization == null) {
             throw new UserOrganizationNotFoundException("Organization not found.");
         }
 
-        UUID organizationId=organization.getId();
+        UUID organizationId = organization.getId();
 
         return userRepository.findByOrganizationId(organizationId)
                 .stream()
@@ -129,14 +125,14 @@ public class UserService {
         return toResponse(saved);
     }
 
-    public void updateUserStatus(UUID userId, UpdateUserStatusRequest request){
+    public void updateUserStatus(UUID userId, UpdateUserStatusRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(()->new UserNotFoundException(USER_NO_EXIST+userId));
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + userId));
 
         user.setStatus(request.getStatus());
         user.setUpdatedAt(LocalDateTime.now());
 
-        User saved = userRepository.save(user);
+        userRepository.save(user);
     }
 
     public void deleteUser(UUID id) {
@@ -163,6 +159,13 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public List<UserResponse> getUsersByOrganizationId(UUID organizationId) {
+        return userRepository.findByOrganizationId(organizationId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private UserResponse toResponse(User user) {
         return new UserResponse(
                 user.getId(),
@@ -175,38 +178,11 @@ public class UserService {
         );
     }
 
-    public List<UserResponse> getUsersByOrganizationId(UUID organizationId) {
-        return userRepository.findByOrganizationId(organizationId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
-    }
-
-    private final PasswordEncoder passwordEncoder;
-
     private User createUserEntityForRole(RoleName roleName) {
         return switch (roleName) {
             case PARENT -> new Parent();
             case STUDENT -> new Student();
             default -> new User();
         };
-    }
-
-    public BulkImportResponse importUsers(CreateUserBulkRequest request) {
-        List<UserImportResult> results = request.getUsers().stream()
-                .map(this::tryCreateSingleUser)
-                .toList();
-
-        return new BulkImportResponse(results);
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public UserImportResult tryCreateSingleUser(CreateUserRequest request) {
-        try {
-            UserResponse created = createUser(request);
-            return UserImportResult.succeeded(created);
-        } catch (Exception e) {
-            return UserImportResult.failed(request.getEmail(), e.getMessage());
-        }
     }
 }

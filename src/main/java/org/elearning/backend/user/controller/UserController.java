@@ -7,16 +7,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
-import org.apache.coyote.Response;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
-import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
+import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserResponse;
+import org.elearning.backend.user.service.UserImportService;
 import org.elearning.backend.user.service.UserService;
-import org.mapstruct.control.MappingControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,6 +30,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1/users")
 public class UserController {
     private final UserService userService;
+    private final UserImportService userImportService;
 
     @Operation(
             summary = "Create a new user",
@@ -87,16 +87,17 @@ public class UserController {
     @ApiResponse(
             responseCode = "401",
             description = "Unauthorized",
-            content = @Content)
-
+            content = @Content
+    )
     @ApiResponse(
             responseCode = "403",
             description = "Access denied",
-            content = @Content)
+            content = @Content
+    )
     @PreAuthorize("@accessService.canImportUsers(authentication, #request)")
     @PostMapping("/import")
     public ResponseEntity<BulkImportResponse> importUsers(@Valid @RequestBody CreateUserBulkRequest request) {
-        BulkImportResponse response = userService.importUsers(request);
+        BulkImportResponse response = userImportService.importUsers(request);
         return ResponseEntity.ok(response);
     }
 
@@ -130,7 +131,7 @@ public class UserController {
 
     @Operation(
             summary = "Get users",
-            description ="Returns the list of users that are part of the administrator's organization"
+            description = "Returns the list of users that are part of the administrator's organization"
     )
     @ApiResponse(
             responseCode = "200",
@@ -152,10 +153,9 @@ public class UserController {
     )
     @PreAuthorize("hasRole('ORGANIZATION_ADMIN')")
     @GetMapping("/organization")
-    public ResponseEntity<List<UserResponse>> getOrganizationUsers(){
+    public ResponseEntity<List<UserResponse>> getOrganizationUsers() {
         return ResponseEntity.ok(userService.getCurrentOrganizationUsers());
     }
-
 
     @Operation(
             summary = "Update user status",
@@ -188,7 +188,8 @@ public class UserController {
     )
     @PreAuthorize("@accessService.canUpdateUserStatus(authentication, #id)")
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Void> updateUserStatus(@P("id") @PathVariable UUID id, @Valid @RequestBody UpdateUserStatusRequest request){
+    public ResponseEntity<Void> updateUserStatus(@P("id") @PathVariable UUID id,
+                                                 @Valid @RequestBody UpdateUserStatusRequest request) {
         userService.updateUserStatus(id, request);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
