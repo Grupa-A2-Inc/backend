@@ -109,6 +109,8 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
 
+        validateUserCanLogin(user);
+
         handleExistingLock(user);
 
         try {
@@ -191,5 +193,13 @@ public class AuthService {
             throw new AuthLockedAccount("Too many login attempts. Please try again after " +
                     lockedFormat);
         }
+    }
+
+    private void validateUserCanLogin(User user) {
+        if (user.getStatus() == UserStatus.ACTIVE) {
+            return;
+        }
+
+        throw new InvalidCredentialsException("Account is " + user.getStatus() + ". Login is not allowed.");
     }
 }

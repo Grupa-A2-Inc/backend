@@ -3,6 +3,7 @@ package org.elearning.backend.assessment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.assessment.dto.test_dto.SubmitAnswerDto;
 import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
+import org.elearning.backend.auth.service.AccountActivationService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -46,6 +48,9 @@ class AttemptControllerTest {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @MockitoBean
+    private AccountActivationService accountActivationService;
+
     private UUID studentId;
     private String accessToken;
 
@@ -66,6 +71,7 @@ class AttemptControllerTest {
         jdbcTemplate.execute("DELETE FROM tests");
         jdbcTemplate.execute("DELETE FROM lessons");
         jdbcTemplate.execute("DELETE FROM chapters");
+        jdbcTemplate.execute("DELETE FROM course_enrollments");
         jdbcTemplate.execute("DELETE FROM courses");
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", studentId);
     }
@@ -116,6 +122,8 @@ class AttemptControllerTest {
                 "INSERT INTO lessons (id, chapter_id, title, order_index) VALUES (?, ?, ?, ?)",
                 lessonId, chapterId, "Lesson for attempt tests", 1
         );
+
+        insertEnrollment(studentId, courseId);
 
         jdbcTemplate.update(
                 "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status) " +
@@ -174,6 +182,8 @@ class AttemptControllerTest {
                 lessonId, chapterId, "Lesson for attempt tests", 1
         );
 
+        insertEnrollment(studentId, courseId);
+
         jdbcTemplate.update(
                 "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS test_status))",
@@ -188,6 +198,15 @@ class AttemptControllerTest {
         );
 
         return testId;
+    }
+
+    private UUID insertEnrollment(UUID studentId, UUID courseId) {
+        UUID enrollmentId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO course_enrollments (id, student_id, course_id, enrolled_at) VALUES (?, ?, ?, NOW())",
+                enrollmentId, studentId, courseId
+        );
+        return enrollmentId;
     }
 
     private TestContext insertAdditionalQuestion(UUID testId, String content) {

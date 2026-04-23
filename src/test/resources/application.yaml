@@ -29,3 +29,5 @@
   app:
     mail:
       from: test@example.com
+    frontend:
+      url: http://localhost:3000

@@ -263,13 +263,15 @@ class ParentServiceTest {
 
     @Test
     void addStudent_parentNotHaveParentRole_throwsException() {
+        UUID parentId = parent.getId();
+        UUID studentId = student.getId();
         Role teacherRole = new Role(RoleName.TEACHER);
         parent.setRole(teacherRole);
 
-        when(parentRepository.findById(parent.getId()))
+        when(parentRepository.findById(parentId))
                 .thenReturn(Optional.of(parent));
 
-        assertThatThrownBy(() -> parentService.addStudent(parent.getId(), student.getId()))
+        assertThatThrownBy(() -> parentService.addStudent(parentId, studentId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("User is not a parent");
 
@@ -278,16 +280,18 @@ class ParentServiceTest {
 
     @Test
     void addStudent_studentNotHaveStudentRole_throwsException() {
+        UUID parentId = parent.getId();
+        UUID studentId = student.getId();
         Role teacherRole = new Role(RoleName.TEACHER);
         parent.setRole(new Role(RoleName.PARENT));
         student.setRole(teacherRole);
 
-        when(parentRepository.findById(parent.getId()))
+        when(parentRepository.findById(parentId))
                 .thenReturn(Optional.of(parent));
-        when(studentRepository.findById(student.getId()))
+        when(studentRepository.findById(studentId))
                 .thenReturn(Optional.of(student));
 
-        assertThatThrownBy(() -> parentService.addStudent(parent.getId(), student.getId()))
+        assertThatThrownBy(() -> parentService.addStudent(parentId, studentId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("User is not a student");
 
@@ -296,6 +300,8 @@ class ParentServiceTest {
 
     @Test
     void addStudent_differentOrganization_throwsException() {
+        UUID parentId = parent.getId();
+        UUID studentId = student.getId();
         Organization org1 = new Organization();
         org1.setId(UUID.randomUUID());
 
@@ -308,12 +314,48 @@ class ParentServiceTest {
         student.setRole(new Role(RoleName.STUDENT));
         student.setOrganization(org2);
 
-        when(parentRepository.findById(parent.getId()))
+        when(parentRepository.findById(parentId))
                 .thenReturn(Optional.of(parent));
-        when(studentRepository.findById(student.getId()))
+        when(studentRepository.findById(studentId))
                 .thenReturn(Optional.of(student));
 
-        assertThatThrownBy(() -> parentService.addStudent(parent.getId(), student.getId()))
+        assertThatThrownBy(() -> parentService.addStudent(parentId, studentId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Parent and student are not in the same organization");
+
+        verify(parentRepository, never()).save(any());
+    }
+
+    @Test
+    void addStudent_parentWithoutOrganization_throwsException() {
+        UUID parentId = parent.getId();
+        UUID studentId = student.getId();
+        parent.setOrganization(null);
+
+        when(parentRepository.findById(parentId))
+                .thenReturn(Optional.of(parent));
+        when(studentRepository.findById(studentId))
+                .thenReturn(Optional.of(student));
+
+        assertThatThrownBy(() -> parentService.addStudent(parentId, studentId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Parent and student are not in the same organization");
+
+        verify(parentRepository, never()).save(any());
+    }
+
+    @Test
+    void addStudent_studentWithoutOrganization_throwsException() {
+        UUID parentId = parent.getId();
+        UUID studentId = student.getId();
+        student.setOrganization(null);
+
+        when(parentRepository.findById(parentId))
+                .thenReturn(Optional.of(parent));
+        when(studentRepository.findById(studentId))
+                .thenReturn(Optional.of(student));
+
+        assertThatThrownBy(() -> parentService.addStudent(parentId, studentId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Parent and student are not in the same organization");
 

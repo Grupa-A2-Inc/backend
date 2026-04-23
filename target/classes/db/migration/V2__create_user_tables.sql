@@ -16,7 +16,7 @@ INSERT INTO roles (name) VALUES
 CREATE TABLE users (
    id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
    email         VARCHAR(255) NOT NULL UNIQUE,
-   password_hash VARCHAR(255) NOT NULL,
+   password_hash VARCHAR(255) ,
    first_name    VARCHAR(100) NOT NULL,
    last_name     VARCHAR(100) NOT NULL,
    role_id       BIGINT       NOT NULL REFERENCES roles(id),

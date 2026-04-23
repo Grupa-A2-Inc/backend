@@ -11,6 +11,8 @@ import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -169,6 +171,28 @@ class JwtAuthenticationFilterTest {
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+        assertThat(filterChain.wasInvoked()).isTrue();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = UserStatus.class, names = {"INACTIVE", "BLOCKED", "PENDING"})
+    void doFilterInternal_withValidTokenButNonActiveUser_leavesSecurityContextEmpty(UserStatus status)
+            throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setServletPath("/api/v1/users");
+        request.addHeader("Authorization", "Bearer valid-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        TrackingFilterChain filterChain = new TrackingFilterChain();
+
+        tokenBlacklistService.revoked = false;
+        jwtUtil.userId = UUID.randomUUID();
+        User user = makeUser(jwtUtil.userId, status.name().toLowerCase() + "@test.com", RoleName.ADMIN);
+        user.setStatus(status);
+        customUserDetailsService.user = user;
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         assertThat(filterChain.wasInvoked()).isTrue();
     }
 
