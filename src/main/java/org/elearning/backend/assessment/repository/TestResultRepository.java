@@ -1,10 +1,14 @@
 package org.elearning.backend.assessment.repository;
 
+
+import org.elearning.backend.analytics.dto.statistics.entity.CourseDetailsDto;
+import org.elearning.backend.analytics.dto.statistics.entity.CourseStatsDto;
 import org.elearning.backend.analytics.dto.statistics.student.MyClassTestAverageDto;
 import org.elearning.backend.analytics.dto.statistics.student.MyClassTestBestResultsDto;
 import org.elearning.backend.analytics.dto.statistics.student.MyPersonalTestStatsDto;
 import org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto;
 import org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptDetailsDto;
 import org.elearning.backend.assessment.model.AttemptStatus;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.model.TestResult;
@@ -134,11 +138,69 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
     List<MyClassTestBestResultsDto> getAllByTestOrderByScorePercentAsc(Test test);
 
     @Query(value = """
-        SELECT DISTINCT ON (student_id) * FROM test_results 
-        WHERE test_id = :testId 
+        SELECT new org.elearning.backend.assessment.dto.attempt_dto.AttemptDetailsDto(
+        tr.attemptId,
+        t.id,
+        t.title,
+        tr.score,
+        tr.scorePercent,
+        tr.passed,
+        tr.completedAt
+         )
+        FROM TestResult tr
+        JOIN tr.test t
+        JOIN Lesson l ON l.id = t.lessonId
+        JOIN l.chapter ch
+        JOIN ch.course c
+        WHERE tr.studentId = :studentId
+        AND c.id = :courseId
+        ORDER BY tr.completedAt DESC
+        """)
+    List<AttemptDetailsDto> getLastAttempts(@Param("studentId") UUID studentId,
+                                            @Param("courseId") UUID courseId,
+                                            Pageable pageable);
+
+    @Query(value = """
+        SELECT new org.elearning.backend.analytics.dto.statistics.entity.CourseDetailsDto(
+        c.title,
+        CAST(COUNT(DISTINCT tr) as integer)
+        )
+        FROM TestResult tr
+        JOIN tr.test t
+        JOIN Lesson l ON l.id = t.lessonId
+        JOIN l.chapter ch
+        JOIN ch.course c
+        WHERE c.id = :courseId
+        """)
+    CourseDetailsDto getCourseDetails(@Param("courseId") UUID courseId);
+
+    @Query(value = """
+          SELECT new org.elearning.backend.analytics.dto.statistics.entity.CourseStatsDto(
+              CAST(COUNT(tr) AS integer),
+              CAST(SUM(CASE WHEN tr.passed = true THEN 1 ELSE 0 END) AS INTEGER),
+              MAX(tr.scorePercent),
+              MIN(tr.scorePercent),
+              AVG(tr.scorePercent)
+              )
+        FROM TestResult tr
+        JOIN tr.test t
+        JOIN Lesson l ON l.id = t.lessonId
+        JOIN l.chapter ch
+        JOIN ch.course c
+        WHERE tr.studentId = :studentId
+        AND c.id = :courseId
+    """)
+    CourseStatsDto getCourseStats(@Param("courseId") UUID studentId,
+                                  @Param("studentId") UUID courseId);
+
+
+    @Query(value = """
+        SELECT DISTINCT ON (student_id) * FROM test_results
+        WHERE test_id = :testId
         ORDER BY student_id, score DESC, completed_at DESC
         """, nativeQuery = true)
     List<TestResult> findBestAttemptsByTestId(@Param("testId") UUID testId);
 
 
 }
+

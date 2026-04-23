@@ -31,4 +31,9 @@ public class AnalyticsExceptionHandler extends GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleValidationException(ValidationException exception){
         return buildErrorResponse(exception, HttpStatus.UNPROCESSABLE_ENTITY);
     }
+
+    @ExceptionHandler(StudentNotEnrolledInCourseException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationException(StudentNotEnrolledInCourseException exception){
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
 }
