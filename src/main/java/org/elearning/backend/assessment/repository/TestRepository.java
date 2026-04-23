@@ -68,13 +68,4 @@ public interface TestRepository extends JpaRepository<Test, UUID> {
     @Query("SELECT t.lessonId, t.id FROM Test t WHERE t.lessonId IN :lessonIds")
     List<Object[]> findTestIdsByLessonIds(@Param("lessonIds") List<UUID> lessonIds);
 
-    @Query(value = """
-        SELECT COUNT(t)
-        FROM Test t
-        JOIN Lesson l ON t.lessonId = l.id
-        JOIN l.chapter ch
-        JOIN ch.course c
-        WHERE c.id = :courseId
-    """)
-    long countAllTestsFromCourse(UUID courseId);
 }
