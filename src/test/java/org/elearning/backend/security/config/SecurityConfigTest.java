@@ -1,6 +1,6 @@
 package org.elearning.backend.security.config;
 
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.TokenBlackListService;
 import org.elearning.backend.security.auth.CustomUserDetailsService;
 import org.elearning.backend.security.handler.JwtAccessDeniedHandler;
 import org.elearning.backend.security.handler.JwtAuthenticationEntryPoint;
@@ -76,7 +76,7 @@ class SecurityConfigTest {
                 new JwtAuthenticationFilter(
                         new NoopJwtUtil(),
                         new NoopCustomUserDetailsService(),
-                        new NoopTokenBlacklistService()
+                        new NoopTokenBlackListService()
                 ),
                 new JwtAccessDeniedHandler(),
                 new JwtAuthenticationEntryPoint()
@@ -128,14 +128,14 @@ class SecurityConfigTest {
         }
 
         @Bean
-        TokenBlacklistService tokenBlacklistService() {
-            return new NoopTokenBlacklistService();
+        TokenBlackListService tokenBlacklistService() {
+            return new NoopTokenBlackListService();
         }
 
         @Bean
         JwtAuthenticationFilter jwtAuthenticationFilter(
                 CustomUserDetailsService customUserDetailsService,
-                TokenBlacklistService tokenBlacklistService
+                TokenBlackListService tokenBlacklistService
         ) {
             return new JwtAuthenticationFilter(new NoopJwtUtil(), customUserDetailsService, tokenBlacklistService);
         }
@@ -191,9 +191,9 @@ class SecurityConfigTest {
         }
     }
 
-    static class NoopTokenBlacklistService extends TokenBlacklistService {
+    static class NoopTokenBlackListService extends TokenBlackListService {
 
-        NoopTokenBlacklistService() {
+        NoopTokenBlackListService() {
             super(null);
         }
 

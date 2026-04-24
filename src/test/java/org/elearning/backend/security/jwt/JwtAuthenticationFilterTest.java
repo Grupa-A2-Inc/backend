@@ -2,7 +2,7 @@ package org.elearning.backend.security.jwt;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.ServletException;
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.TokenBlackListService;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
@@ -27,7 +27,7 @@ class JwtAuthenticationFilterTest {
 
     private final StubJwtUtil jwtUtil = new StubJwtUtil();
     private final StubCustomUserDetailsService customUserDetailsService = new StubCustomUserDetailsService();
-    private final StubTokenBlacklistService tokenBlacklistService = new StubTokenBlacklistService();
+    private final StubTokenBlackListService tokenBlacklistService = new StubTokenBlackListService();
     private final JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil, customUserDetailsService, tokenBlacklistService);
 
     @AfterEach
@@ -253,11 +253,11 @@ class JwtAuthenticationFilterTest {
         }
     }
 
-    private static final class StubTokenBlacklistService extends TokenBlacklistService {
+    private static final class StubTokenBlackListService extends TokenBlackListService {
 
         private boolean revoked;
 
-        private StubTokenBlacklistService() {
+        private StubTokenBlackListService() {
             super(null);
         }
 

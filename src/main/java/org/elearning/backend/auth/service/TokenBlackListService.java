@@ -17,7 +17,7 @@ import java.util.HexFormat;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TokenBlacklistService {
+public class TokenBlackListService {
 
     private final RevokedAccessTokenRepository revokedAccessTokenRepository;
 

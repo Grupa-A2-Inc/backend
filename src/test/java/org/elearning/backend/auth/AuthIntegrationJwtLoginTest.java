@@ -53,7 +53,7 @@ class AuthIntegrationJwtLoginTest {
     private RefreshTokenService refreshTokenService;
 
     @MockitoBean
-    private TokenBlacklistService tokenBlacklistService;
+    private TokenBlackListService tokenBlacklistService;
 
     @MockitoBean
     private JwtUtil jwtUtil;

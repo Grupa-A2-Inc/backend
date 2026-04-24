@@ -35,7 +35,7 @@ public class AuthController {
     private final AuthService authService;
     private final PasswordResetService resetService;
     private final RefreshTokenService refreshTokenService;
-    private final TokenBlacklistService tokenBlacklistService;
+    private final TokenBlackListService tokenBlacklistService;
     private final JwtUtil jwtUtil;
 
     @Value("${app.auth.api-path:/api/v1/auth}")

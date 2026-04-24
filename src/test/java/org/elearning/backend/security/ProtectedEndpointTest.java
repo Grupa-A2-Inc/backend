@@ -1,6 +1,6 @@
 package org.elearning.backend.security;
 
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.TokenBlackListService;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
@@ -41,7 +41,7 @@ class ProtectedEndpointTest {
     private CustomUserDetailsService customUserDetailsService;
 
     @MockitoBean
-    private TokenBlacklistService tokenBlacklistService;
+    private TokenBlackListService tokenBlacklistService;
 
     private CustomUserDetails createUserDetails() {
         User user = new User();

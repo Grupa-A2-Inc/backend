@@ -1,5 +1,7 @@
 package org.elearning.backend.security.access;
 
+import org.elearning.backend.classroom.entity.Classroom;
+import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -33,6 +35,9 @@ class AccessServiceTest {
 
     @Mock
     private OrganizationRepository organizationRepository;
+
+    @Mock
+    private ClassroomRepository classroomRepository;
 
     @InjectMocks
     private AccessService accessService;
@@ -369,6 +374,110 @@ class AccessServiceTest {
         Authentication authentication = new UsernamePasswordAuthenticationToken("plain-user", "secret");
 
         assertThat(accessService.extractCurrentUser(authentication)).isNull();
+    }
+
+    @Test
+    void canCreateClassroom_returnsFalseWhenAuthenticationIsMissing() {
+        assertThat(accessService.canCreateClassroom(null)).isFalse();
+    }
+
+    @Test
+    void canCreateClassroom_returnsTrueForOrganizationAdminWithOrganization() {
+        assertThat(accessService.canCreateClassroom(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, UUID.randomUUID()))
+        )).isTrue();
+    }
+
+    @Test
+    void canCreateClassroom_returnsFalseForOrganizationAdminWithoutOrganization() {
+        assertThat(accessService.canCreateClassroom(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, null))
+        )).isFalse();
+    }
+
+    @Test
+    void canCreateClassroom_returnsFalseForOtherRoles() {
+        assertThat(accessService.canCreateClassroom(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID()))
+        )).isFalse();
+    }
+
+    @Test
+    void canManageClassroom_returnsFalseWhenAuthenticationIsMissing() {
+        assertThat(accessService.canManageClassroom(null, UUID.randomUUID())).isFalse();
+    }
+
+    @Test
+    void canManageClassroom_returnsFalseForNonOrganizationAdmin() {
+        assertThat(accessService.canManageClassroom(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
+                UUID.randomUUID()
+        )).isFalse();
+    }
+
+    @Test
+    void canManageClassroom_returnsFalseForOrganizationAdminWithoutOrganization() {
+        assertThat(accessService.canManageClassroom(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, null)),
+                UUID.randomUUID()
+        )).isFalse();
+    }
+
+    @Test
+    void canManageClassroom_returnsFalseWhenClassroomIsMissing() {
+        UUID classroomId = UUID.randomUUID();
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.empty());
+
+        assertThat(accessService.canManageClassroom(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, UUID.randomUUID())),
+                classroomId
+        )).isFalse();
+    }
+
+    @Test
+    void canManageClassroom_returnsFalseWhenClassroomHasNoOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        Classroom classroom = new Classroom();
+        classroom.setId(classroomId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertThat(accessService.canManageClassroom(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, UUID.randomUUID())),
+                classroomId
+        )).isFalse();
+    }
+
+    @Test
+    void canManageClassroom_returnsFalseWhenClassroomBelongsToDifferentOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        Classroom classroom = new Classroom();
+        classroom.setId(classroomId);
+        Organization organization = new Organization();
+        organization.setId(UUID.randomUUID());
+        classroom.setOrganization(organization);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertThat(accessService.canManageClassroom(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, UUID.randomUUID())),
+                classroomId
+        )).isFalse();
+    }
+
+    @Test
+    void canManageClassroom_returnsTrueForOrganizationAdminFromSameOrganization() {
+        UUID organizationId = UUID.randomUUID();
+        UUID classroomId = UUID.randomUUID();
+        Classroom classroom = new Classroom();
+        classroom.setId(classroomId);
+        Organization organization = new Organization();
+        organization.setId(organizationId);
+        classroom.setOrganization(organization);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertThat(accessService.canManageClassroom(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, organizationId)),
+                classroomId
+        )).isTrue();
     }
 
     private Authentication authenticationFor(User user) {
