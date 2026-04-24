@@ -19,6 +19,8 @@ import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.content.repository.LessonResourceRepository;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.repository.OrganizationRepository;
+import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.classroom.entity.Classroom;
 import org.elearning.backend.parent.entity.Parent;
 import org.elearning.backend.parent.repository.ParentRepository;
 import org.elearning.backend.role.entity.RoleName;
@@ -49,6 +51,7 @@ public class AccessService {
     private final CourseEnrollmentRepository courseEnrollmentRepository;
     private final ParentRepository parentRepository;
     private final StudentRepository studentRepository;
+    private final ClassroomRepository classroomRepository;
 
     public boolean canCreateUser(Authentication authentication, CreateUserRequest request) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
@@ -499,6 +502,29 @@ public class AccessService {
         }
 
         return currentUser.getUserId().equals(attempt.getStudentId());
+    }
+
+    public boolean canCreateClassroom(Authentication authentication) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        return currentUser != null
+                && currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN
+                && currentUser.getOrganizationId() != null;
+    }
+
+    public boolean canManageClassroom(Authentication authentication, UUID classroomId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null
+                || currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN
+                || currentUser.getOrganizationId() == null) {
+            return false;
+        }
+
+        Classroom classroom = classroomRepository.findById(classroomId).orElse(null);
+        return classroom != null
+                && classroom.getOrganization() != null
+                && currentUser.getOrganizationId().equals(classroom.getOrganization().getId());
     }
 
     private boolean canManageChapterCourse(Authentication authentication, UUID targetChapterId) {

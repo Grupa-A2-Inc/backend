@@ -36,7 +36,7 @@ class AuthControllerTest {
     private AuthController authController;
 
     @Mock
-    private TokenBlacklistService tokenBlacklistService;
+    private TokenBlackListService tokenBlacklistService;
 
     @Mock
     private AccountActivationService accountActivationService;

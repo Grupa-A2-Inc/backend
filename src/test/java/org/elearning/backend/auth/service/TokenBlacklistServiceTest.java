@@ -21,7 +21,7 @@ class TokenBlacklistServiceTest {
     private RevokedAccessTokenRepository revokedAccessTokenRepository;
 
     @InjectMocks
-    private TokenBlacklistService tokenBlacklistService;
+    private TokenBlackListService tokenBlacklistService;
 
     @Test
     void revokeAccessToken_savesEntityWithCorrectFields() {
