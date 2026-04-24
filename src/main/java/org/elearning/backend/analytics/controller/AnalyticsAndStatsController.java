@@ -79,7 +79,7 @@ public class AnalyticsAndStatsController {
     @ApiResponse(responseCode = FORBIDDEN, description = "User does not have the permissions to view data from given test")
 
     @GetMapping("/students/me/tests/{testId}/stats")
-    @PreAuthorize("@accessService.canViewTest(authentication,#id)")
+    @PreAuthorize("@accessService.canViewMyBestTestResult(authentication,#id)")
     public ResponseEntity<MyTestStatsDto> getMyTestStats(
             @P("id") @PathVariable UUID testId,
             @AuthenticationPrincipal CustomUserDetails currentUser){

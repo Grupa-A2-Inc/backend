@@ -17,12 +17,13 @@ import java.util.UUID;
 public interface LessonDifficultyByStudentRepository extends JpaRepository<LessonDifficultyByStudent, LessonDifficultyKey> {
 
     @Query(value = """
-            SELECT
+            SELECT new org.elearning.backend.analytics.dto.statistics.entity.DifficultyLessonDto(
              ld.id.lessonId,
              ld.lessonTitle,
              ld.myBestScore,
              ld.classAverage,
              ld.gap
+             )
             FROM LessonDifficultyByStudent ld
             WHERE ld.courseId = :courseId
             AND ld.id.studentId = :studentId
