@@ -2,7 +2,7 @@ package org.elearning.backend.analytics.service;
 
 import org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto;
 import org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto;
-import org.elearning.backend.analytics.exception.AccessDeniedException;
+import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.repository.TestRepository;
@@ -13,6 +13,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
+
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -37,10 +39,16 @@ public class AnalyticsQueryService {
         Test test = testRepository.findById(testId)
                 .orElseThrow( () -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
         if(!test.getCreatedBy().equals(professorId)){
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
-        return testResultRepository.getClassAverages(test);
+        ClassAverageDto result = testResultRepository.getClassAverages(test);
+
+        if(result==null){
+            return new ClassAverageDto(testId, test.getTitle(), 0, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0.0);
+        }
+
+        return result;
     }
 
     public Page<StudentAverageDto> getStudentAverages(UUID courseId, UUID professorId, Pageable pageable){
@@ -48,7 +56,7 @@ public class AnalyticsQueryService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new DoesNotExistException(COURSE_DOES_NOT_EXIST));
         if(!course.getCreatedBy().equals(professorId)){
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
         return testResultRepository.getStudentAverages(courseId, pageable);

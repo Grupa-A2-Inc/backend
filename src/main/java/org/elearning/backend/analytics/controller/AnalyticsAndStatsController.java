@@ -2,6 +2,7 @@ package org.elearning.backend.analytics.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import org.elearning.backend.analytics.dto.statistics.student.MySummaryDataDto;
 import org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto;
 import org.elearning.backend.analytics.dto.statistics.student.MyTestStatsDto;
 import org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto;
@@ -78,12 +79,28 @@ public class AnalyticsAndStatsController {
     @ApiResponse(responseCode = FORBIDDEN, description = "User does not have the permissions to view data from given test")
 
     @GetMapping("/students/me/tests/{testId}/stats")
-    @PreAuthorize("@accessService.canViewTest(authentication,#id)")
+    @PreAuthorize("@accessService.canViewMyBestTestResult(authentication,#id)")
     public ResponseEntity<MyTestStatsDto> getMyTestStats(
             @P("id") @PathVariable UUID testId,
             @AuthenticationPrincipal CustomUserDetails currentUser){
         UUID userId = currentUser.getUserId();
         return ResponseEntity.ok().body(studentsStatsService.getMyTestStats(userId, testId));
+    }
+
+    @Operation(summary = "Get personal course data",
+            description = "A student can view their own statistics from course involving the total numbers of tests taken," +
+                    " total tests passed, best score, average score, worst score, three lessons where the student is the" +
+                    " most struggling at and the last five attempts.")
+    @ApiResponse(responseCode = OK, description = "Data returned")
+    @ApiResponse(responseCode = NOT_FOUND, description = "Course does not exist")
+    @ApiResponse(responseCode = FORBIDDEN, description = "Student not enrolled to the course")
+    @GetMapping("/students/me/courses/{courseId}/stats")
+    @PreAuthorize("@accessService.canEnrollInCourse(authentication,#id)")
+    public ResponseEntity<MySummaryDataDto> getMySummaryData(
+            @P("id") @PathVariable UUID courseId,
+            @AuthenticationPrincipal CustomUserDetails currentUser){
+        UUID userId = currentUser.getUserId();
+        return ResponseEntity.ok().body(studentsStatsService.getMySummaryData(userId, courseId));
     }
 
 

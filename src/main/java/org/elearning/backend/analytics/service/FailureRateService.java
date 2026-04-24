@@ -3,7 +3,7 @@ package org.elearning.backend.analytics.service;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.analytics.dto.alerts.AlertDTO;
 import org.elearning.backend.analytics.dto.statistics.teacher.FailureRateDTO;
-import org.elearning.backend.analytics.exception.AccessDeniedException;
+import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.analytics.model.AnalyticsAlert;
 import org.elearning.backend.analytics.repository.AnalyticsAlertRepository;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
@@ -31,7 +31,7 @@ public class FailureRateService {
         Test test = testRepository.findById(testId)
                 .orElseThrow(() -> new DoesNotExistException("Test with id " + testId + " does not exist"));
         if (!test.getCreatedBy().equals(professorId)) {
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
         BigDecimal threshold = analyticsAlertRepository.findByTestIdAndIsActiveTrue(testId)
@@ -53,11 +53,11 @@ public class FailureRateService {
         return new FailureRateDTO(BigDecimal.valueOf(failureRate), threshold, alertTriggered);
     }
 
-    public FailureRateDTO getLessonFailureRate(UUID lessonId, UUID professorId) throws DoesNotExistException, AccessDeniedException {
+    public FailureRateDTO getLessonFailureRate(UUID lessonId, UUID professorId) throws DoesNotExistException, WithoutAccessException {
         Test test = testRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new DoesNotExistException("No test found for lesson with id " + lessonId));
         if (!test.getCreatedBy().equals(professorId)) {
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
         UUID testId = test.getId();
@@ -70,7 +70,7 @@ public class FailureRateService {
         Test test = testRepository.findById(testId)
                 .orElseThrow(() -> new DoesNotExistException("Test with id " + testId + " does not exist"));
         if (!test.getCreatedBy().equals(professorId)) {
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
 
         analyticsAlertRepository.upsertAlertThreshold(testId, professorId, threshold);
@@ -84,7 +84,7 @@ public class FailureRateService {
 
     public List<AlertDTO> getAlerts(UUID professorId, RoleName roleName) {
         if (!roleName.equals(RoleName.TEACHER)) {
-            throw new AccessDeniedException(professorId);
+            throw new WithoutAccessException(professorId);
         }
         return analyticsAlertRepository.getActiveAlertsForProfessor(professorId)
                 .stream()

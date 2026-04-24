@@ -12,8 +12,8 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = "org.elearning.backend.analytics")
 public class AnalyticsExceptionHandler extends GlobalExceptionHandler {
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(AccessDeniedException exception) {
+    @ExceptionHandler(WithoutAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(WithoutAccessException exception) {
         return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
     }
 
@@ -30,5 +30,10 @@ public class AnalyticsExceptionHandler extends GlobalExceptionHandler {
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(ValidationException exception){
         return buildErrorResponse(exception, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @ExceptionHandler(StudentNotEnrolledInCourseException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationException(StudentNotEnrolledInCourseException exception){
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
     }
 }

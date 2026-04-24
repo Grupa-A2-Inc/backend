@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.analytics.dto.InjectRequestDto;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
+import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.hamcrest.Matchers.containsString;
@@ -185,6 +187,92 @@ class AiControllerTest {
                 "}]";
     }
 
+        private String invalidQuestionsJson_lessThanTwoOptions() {
+                return "[{" +
+                                "\"text\": \"Question with one option\"," +
+                                "\"type\": \"SINGLE_CHOICE\"," +
+                                "\"options\": [" +
+                                "  {\"text\": \"Only option\", \"displayOrder\": 1, \"isCorrect\": true}" +
+                                "]" +
+                                "}]";
+        }
+
+        private String invalidQuestionsJson_trueFalseWrongOptionCount() {
+                return "[{" +
+                                "\"text\": \"Java is compiled?\"," +
+                                "\"type\": \"TRUE_FALSE\"," +
+                                "\"options\": [" +
+                                "  {\"text\": \"True\", \"displayOrder\": 1, \"isCorrect\": true}," +
+                                "  {\"text\": \"False\", \"displayOrder\": 2, \"isCorrect\": false}," +
+                                "  {\"text\": \"Maybe\", \"displayOrder\": 3, \"isCorrect\": false}" +
+                                "]" +
+                                "}]";
+        }
+
+        private String invalidQuestionsJson_trueFalseTwoCorrectAnswers() {
+                return "[{" +
+                                "\"text\": \"Java is object oriented?\"," +
+                                "\"type\": \"TRUE_FALSE\"," +
+                                "\"options\": [" +
+                                "  {\"text\": \"True\", \"displayOrder\": 1, \"isCorrect\": true}," +
+                                "  {\"text\": \"False\", \"displayOrder\": 2, \"isCorrect\": true}" +
+                                "]" +
+                                "}]";
+        }
+
+        private String validMultipleChoiceQuestionJson() {
+                return "[{" +
+                                "\"text\": \"Select JVM languages\"," +
+                                "\"type\": \"MULTIPLE_CHOICE\"," +
+                                "\"options\": [" +
+                                "  {\"text\": \"Java\", \"displayOrder\": 1, \"isCorrect\": true}," +
+                                "  {\"text\": \"Kotlin\", \"displayOrder\": 2, \"isCorrect\": true}," +
+                                "  {\"text\": \"MySQL\", \"displayOrder\": 3, \"isCorrect\": false}" +
+                                "]" +
+                                "}]";
+        }
+
+        private String invalidQuestionsJson_nullText() {
+                return "[{" +
+                                "\"text\": null," +
+                                "\"type\": \"SINGLE_CHOICE\"," +
+                                "\"options\": [" +
+                                "  {\"text\": \"A\", \"displayOrder\": 1, \"isCorrect\": true}," +
+                                "  {\"text\": \"B\", \"displayOrder\": 2, \"isCorrect\": false}" +
+                                "]" +
+                                "}]";
+        }
+
+        private String invalidQuestionsJson_nullOptions() {
+                return "[{" +
+                                "\"text\": \"Question without options\"," +
+                                "\"type\": \"SINGLE_CHOICE\"," +
+                                "\"options\": null" +
+                                "}]";
+        }
+
+        private String invalidQuestionsJson_nullQuestionType() {
+                return "[{" +
+                                "\"text\": \"Question with missing type\"," +
+                                "\"type\": null," +
+                                "\"options\": [" +
+                                "  {\"text\": \"A\", \"displayOrder\": 1, \"isCorrect\": true}," +
+                                "  {\"text\": \"B\", \"displayOrder\": 2, \"isCorrect\": false}" +
+                                "]" +
+                                "}]";
+        }
+
+        private String validQuestionsJson_withNullIsCorrectOption() {
+                return "[{" +
+                                "\"text\": \"Pick the correct answer\"," +
+                                "\"type\": \"SINGLE_CHOICE\"," +
+                                "\"options\": [" +
+                                "  {\"text\": \"A\", \"displayOrder\": 1, \"isCorrect\": true}," +
+                                "  {\"text\": \"B\", \"displayOrder\": 2, \"isCorrect\": null}" +
+                                "]" +
+                                "}]";
+        }
+
     private MockHttpServletRequestBuilder authorizedPost(String urlTemplate, Object... uriVars) {
         return post(urlTemplate, uriVars)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + teacherToken)
@@ -296,6 +384,17 @@ class AiControllerTest {
                 .andExpect(jsonPath("$.message", containsString("not found")));
     }
 
+        @Test
+        void injectQuestions_shouldReturn404_whenLessonDoesNotExistForAiRequest() throws Exception {
+                UUID missingLessonId = UUID.randomUUID();
+                UUID requestId = insertAiRequest(missingLessonId, "SUCCESS", validGeneratedQuestionsJson());
+
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.message", containsString("Lesson not found")));
+        }
+
     @Test
     void injectQuestions_shouldReturn404_whenTestIdProvidedButDoesNotExist() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
@@ -350,6 +449,17 @@ class AiControllerTest {
                 .andExpect(jsonPath("$.message", containsString("text")));
     }
 
+        @Test
+        void injectQuestions_shouldReturn422_whenQuestionTextIsNull() throws Exception {
+                LessonContext ctx = insertLessonOwnedBy(teacherId);
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_nullText());
+
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                                .andExpect(status().isUnprocessableEntity())
+                                .andExpect(jsonPath("$.message", containsString("text")));
+        }
+
     @Test
     void injectQuestions_shouldReturn422_whenNoCorrectAnswerDefined() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
@@ -371,6 +481,94 @@ class AiControllerTest {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message", containsString("SINGLE_CHOICE")));
     }
+
+        @Test
+        void injectQuestions_shouldReturn422_whenQuestionHasLessThanTwoOptions() throws Exception {
+                LessonContext ctx = insertLessonOwnedBy(teacherId);
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_lessThanTwoOptions());
+
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                                .andExpect(status().isUnprocessableEntity())
+                                .andExpect(jsonPath("$.message", containsString("at least 2 answer options")));
+        }
+
+        @Test
+        void injectQuestions_shouldReturn422_whenQuestionOptionsAreNull() throws Exception {
+                LessonContext ctx = insertLessonOwnedBy(teacherId);
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_nullOptions());
+
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                                .andExpect(status().isUnprocessableEntity())
+                                .andExpect(jsonPath("$.message", containsString("at least 2 answer options")));
+        }
+
+        @Test
+        void injectQuestions_shouldReturn422_whenTrueFalseHasWrongOptionCount() throws Exception {
+                LessonContext ctx = insertLessonOwnedBy(teacherId);
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_trueFalseWrongOptionCount());
+
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                                .andExpect(status().isUnprocessableEntity())
+                                .andExpect(jsonPath("$.message", containsString("exactly 2 options")));
+        }
+
+        @Test
+        void injectQuestions_shouldReturn422_whenTrueFalseHasTwoCorrectAnswers() throws Exception {
+                LessonContext ctx = insertLessonOwnedBy(teacherId);
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_trueFalseTwoCorrectAnswers());
+
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                                .andExpect(status().isUnprocessableEntity())
+                                .andExpect(jsonPath("$.message", containsString("TRUE_FALSE")));
+        }
+
+        @Test
+        void injectQuestions_shouldReturn422_whenGeneratedQuestionsJsonCannotBeParsed() throws Exception {
+                LessonContext ctx = insertLessonOwnedBy(teacherId);
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", "not-json");
+
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                                .andExpect(status().isUnprocessableEntity())
+                                .andExpect(jsonPath("$.message", containsString("parsing generated questions")));
+        }
+
+        @Test
+        void injectQuestions_shouldReturn422_whenQuestionTypeIsNull() throws Exception {
+                LessonContext ctx = insertLessonOwnedBy(teacherId);
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_nullQuestionType());
+
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                                .andExpect(status().isUnprocessableEntity())
+                                .andExpect(jsonPath("$.message", containsString("Unknown question type")));
+        }
+
+        @Test
+        void injectQuestions_shouldThrowServletException_whenMultipleChoiceIsRejectedByDatabaseEnum() {
+                LessonContext ctx = insertLessonOwnedBy(teacherId);
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validMultipleChoiceQuestionJson());
+
+                assertThrows(ServletException.class, () ->
+                                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                );
+        }
+
+        @Test
+        void injectQuestions_shouldThrowServletException_whenAnOptionHasNullIsCorrectBecauseDbConstraintRejectsIt() {
+                LessonContext ctx = insertLessonOwnedBy(teacherId);
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validQuestionsJson_withNullIsCorrectOption());
+
+                assertThrows(ServletException.class, () ->
+                                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                                .content("{}"))
+                );
+        }
 
     @Test
     void injectQuestions_shouldReturn401_whenNotAuthenticated() throws Exception {

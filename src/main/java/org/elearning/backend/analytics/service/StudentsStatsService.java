@@ -1,14 +1,22 @@
 package org.elearning.backend.analytics.service;
 
-import org.elearning.backend.analytics.dto.statistics.student.MyClassTestAverageDto;
-import org.elearning.backend.analytics.dto.statistics.student.MyClassTestBestResultsDto;
-import org.elearning.backend.analytics.dto.statistics.student.MyPersonalTestStatsDto;
-import org.elearning.backend.analytics.dto.statistics.student.MyTestStatsDto;
+import org.elearning.backend.analytics.dto.statistics.entity.CourseDetailsDto;
+import org.elearning.backend.analytics.dto.statistics.entity.CourseStatsDto;
+import org.elearning.backend.analytics.dto.statistics.entity.DifficultyLessonDto;
+import org.elearning.backend.analytics.dto.statistics.student.*;
+import org.elearning.backend.analytics.exception.StudentNotEnrolledInCourseException;
+import org.elearning.backend.analytics.repository.LessonDifficultyByStudentRepository;
+import org.elearning.backend.assessment.dto.attempt_dto.AttemptDetailsDto;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.repository.TestRepository;
 import org.elearning.backend.assessment.repository.TestResultRepository;
+import org.elearning.backend.content.repository.CourseRepository;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -19,14 +27,29 @@ import java.util.UUID;
 @Service
 public class StudentsStatsService {
 
-    private final TestRepository testRepository;
-    private final TestResultRepository testResultRepository;
 
     private static final String TEST_DOES_NOT_EXIST = "Test does not exist";
+    private static final String COURSE_DOES_NOT_EXIST = "Course does not exist";
+    private static final String STUDENT_NOT_ENROLLED = "Student is not enrolled to course";
 
-    public StudentsStatsService(TestRepository testRepository, TestResultRepository testResultRepository) {
+    private static final Pageable LAST_ATTEMPT_COUNT = PageRequest.of(0,5);
+    private static final Pageable DIFFICULT_LESSON_COUNT = PageRequest.of(0,3);
+
+    private static final BigDecimal PROBLEM_GAP = BigDecimal.valueOf(15);
+    private static final BigDecimal PASSING_GRADE_PERCENTAGE = BigDecimal.valueOf(60);
+
+    private final TestRepository testRepository;
+    private final TestResultRepository testResultRepository;
+    private final CourseRepository courseRepository;
+    private final LessonDifficultyByStudentRepository lessonDifficultyByStudentRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
+
+    public StudentsStatsService(TestRepository testRepository, TestResultRepository testResultRepository, CourseRepository courseRepository, LessonDifficultyByStudentRepository lessonDifficultyByStudentRepository, CourseEnrollmentRepository courseEnrollmentRepository) {
         this.testRepository = testRepository;
         this.testResultRepository = testResultRepository;
+        this.courseRepository = courseRepository;
+        this.lessonDifficultyByStudentRepository = lessonDifficultyByStudentRepository;
+        this.courseEnrollmentRepository = courseEnrollmentRepository;
     }
 
     private int getRank(UUID studentId, List<MyClassTestBestResultsDto> myClassBestResults){
@@ -57,8 +80,11 @@ public class StudentsStatsService {
 
     private BigDecimal computeMedian(List<MyClassTestBestResultsDto> myClassBestResults){
         int totalResults = myClassBestResults.size();
+        if(totalResults==0){
+            return BigDecimal.valueOf(0);
+        }
         if(totalResults %2==1){
-            return  myClassBestResults.get((totalResults /2)-1).getBestScorePercentage();
+            return  myClassBestResults.get((totalResults /2)).getBestScorePercentage();
         }
         else{
             return myClassBestResults.get((totalResults /2)-1).getBestScorePercentage()
@@ -83,7 +109,7 @@ public class StudentsStatsService {
 
 
         List<MyClassTestBestResultsDto> myClassBestResults = new ArrayList<>(testResultRepository
-                .getAllByTestOrderByScorePercentAsc(test));
+                .getAllByTestOrderByScorePercentDesc(test));
 
         int totalResults = myClassBestResults.size();
 
@@ -99,5 +125,27 @@ public class StudentsStatsService {
                 classMedian,
                 rank,
                 percentile);
+    }
+
+    public MySummaryDataDto getMySummaryData(UUID studentId, UUID courseId){
+        if(!courseRepository.existsById(courseId)){
+            throw new DoesNotExistException(COURSE_DOES_NOT_EXIST);
+        }
+        if(!courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)){
+            throw new StudentNotEnrolledInCourseException(STUDENT_NOT_ENROLLED);
+        }
+
+        CourseDetailsDto courseDetailsDto = testResultRepository.getCourseDetails(courseId);
+        CourseStatsDto courseStatsDto = testResultRepository.getCourseStats(studentId, courseId);
+        List<DifficultyLessonDto> difficultyLessonDto = lessonDifficultyByStudentRepository.getLessonDifficultyList(
+                        courseId,
+                        studentId,
+                        PASSING_GRADE_PERCENTAGE,
+                        PROBLEM_GAP,
+                        DIFFICULT_LESSON_COUNT);
+
+        List<AttemptDetailsDto> lastFewAttempts = testResultRepository.getLastAttempts(studentId, courseId, LAST_ATTEMPT_COUNT);
+        return new MySummaryDataDto(courseDetailsDto, courseStatsDto, difficultyLessonDto, lastFewAttempts);
+
     }
 }

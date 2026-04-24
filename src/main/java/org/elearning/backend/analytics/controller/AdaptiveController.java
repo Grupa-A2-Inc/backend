@@ -9,7 +9,9 @@ import org.elearning.backend.analytics.dto.AdaptiveSubmitRequestDto;
 import org.elearning.backend.analytics.service.AdaptiveSubmitService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -34,8 +36,9 @@ public class AdaptiveController {
     })
 
     @PostMapping("/adaptive/sessions/{sessionId}/submit")
+    @PreAuthorize("@accessService.canSubmitAdaptiveSession(authentication,#id)")
     public ResponseEntity<AdaptiveResultDto> submitAdaptiveSession(
-            @PathVariable UUID sessionId,
+            @P("id") @PathVariable UUID sessionId,
             @RequestBody AdaptiveSubmitRequestDto body,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
