@@ -80,8 +80,11 @@ public class StudentsStatsService {
 
     private BigDecimal computeMedian(List<MyClassTestBestResultsDto> myClassBestResults){
         int totalResults = myClassBestResults.size();
+        if(totalResults==0){
+            return BigDecimal.valueOf(0);
+        }
         if(totalResults %2==1){
-            return  myClassBestResults.get((totalResults /2)-1).getBestScorePercentage();
+            return  myClassBestResults.get((totalResults /2)).getBestScorePercentage();
         }
         else{
             return myClassBestResults.get((totalResults /2)-1).getBestScorePercentage()
@@ -106,7 +109,7 @@ public class StudentsStatsService {
 
 
         List<MyClassTestBestResultsDto> myClassBestResults = new ArrayList<>(testResultRepository
-                .getAllByTestOrderByScorePercentAsc(test));
+                .getAllByTestOrderByScorePercentDesc(test));
 
         int totalResults = myClassBestResults.size();
 

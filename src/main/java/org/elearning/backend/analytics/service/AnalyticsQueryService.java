@@ -13,6 +13,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
+
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -40,7 +42,13 @@ public class AnalyticsQueryService {
             throw new WithoutAccessException(professorId);
         }
 
-        return testResultRepository.getClassAverages(test);
+        ClassAverageDto result = testResultRepository.getClassAverages(test);
+
+        if(result==null){
+            return new ClassAverageDto(testId, test.getTitle(), 0, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0.0);
+        }
+
+        return result;
     }
 
     public Page<StudentAverageDto> getStudentAverages(UUID courseId, UUID professorId, Pageable pageable){
