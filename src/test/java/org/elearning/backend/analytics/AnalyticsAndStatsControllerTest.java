@@ -378,6 +378,25 @@ class AnalyticsAndStatsControllerTest {
                 .andExpect(jsonPath("$.totalAttemptCount", is(2)));
     }
 
+    @Test
+    @Order(32)
+    @DisplayName("3.3 — my test stats -> rank = 1 when student has highest score")
+    void myTestStats_RankIsOne_WhenStudentIsTopScorer() throws Exception {
+        UUID student2 = insertUser(RoleName.STUDENT);
+        try {
+            enrollStudent(studentId, courseId);
+            insertAttemptWithResult(studentId, testId, PASSING_SCORE, true);   // 80%
+            insertAttemptWithResult(student2,  testId, FAILING_SCORE, false);  // 40%
+            mockMvc.perform(asStudent(get(BASE + "/students/me/tests/{testId}/stats", testId)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.rank", is(1)));
+        } finally {
+            jdbcTemplate.update("DELETE FROM test_results  WHERE student_id = ?", student2);
+            jdbcTemplate.update("DELETE FROM test_attempts WHERE student_id = ?", student2);
+            jdbcTemplate.update("DELETE FROM users WHERE id = ?", student2);
+        }
+    }
+
 
     @Test
     @Order(33)

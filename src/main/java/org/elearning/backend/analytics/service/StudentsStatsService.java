@@ -32,10 +32,14 @@ public class StudentsStatsService {
     private static final String COURSE_DOES_NOT_EXIST = "Course does not exist";
     private static final String STUDENT_NOT_ENROLLED = "Student is not enrolled to course";
 
+    //Determines how many of the last attempts should be listed
     private static final Pageable LAST_ATTEMPT_COUNT = PageRequest.of(0,5);
+    //Determines how many of the most problematic lessons should be listed
     private static final Pageable DIFFICULT_LESSON_COUNT = PageRequest.of(0,3);
 
+    //Determines the gap that should be considered problematic for a student
     private static final BigDecimal PROBLEM_GAP = BigDecimal.valueOf(15);
+    //Determines the percentage a student should aim for to pass a test
     private static final BigDecimal PASSING_GRADE_PERCENTAGE = BigDecimal.valueOf(60);
 
     private final TestRepository testRepository;
@@ -52,6 +56,12 @@ public class StudentsStatsService {
         this.courseEnrollmentRepository = courseEnrollmentRepository;
     }
 
+    /**
+     * Computes the rank of a student
+     * @param studentId the id of the student for whom the rank is computed
+     * @param myClassBestResults the list of the best grades each student has, sorted from best to worst
+     * @return the rank of the student inside a course
+     */
     private int getRank(UUID studentId, List<MyClassTestBestResultsDto> myClassBestResults){
         int rank;
 
@@ -62,6 +72,13 @@ public class StudentsStatsService {
         }
         return rank+1;
     }
+
+    /**
+     * Computes the percentile of a student, determined by the formula (totalStudents - studentRank + 1) / totalStudents * 100
+     * @param studentRank the id of the student for whom the percentile is computed
+     * @param totalStudents  the total amount of students from a course
+     * @return the percentile of a student
+     */
 
     private BigDecimal computePercentile(int studentRank, int totalStudents) {
         if (totalStudents == 0) {
@@ -78,6 +95,13 @@ public class StudentsStatsService {
                 .multiply(BigDecimal.valueOf(100));
     }
 
+    /**
+     * Computes the median of a class. If the total amount of students from a class is odd, it returns the score
+     * situated at the middle, otherwise it returns the average of the two students at the middle of the top
+     * @param myClassBestResults the list of the best results from a given class
+     * @return the median of the class
+     */
+
     private BigDecimal computeMedian(List<MyClassTestBestResultsDto> myClassBestResults){
         int totalResults = myClassBestResults.size();
         if(totalResults==0){
@@ -92,6 +116,15 @@ public class StudentsStatsService {
                     .divide(BigDecimal.valueOf(2), RoundingMode.HALF_UP);
         }
     }
+
+    /**
+     * Returns the stats of a student from a test
+     * @param studentId the student for whom we get the data for
+     * @param testId the test the data is taken from
+     * @return  a MyTestStatsDto Object containing the id of the test, the tile of it, the total amount of attempts,
+     * the best score, the worst score, the average score, the last score, the amount of students who took the test,
+     * the class average, the class median, the rank and the percentile, all of a given student
+     */
 
     public MyTestStatsDto getMyTestStats(UUID studentId, UUID testId){
         Test test = testRepository.findById(testId)
@@ -109,7 +142,7 @@ public class StudentsStatsService {
 
 
         List<MyClassTestBestResultsDto> myClassBestResults = new ArrayList<>(testResultRepository
-                .getAllByTestOrderByScorePercentDesc(test));
+                .getAllTestsOrderByBestScoreDesc(test));
 
         int totalResults = myClassBestResults.size();
 
@@ -126,6 +159,15 @@ public class StudentsStatsService {
                 rank,
                 percentile);
     }
+
+    /**
+     * Gets the summary data of a course for a student
+     * @param studentId the student for whom we get the data for
+     * @param courseId the course from whom the data is extracted
+     * @return a MySummaryDataDto Object containing the course title, total test count of a course, total tests done
+     * by the student, total of tests passed, best score, worst score, average of score, the lessons where the student
+     * is having difficulties the most and the last few attempts
+     */
 
     public MySummaryDataDto getMySummaryData(UUID studentId, UUID courseId){
         if(!courseRepository.existsById(courseId)){
