@@ -10,7 +10,7 @@ spring:
 #      - org.springframework.boot.actuate.autoconfigure.security.reactive.ReactiveManagementWebSecurityAutoConfiguration
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/adaptive_tutor  # va fi suprascris de DynamicPropertySource
+    url: jdbc:postgresql://localhost:5432/adaptive_tutor_test  # va fi suprascris de DynamicPropertySource
     username: user
     password: password
   jpa:
