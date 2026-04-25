@@ -3,6 +3,7 @@ package org.elearning.backend.ai.controller;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.ai.dto.AiGenerateRequestDto;
 import org.elearning.backend.ai.dto.AiGenerateResponseDto;
+import org.elearning.backend.ai.dto.AiRequestStatusDto;
 import org.elearning.backend.ai.service.AiGenerationService;
 import org.elearning.backend.analytics.model.AiRequestStatus;
 import org.elearning.backend.role.entity.RoleName;
@@ -36,5 +37,13 @@ public class AiGenerationController {
         responseDto.setLessonId(lessonId);
 
         return ResponseEntity.accepted().body(responseDto);
+    }
+
+    @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT')")
+    @GetMapping("/ai/requests/{requestId}/status")
+    public ResponseEntity<AiRequestStatusDto> getRequestStatus(@PathVariable UUID requestId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID userId = userDetails.getUserId();
+        RoleName role = userDetails.getRoleName();
+        return ResponseEntity.ok(aiService.getRequestStatus(requestId, userId, role));
     }
 }
