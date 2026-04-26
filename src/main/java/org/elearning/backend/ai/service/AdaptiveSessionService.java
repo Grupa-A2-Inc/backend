@@ -34,6 +34,7 @@ public class AdaptiveSessionService {
     private final ObjectMapper objectMapper;
     private final AdaptiveSessionExerciseRepository exerciseRepository;
     private final AdaptiveSessionAnswerRepository adaptiveSessionAnswerRepository;
+    private static final int SESSION_MINUTES = 30;
 
     public AdaptiveStartDto startSession(UUID studentId, Integer subjectId, Integer topicId, int count) {
         AiAdaptiveResponse response;
@@ -47,7 +48,7 @@ public class AdaptiveSessionService {
                 .studentId(studentId)
                 .subjectId(subjectId)
                 .topicId(topicId)
-                .expiresAt(LocalDateTime.now().plusMinutes(30))
+                .expiresAt(LocalDateTime.now().plusMinutes(SESSION_MINUTES))
                 .build();
         session = adaptiveSessionRepository.save(session);
         UUID sessionId = session.getId();
