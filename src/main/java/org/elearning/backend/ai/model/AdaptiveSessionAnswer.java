@@ -1,7 +1,10 @@
-package org.elearning.backend.analytics.model;
+package org.elearning.backend.ai.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -23,6 +26,7 @@ public class AdaptiveSessionAnswer {
     @Column(name = "exercise_id", nullable = false)
     private UUID exerciseId;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "given_answers", nullable = false, columnDefinition = "jsonb")
     private String givenAnswers;
 

@@ -5,7 +5,7 @@ import org.elearning.backend.ai.dto.AiGenerateRequestDto;
 import org.elearning.backend.ai.dto.AiGenerateResponseDto;
 import org.elearning.backend.ai.dto.AiRequestStatusDto;
 import org.elearning.backend.ai.service.AiGenerationService;
-import org.elearning.backend.analytics.model.AiRequestStatus;
+import org.elearning.backend.ai.model.AiRequestStatus;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;

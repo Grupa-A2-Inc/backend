@@ -2,7 +2,6 @@ package org.elearning.backend.analytics.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.elearning.backend.analytics.dto.statistics.teacher.FailureRateDTO;
 import org.elearning.backend.analytics.model.AnalyticsAlert;
 import org.elearning.backend.analytics.repository.AnalyticsAlertRepository;
 import org.elearning.backend.assessment.model.TestResult;

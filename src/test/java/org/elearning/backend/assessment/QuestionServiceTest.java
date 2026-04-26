@@ -153,7 +153,7 @@ class QuestionServiceTest {
 
         @Test
         void shouldCreateQuestion_whenMultipleChoiceIsValid() {
-            QuestionRequestDto dto = requestDto(QuestionType.MULTIPLE_CHOICE, multipleChoiceOptions());
+            QuestionRequestDto dto = requestDto(QuestionType.MULTI_CHOICE, multipleChoiceOptions());
             Question entity = questionEntity(2, draftTest);
 
             when(testRepository.findById(testId)).thenReturn(Optional.of(draftTest));
@@ -292,7 +292,7 @@ class QuestionServiceTest {
 
         @Test
         void shouldThrowValidation_whenMultipleChoiceHasOnlyOneOption() {
-            QuestionRequestDto dto = requestDto(QuestionType.MULTIPLE_CHOICE, List.of(option("A", true)));
+            QuestionRequestDto dto = requestDto(QuestionType.MULTI_CHOICE, List.of(option("A", true)));
             when(testRepository.findById(testId)).thenReturn(Optional.of(draftTest));
 
             ThrowingCallable call = () -> questionService.createQuestion(testId, dto, teacherId);
@@ -304,7 +304,7 @@ class QuestionServiceTest {
 
         @Test
         void shouldThrowValidation_whenMultipleChoiceHasOnlyOneCorrectOption() {
-            QuestionRequestDto dto = requestDto(QuestionType.MULTIPLE_CHOICE,
+            QuestionRequestDto dto = requestDto(QuestionType.MULTI_CHOICE,
                     List.of(option("A", true), option("B", false), option("C", false)));
             when(testRepository.findById(testId)).thenReturn(Optional.of(draftTest));
 

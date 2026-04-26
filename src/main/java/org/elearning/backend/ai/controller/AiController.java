@@ -1,12 +1,12 @@
-package org.elearning.backend.analytics.controller;
+package org.elearning.backend.ai.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.analytics.dto.InjectRequestDto;
-import org.elearning.backend.analytics.dto.InjectionResultDto;
-import org.elearning.backend.analytics.service.AiQuestionInjectorService;
+import org.elearning.backend.ai.dto.InjectRequestDto;
+import org.elearning.backend.ai.dto.InjectionResultDto;
+import org.elearning.backend.ai.service.AiQuestionInjectorService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

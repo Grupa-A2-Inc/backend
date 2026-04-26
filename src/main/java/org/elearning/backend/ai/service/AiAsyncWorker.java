@@ -8,9 +8,9 @@ import org.elearning.backend.ai.dto.AiGenerateResponse;
 import org.elearning.backend.ai.dto.AiQuestionDto;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
-import org.elearning.backend.analytics.model.AiQuestionRequest;
-import org.elearning.backend.analytics.model.AiRequestStatus;
-import org.elearning.backend.analytics.repository.AiQuestionRequestRepository;
+import org.elearning.backend.ai.model.AiQuestionRequest;
+import org.elearning.backend.ai.model.AiRequestStatus;
+import org.elearning.backend.ai.repository.AiQuestionRequestRepository;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 

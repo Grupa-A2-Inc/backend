@@ -1,4 +1,4 @@
-package org.elearning.backend.analytics.model;
+package org.elearning.backend.ai.model;
 
 import jakarta.persistence.*;
 import lombok.*;

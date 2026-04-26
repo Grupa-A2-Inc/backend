@@ -1,9 +1,9 @@
-package org.elearning.backend.analytics;
+package org.elearning.backend.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elearning.backend.ai.service.AdaptiveSessionService;
 import org.elearning.backend.ai.service.AiApiClient;
-import org.elearning.backend.analytics.dto.AdaptiveSubmitRequestDto;
-import org.elearning.backend.analytics.service.AdaptiveSubmitService;
+import org.elearning.backend.ai.dto.AdaptiveSubmitRequestDto;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -58,7 +58,7 @@ class AdaptiveControllerTest {
     private String studentToken;
 
     @Autowired
-    private AdaptiveSubmitService adaptiveSubmitService;
+    private AdaptiveSessionService adaptiveSubmitService;
 
     @BeforeEach
     void setUp() {

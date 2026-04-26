@@ -1,4 +1,4 @@
-package org.elearning.backend.analytics.exception;
+package org.elearning.backend.ai.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

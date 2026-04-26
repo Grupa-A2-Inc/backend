@@ -1,7 +1,6 @@
-package org.elearning.backend.analytics.dto;
+package org.elearning.backend.ai.dto;
 
 import lombok.AllArgsConstructor;
-import org.elearning.backend.ai.dto.AiAdaptiveExerciseDto;
 
 import java.time.LocalDateTime;
 import java.util.List;

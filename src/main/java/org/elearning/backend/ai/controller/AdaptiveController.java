@@ -1,16 +1,15 @@
-package org.elearning.backend.analytics.controller;
+package org.elearning.backend.ai.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.analytics.dto.AdaptiveResultDto;
-import org.elearning.backend.analytics.dto.AdaptiveStartDto;
-import org.elearning.backend.analytics.dto.AdaptiveStartRequestDto;
-import org.elearning.backend.analytics.dto.AdaptiveSubmitRequestDto;
-import org.elearning.backend.analytics.service.AdaptiveSubmitService;
+import org.elearning.backend.ai.dto.AdaptiveResultDto;
+import org.elearning.backend.ai.dto.AdaptiveStartDto;
+import org.elearning.backend.ai.dto.AdaptiveStartRequestDto;
+import org.elearning.backend.ai.dto.AdaptiveSubmitRequestDto;
 import org.elearning.backend.security.auth.CustomUserDetails;
-import org.elearning.backend.analytics.service.AdaptiveSessionService;
+import org.elearning.backend.ai.service.AdaptiveSessionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,7 +22,6 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class AdaptiveController {
-    private final AdaptiveSubmitService adaptiveSubmitService;
     private final AdaptiveSessionService adaptiveSessionService;
 
     private static final String OK = "200";
@@ -57,7 +55,7 @@ public class AdaptiveController {
             @RequestBody AdaptiveSubmitRequestDto body,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
-        return ResponseEntity.ok(adaptiveSubmitService.submitSession(sessionId, currentUser.getUserId(), body));
+        return ResponseEntity.ok(adaptiveSessionService.submitSession(sessionId, currentUser.getUserId(), body));
     }
 
     /**

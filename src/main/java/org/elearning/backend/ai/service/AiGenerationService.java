@@ -1,23 +1,16 @@
 package org.elearning.backend.ai.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.ai.dto.AiGenerateResponse;
-import org.elearning.backend.ai.dto.AiQuestionDto;
 import org.elearning.backend.ai.dto.AiRequestStatusDto;
-import org.elearning.backend.ai.exception.AiApiException;
-import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.elearning.backend.analytics.exception.WithoutAccessException;
-import org.elearning.backend.analytics.model.AiQuestionRequest;
-import org.elearning.backend.analytics.model.AiRequestStatus;
-import org.elearning.backend.analytics.repository.AiQuestionRequestRepository;
+import org.elearning.backend.ai.model.AiQuestionRequest;
+import org.elearning.backend.ai.model.AiRequestStatus;
+import org.elearning.backend.ai.repository.AiQuestionRequestRepository;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.role.entity.RoleName;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service

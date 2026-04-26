@@ -58,7 +58,7 @@ public class QuestionService {
             case SINGLE_CHOICE:
                 validateSingleChoice(options.size(), correctCount);
                 break;
-            case MULTIPLE_CHOICE:
+            case MULTI_CHOICE:
                 validateMultipleChoice(options.size(), correctCount);
                 break;
             case TRUE_FALSE:
