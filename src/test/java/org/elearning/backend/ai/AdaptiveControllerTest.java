@@ -1,9 +1,14 @@
 package org.elearning.backend.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elearning.backend.ai.dto.AdaptiveStartRequestDto;
+import org.elearning.backend.ai.dto.AiAdaptiveExerciseDto;
+import org.elearning.backend.ai.dto.AiAdaptiveResponse;
+import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.service.AdaptiveSessionService;
 import org.elearning.backend.ai.service.AiApiClient;
 import org.elearning.backend.ai.dto.AdaptiveSubmitRequestDto;
+import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -28,11 +33,11 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -424,7 +429,7 @@ class AdaptiveControllerTest {
         String requestJson = objectMapper.writeValueAsString(request);
 
         ObjectMapper fakeMapper = Mockito.mock(ObjectMapper.class);
-        Mockito.when(fakeMapper.writeValueAsString(any())).thenThrow(new RuntimeException("Simulated JSON Error"));
+        when(fakeMapper.writeValueAsString(any())).thenThrow(new RuntimeException("Simulated JSON Error"));
 
         org.springframework.test.util.ReflectionTestUtils.setField(adaptiveSubmitService, "objectMapper", fakeMapper);
 
@@ -494,5 +499,85 @@ class AdaptiveControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalScore").value(0.0));
+    }
+
+    // =========================================================================
+    // POST /api/v1/adaptive/start
+    // =========================================================================
+
+    @Test
+    void startSession_shouldReturn200_andHideCorrectAnswers_whenSuccessful() throws Exception {
+        AiAdaptiveExerciseDto mockExercise = new AiAdaptiveExerciseDto();
+        mockExercise.setExerciseId("ai-123");
+        mockExercise.setText("Care este capitala Frantei?");
+        mockExercise.setType(QuestionType.SINGLE_CHOICE);
+        mockExercise.setAnswers(List.of("Paris", "Londra"));
+        mockExercise.setCorrectAnswers(List.of("Paris"));
+        mockExercise.setDifficulty(0.5);
+
+        AiAdaptiveResponse mockResponse = new AiAdaptiveResponse();
+        mockResponse.setExercises(List.of(mockExercise));
+
+        when(aiApiClient.requestAdaptiveExercises(any(), any(), anyInt(), anyInt(), anyInt()))
+                .thenReturn(mockResponse);
+
+        AdaptiveStartRequestDto request = new AdaptiveStartRequestDto();
+        request.setSubjectId(1);
+        request.setTopicId(10);
+        request.setCount(5);
+
+        String responseJson = mockMvc.perform(post("/api/v1/adaptive/start")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + studentToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").exists())
+                .andExpect(jsonPath("$.expiresAt").exists())
+                .andExpect(jsonPath("$.exercises[0].exerciseId").value("ai-123"))
+                .andExpect(jsonPath("$.exercises[0].correctAnswers").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+
+        String sessionId = objectMapper.readTree(responseJson).get("sessionId").asText();
+
+        String correctAnswersDb = jdbcTemplate.queryForObject(
+                "SELECT correct_answers_raw FROM adaptive_session_exercises WHERE session_id = CAST(? AS uuid) LIMIT 1",
+                String.class,
+                sessionId
+        );
+
+        assertTrue(correctAnswersDb.contains("Paris"));
+    }
+
+    @Test
+    void startSession_shouldReturn503_whenAiFails() throws Exception {
+        when(aiApiClient.requestAdaptiveExercises(any(), any(), anyInt(), anyInt(), anyInt()))
+                .thenThrow(new AiApiException("AI is down"));
+
+        AdaptiveStartRequestDto request = new AdaptiveStartRequestDto();
+        request.setSubjectId(1);
+        request.setTopicId(10);
+        request.setCount(5);
+
+        mockMvc.perform(post("/api/v1/adaptive/start")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + studentToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void startSession_shouldReturn401_whenNotAuthenticated() throws Exception {
+        AdaptiveStartRequestDto request = new AdaptiveStartRequestDto();
+        request.setSubjectId(1);
+        request.setTopicId(10);
+        request.setCount(5);
+
+        mockMvc.perform(post("/api/v1/adaptive/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
     }
 }

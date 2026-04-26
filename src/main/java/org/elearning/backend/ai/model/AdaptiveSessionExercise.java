@@ -2,6 +2,9 @@ package org.elearning.backend.ai.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -29,9 +32,11 @@ public class AdaptiveSessionExercise {
     @Column(name = "exercise_type", nullable = false, length = 30)
     private String exerciseType;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "answers_raw", nullable = false, columnDefinition = "jsonb")
     private String answersRaw;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "correct_answers_raw", nullable = false, columnDefinition = "jsonb")
     private String correctAnswersRaw;
 
