@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.analytics.dto.alerts.AlertDTO;
 import org.elearning.backend.analytics.dto.alerts.ThresholdDTO;
 import org.elearning.backend.analytics.dto.statistics.teacher.FailureRateDTO;
+import org.elearning.backend.analytics.dto.statistics.teacher.TestFailureRateChartDTO;
 import org.elearning.backend.analytics.service.FailureRateService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
@@ -81,7 +82,18 @@ public class FailureRateController {
         return ResponseEntity.ok(failureRateService.getAlerts(professorId, roleName));
     }
 
-
+    @Operation(summary = "Get failure rate chart data for each test in a specific course",
+            description = "A teacher can get the failure rate chart data for all tests associated with a specific course they created. " +
+                    "The chart data includes daily failure rates for each test, which can be used to visualize trends over time.")
+    @ApiResponse(responseCode = OK, description = "Failure rate chart data returned successfully")
+    @ApiResponse(responseCode = FORBIDDEN, description = "User does not have permission to view the course analytics")
+    @ApiResponse(responseCode = NOT_FOUND, description = "Course not found")
+    @GetMapping("/courses/{courseId}/analytics/chart-data")
+    @PreAuthorize("@accessService.canViewCourseFullView(authentication,#id)")
+    public ResponseEntity<List<TestFailureRateChartDTO>> getFailureRateChartData(@P("id") @PathVariable UUID courseId, @AuthenticationPrincipal UserDetails currentUser) {
+        UUID professorId = extractUserId(currentUser);
+        return ResponseEntity.ok(failureRateService.getFailureCharts(courseId, professorId));
+    }
 
     private UUID extractUserId(UserDetails currentUser) {
         if (currentUser instanceof CustomUserDetails customUserDetails) {
