@@ -47,16 +47,34 @@ public class AssessmentExceptionHandler extends GlobalExceptionHandler {
         return buildErrorResponse(exception, HttpStatus.CONFLICT);
     }
 
+    /**
+     * Handle attempts to publish an assessment that is already published.
+     *
+     * @param exception the exception indicating the assessment has already been published
+     * @return a ResponseEntity containing an error payload and HTTP status 409 (Conflict)
+     */
     @ExceptionHandler(AlreadyPublishedException.class)
     public ResponseEntity<Map<String, Object>> handlePublished(AlreadyPublishedException exception) {
         return buildErrorResponse(exception, HttpStatus.CONFLICT);
     }
 
+    /**
+     * Handles a TestMustBeDraftException by producing an HTTP 409 Conflict error response.
+     *
+     * @param exception the exception indicating the target test must be in draft state
+     * @return a ResponseEntity with an error body derived from the exception and HTTP status 409 (Conflict)
+     */
     @ExceptionHandler(TestMustBeDraftException.class)
     public ResponseEntity<Map<String, Object>> handlePublished(TestMustBeDraftException exception) {
         return buildErrorResponse(exception, HttpStatus.CONFLICT);
     }
 
+    /**
+     * Handles a timer-expired condition for an attempt and maps it to an HTTP 410 Gone response.
+     *
+     * @param exception the TimerExpiredException indicating the attempt's timer has expired
+     * @return a ResponseEntity containing an error payload and HTTP status 410 (Gone)
+     */
     @ExceptionHandler(TimerExpiredException.class)
     public ResponseEntity<Map<String, Object>> handleTimerExpired(TimerExpiredException exception) {
         return buildErrorResponse(exception, HttpStatus.GONE);

@@ -25,6 +25,17 @@ public class AiAsyncWorker {
     private final ObjectMapper objectMapper;
     private final AiQuestionRequestRepository repository;
 
+    /**
+     * Processes AI question generation for the given request and persists the updated request.
+     *
+     * Attempts to generate questions for the specified lesson and request ID, stores serialized
+     * generated questions on success, and updates the request status based on the outcome before
+     * saving the request.
+     *
+     * @param requestId the identifier of the AI generation request
+     * @param lessonId  the identifier of the lesson for which questions are generated
+     * @param request   the AiQuestionRequest entity to update and persist with status and generated data
+     */
     @Async
     public void processAiGenerationInBackground(UUID requestId, UUID lessonId, AiQuestionRequest request) {
         try {

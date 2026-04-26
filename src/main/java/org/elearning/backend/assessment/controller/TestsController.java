@@ -55,6 +55,12 @@ public class TestsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(testService.createNewTest(lessonId, modifiableTestData, userId));
     }
 
+    /**
+     * Delete the test identified by the given UUID.
+     *
+     * @param testId the UUID of the test to delete
+     * @return a ResponseEntity with HTTP 204 No Content when deletion succeeds
+     */
     @Operation( summary = "Delete a test",
             description = "Deletes the test with a given ID")
     @ApiResponses(value = {
@@ -80,6 +86,12 @@ public class TestsController {
         return ResponseEntity.ok(testService.getTestFromLesson(lessonId));
     }
 
+    /**
+     * Retrieves details for the specified test.
+     *
+     * @param testId the UUID of the test to retrieve
+     * @return the test details as a TestEntityDto
+     */
     @Operation(summary = "Get test details",
             description = "Returns the details of a given test given via test id")
     @ApiResponse(responseCode = OK, description = "Test details successfully returned")
@@ -90,6 +102,16 @@ public class TestsController {
         return ResponseEntity.ok(testService.getTestDetails(testId));
     }
 
+    /**
+     * Update title, description, time duration, and AI usage flag of a draft test.
+     *
+     * Applies the provided editable fields to the test identified by testId. The operation
+     * is permitted only when the test is currently in draft state.
+     *
+     * @param testId               the UUID of the test to update
+     * @param editableTestContent  DTO containing updatable fields (title, description, time duration, AI usage toggle)
+     * @return                      the updated test entity DTO
+     */
     @Operation( summary = "Update test data",
             description = "Updates the title, description, time duration and toggles the Ai usage of a given test" +
                     " via its ID, as long as it's a draft")
@@ -122,6 +144,13 @@ public class TestsController {
     }
 
 
+    /**
+     * Retrieve questions for the specified test, including correct options when the caller has a teacher role.
+     *
+     * @param testId      the UUID of the test whose questions are requested
+     * @param currentUser the authenticated user; their role determines whether correct options are included
+     * @return            a list of question DTOs for the specified test; each DTO includes correct options if the caller is a teacher
+     */
     @Operation( summary = "Get questions",
             description = "Returns the list of each question associated with a given test. Includes the correct options" +
                     "if the user is a teacher")

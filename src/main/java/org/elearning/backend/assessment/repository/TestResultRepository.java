@@ -34,7 +34,14 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
 
     Optional<TestResult> findTopByStudentIdAndTestIdAndAttemptStatusOrderByScorePercentDesc(UUID studentId, UUID testId, AttemptStatus status);
 
-    @Query("""
+    /**
+                                   * Retrieve the lesson IDs (limited to the provided list) for which the given student has a passing test attempt.
+                                   *
+                                   * @param studentId the UUID of the student whose attempts are evaluated
+                                   * @param lessonIds the list of lesson UUIDs to consider
+                                   * @return a set of lesson UUIDs from {@code lessonIds} where the student has at least one TestResult with {@code passed = true}
+                                   */
+                                  @Query("""
         SELECT t.lessonId FROM TestResult tr
         JOIN tr.attempt ta
         JOIN ta.test t
@@ -47,11 +54,12 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
 
 
     /**
-     * Get statistic data about the class average of a given test. Some parameters will be null if nobody took the test,
-     * it's best the returned value is checked to not be null when used.
-     * @param test the given test we want the class stats of
-     * @return the test id, test title, the total count of results, the number of passed/failed tests, the average score,
-     *  the lowest score, the best score and failure rate, inside a ClassAverageDto
+     * Produces aggregated class-level statistics for the specified test.
+     *
+     * @param test the test to aggregate results for
+     * @return a ClassAverageDto containing the test id and title, total result count, passed count, failed count,
+     *         average score percent, minimum score percent, maximum score percent, and failure rate;
+     *         the failure rate is `null` when no results exist
      */
     @Query(value = """
             SELECT new org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto (
@@ -74,12 +82,13 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
 
 
     /**
-     * Gets the student data of a given course. The given data are limited by the pageable parameter, that limits the amount
-     *  of data the professor gets, making sure the data can be split in multiple pages
-     * @param courseId the course the data is extracted from
-     * @param pageable the page settings (e.g. third page with 20 students)
-     * @return a page with a certain amount of students, containing the student ID, their average/lowest/best score,
-     * total test count, how many were passed, how many were failed and day of their latest test attempt
+     * Retrieve per-student score aggregates for a course as a pageable list.
+     *
+     * @param courseId the UUID of the course to aggregate results for
+     * @param pageable pagination and sorting settings for the result page
+     * @return a page of StudentAverageDto where each entry contains the student ID, average score percent,
+     *         minimum score percent, maximum score percent, total test count, passed count, failed count,
+     *         and the timestamp of the student's most recent test attempt
      */
     @Query(value = """
             SELECT new org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto(tr.studentId,
@@ -112,12 +121,13 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
 
 
     /**
-     * Gets the personal stats of a student regarding a test
-     * @param studentId the id of the student
-     * @param test the test the student wants data from
-     * @return the test id, test title, total amount of attempts, worst score, best score, average score from a given test,
-     *  saved in MyPersonalTestStatsDto Object
-     */
+                                                   * Retrieve aggregated personal statistics for a student on a specific test.
+                                                   *
+                                                   * @param studentId UUID of the student whose attempts will be aggregated
+                                                   * @param test      the Test entity to filter attempts by
+                                                   * @return          a MyPersonalTestStatsDto containing the test id, test title, total attempt count,
+                                                   *                  minimum scorePercent, maximum scorePercent, and average scorePercent
+                                                   */
 
     @Query( value = """
            SELECT new org.elearning.backend.analytics.dto.statistics.student.MyPersonalTestStatsDto(
@@ -138,16 +148,21 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
                                                   @Param("test") Test test);
 
 
-    /** Returns the latest TestResult Entity */
+    /**
+ * Fetches the most recent TestResult for the given student and test.
+ *
+ * @param studentId UUID of the student
+ * @param test      the Test entity
+ * @return the latest TestResult for the student and test, or `null` if none exists
+ */
 
     TestResult findTopByStudentIdAndTestOrderByCompletedAtDesc(UUID studentId, Test test);
 
     /**
-     * Gets the average results of a class from a given test. Used as a point of comparison for the student.
-     * Note that a test cannot be associated with multiple courses, ensuring the data comes from the same class
-     * the student is part of
-     * @param test the test of which we want the data from
-     * @return score average and total number of tests, saved inside a MyClassTestAverageDto Object
+     * Compute class-level statistics for a specific test: the average score percent and the total number of attempts.
+     *
+     * @param test the test to aggregate results for
+     * @return a MyClassTestAverageDto containing the average score percent (may be `null` if there are no results) and the total number of attempts as an integer
      */
 
     @Query( value = """
@@ -163,10 +178,10 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
 
 
     /**
-     * Gets every best result of each student from a class at a given test, ordered from best to worst
-     * Used in StudentsStatsService to determine the rank of a student
-     * @param test the test we extract the data from
-     * @return a MyClassTestBestResultsDto list containing each student's id and best score in terms of percentage
+     * Aggregate each student's highest score percent for the given test and order the results from highest to lowest.
+     *
+     * @param test the Test entity to aggregate results for
+     * @return a list of DTOs, each containing a student's id and their best score percent, ordered from highest to lowest
      */
     @Query( value = """
             SELECT new org.elearning.backend.analytics.dto.statistics.student.MyClassTestBestResultsDto
@@ -180,14 +195,13 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
     List<MyClassTestBestResultsDto> getAllTestsOrderByBestScoreDesc(Test test);
 
     /**
-     * Gets the last few attempts of a student at a given course. The number of attempts is determined by the pageable
-     * variable
-     * @param studentId the student looking for the data
-     * @param courseId the course the student is getting the data from
-     * @param pageable determines how many of the last attempts the student did should be returned.
-     * @return a list of AttemptDetailsDto Objects, containing the id of each attempt, each id of the test, each title of the
-     * test, each score, each score percentage, if it passed and moment of completion
-     */
+                                             * Retrieve the most recent test attempts by a student within a course.
+                                             *
+                                             * @param studentId the student's UUID
+                                             * @param courseId  the course's UUID
+                                             * @param pageable  paging/sorting information that controls how many attempts are returned
+                                             * @return a list of AttemptDetailsDto containing attempt id, test id, test title, score, score percent, passed flag, and completion time, ordered by completion time descending
+                                             */
     @Query(value = """
         SELECT new org.elearning.backend.assessment.dto.attempt_dto.AttemptDetailsDto(
         tr.attemptId,
@@ -212,9 +226,10 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
                                             Pageable pageable);
 
     /**
-     * Gets the title of a course and how many tests were taken in total
-     * @param courseId the course the data is taken from
-     * @return the title of a course and how many tests were taken in total, in a CourseDetailsDto Object
+     * Fetches a course's title and the total number of tests taken for that course.
+     *
+     * @param courseId the UUID of the course to query
+     * @return a CourseDetailsDto containing the course title and total tests taken as an integer
      */
     @Query(value = """
         SELECT new org.elearning.backend.analytics.dto.statistics.entity.CourseDetailsDto(
@@ -232,12 +247,12 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
     CourseDetailsDto getCourseDetails(@Param("courseId") UUID courseId);
 
     /**
-     * Returns the course details of a given student
-     * @param studentId the student for whom we get the data from
-     * @param courseId the course where the data is extracted from
-     * @return a CourseStatsDto Object containing the total amount of tests taken by a student, how many wee passed,
-     * the best, worst and average score from a course
-     */
+                                   * Compute aggregated test statistics for a student within a specific course.
+                                   *
+                                   * @param studentId UUID of the student whose statistics are requested
+                                   * @param courseId UUID of the course to aggregate statistics from
+                                   * @return a CourseStatsDto with total tests taken, passed count, maximum score percent, minimum score percent, and average score percent
+                                   */
     @Query(value = """
           SELECT new org.elearning.backend.analytics.dto.statistics.entity.CourseStatsDto(
               CAST(COALESCE(COUNT(tr), 0) AS integer),
@@ -258,6 +273,16 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
                                   @Param("courseId") UUID courseId);
 
 
+    /**
+     * Fetches each student's best attempt for the specified test.
+     *
+     * <p>For each student who has attempts for the given test, returns a single TestResult representing
+     * that student's highest-scoring attempt; when scores are tied, the most recently completed attempt
+     * is chosen.</p>
+     *
+     * @param testId the UUID of the test to query
+     * @return a list of TestResult objects containing one best attempt per student for the given test
+     */
     @Query(value = """
         SELECT DISTINCT ON (student_id) * FROM test_results
         WHERE test_id = :testId

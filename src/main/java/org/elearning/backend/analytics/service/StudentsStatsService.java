@@ -48,6 +48,13 @@ public class StudentsStatsService {
     private final LessonDifficultyByStudentRepository lessonDifficultyByStudentRepository;
     private final CourseEnrollmentRepository courseEnrollmentRepository;
 
+    /**
+     * Constructs a StudentsStatsService with the repository dependencies it requires.
+     *
+     * <p>The provided repositories are retained for querying tests, test results,
+     * course existence, per-student lesson difficulties, and course enrollments used
+     * by the service's methods.
+     */
     public StudentsStatsService(TestRepository testRepository, TestResultRepository testResultRepository, CourseRepository courseRepository, LessonDifficultyByStudentRepository lessonDifficultyByStudentRepository, CourseEnrollmentRepository courseEnrollmentRepository) {
         this.testRepository = testRepository;
         this.testResultRepository = testResultRepository;
@@ -57,11 +64,12 @@ public class StudentsStatsService {
     }
 
     /**
-     * Computes the rank of a student
-     * @param studentId the id of the student for whom the rank is computed
-     * @param myClassBestResults the list of the best grades each student has, sorted from best to worst
-     * @return the rank of the student inside a course
-     */
+         * Determine the 1-based rank of a student within a list of class best results.
+         *
+         * @param studentId the id of the student whose rank is computed
+         * @param myClassBestResults list of each student's best result ordered from highest to lowest
+         * @return the 1-based rank of the student; if the student is not present in the list, returns {@code myClassBestResults.size() + 1}
+         */
     private int getRank(UUID studentId, List<MyClassTestBestResultsDto> myClassBestResults){
         int rank;
 
@@ -74,10 +82,11 @@ public class StudentsStatsService {
     }
 
     /**
-     * Computes the percentile of a student, determined by the formula (totalStudents - studentRank + 1) / totalStudents * 100
-     * @param studentRank the id of the student for whom the percentile is computed
-     * @param totalStudents  the total amount of students from a course
-     * @return the percentile of a student
+     * Calculate a student's percentile within a cohort based on their rank and the cohort size.
+     *
+     * @param studentRank  the 1-based rank of the student within the cohort (1 = top rank)
+     * @param totalStudents the total number of students in the cohort
+     * @return a BigDecimal representing the student's percentile between 0 and 100; returns `0` if `totalStudents` is 0. The value is computed as ((totalStudents - studentRank + 1) / totalStudents) * 100 and is provided with up to four decimal places.
      */
 
     private BigDecimal computePercentile(int studentRank, int totalStudents) {
@@ -96,10 +105,10 @@ public class StudentsStatsService {
     }
 
     /**
-     * Computes the median of a class. If the total amount of students from a class is odd, it returns the score
-     * situated at the middle, otherwise it returns the average of the two students at the middle of the top
-     * @param myClassBestResults the list of the best results from a given class
-     * @return the median of the class
+     * Compute the median best-score percentage from the provided class results.
+     *
+     * @param myClassBestResults list of class best-result DTOs (ordered by score if caller provides such ordering)
+     * @return the median of the best-score percentages; `0` if the list is empty
      */
 
     private BigDecimal computeMedian(List<MyClassTestBestResultsDto> myClassBestResults){
@@ -118,12 +127,13 @@ public class StudentsStatsService {
     }
 
     /**
-     * Returns the stats of a student from a test
-     * @param studentId the student for whom we get the data for
-     * @param testId the test the data is taken from
-     * @return  a MyTestStatsDto Object containing the id of the test, the tile of it, the total amount of attempts,
-     * the best score, the worst score, the average score, the last score, the amount of students who took the test,
-     * the class average, the class median, the rank and the percentile, all of a given student
+     * Provide aggregated test statistics for a student.
+     *
+     * @param studentId UUID of the student
+     * @param testId    UUID of the test
+     * @return a MyTestStatsDto containing the student's personal test stats, the latest score, class average stats,
+     *         class median, the student's rank within the class, and the percentile
+     * @throws DoesNotExistException if the test identified by {@code testId} does not exist
      */
 
     public MyTestStatsDto getMyTestStats(UUID studentId, UUID testId){
@@ -161,12 +171,14 @@ public class StudentsStatsService {
     }
 
     /**
-     * Gets the summary data of a course for a student
-     * @param studentId the student for whom we get the data for
-     * @param courseId the course from whom the data is extracted
-     * @return a MySummaryDataDto Object containing the course title, total test count of a course, total tests done
-     * by the student, total of tests passed, best score, worst score, average of score, the lessons where the student
-     * is having difficulties the most and the last few attempts
+     * Assembles course-level summary data and recent activity for a student.
+     *
+     * @param studentId the UUID of the student
+     * @param courseId  the UUID of the course
+     * @return a MySummaryDataDto containing course details, the student's course statistics (counts and scores),
+     *         the list of lessons where the student shows most difficulty, and the student's recent attempts
+     * @throws DoesNotExistException                 if the course identified by {@code courseId} does not exist
+     * @throws StudentNotEnrolledInCourseException   if the student is not enrolled in the specified course
      */
 
     public MySummaryDataDto getMySummaryData(UUID studentId, UUID courseId){

@@ -29,6 +29,17 @@ public class AdaptiveController {
     private static final String CONFLICT = "409";
     private static final String UNPROCESSABLE_CONTENT = "422";
 
+    /**
+     * Submit a student's answers for an adaptive session and return the computed results.
+     *
+     * Processes the submitted answers, calculates the total score, and returns per-question details
+     * along with AI feedback status.
+     *
+     * @param sessionId the UUID of the adaptive session to submit
+     * @param body the submitted answers and related submission data
+     * @param currentUser the authenticated user's details submitting the session
+     * @return an AdaptiveResultDto containing the total score, detailed results for each question, and AI feedback status
+     */
     @Operation(summary = "Submit an adaptive session", description = "Processes the student's answers for an adaptive session, calculates the total score, and returns detailed results for each question along with AI feedback status.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Session submitted successfully"),
@@ -47,6 +58,13 @@ public class AdaptiveController {
         return ResponseEntity.ok(adaptiveSessionService.submitSession(sessionId, currentUser.getUserId(), body));
     }
 
+    /**
+     * Starts a new adaptive session for the authenticated student using the specified subject, topic, and question count.
+     *
+     * @param request     contains the subjectId, topicId, and desired question count for the new session
+     * @param userDetails authentication principal for the current user; the student's UUID is taken from this object
+     * @return an AdaptiveStartDto describing the created adaptive session
+     */
     @PostMapping("/adaptive/start")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<AdaptiveStartDto> startAdaptiveSession(@RequestBody AdaptiveStartRequestDto request, @AuthenticationPrincipal CustomUserDetails userDetails)

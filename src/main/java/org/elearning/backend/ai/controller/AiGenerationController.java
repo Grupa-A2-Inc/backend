@@ -21,6 +21,12 @@ import java.util.UUID;
 public class AiGenerationController {
     private final AiGenerationService aiService;
 
+    /**
+     * Initiates an AI generation request for the specified lesson and returns the created request metadata.
+     *
+     * @param requestDto request body carrying generation parameters; its `subjectId` and `topicId` are used to scope the generation
+     * @return an AiGenerateResponseDto containing the generated `requestId`, `status` set to `AiRequestStatus.PENDING`, and the associated `lessonId`
+     */
     @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT')")
     @PostMapping("/lessons/{lessonId}/ai/generate-test")
     public ResponseEntity<AiGenerateResponseDto> generateForLesson(@PathVariable UUID lessonId, @RequestBody AiGenerateRequestDto requestDto, @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -39,6 +45,13 @@ public class AiGenerationController {
         return ResponseEntity.accepted().body(responseDto);
     }
 
+    /**
+     * Retrieve the current status of an AI generation request by its ID for the authenticated user.
+     *
+     * @param requestId the UUID of the AI generation request to query
+     * @param userDetails the authenticated principal used to identify the requesting user
+     * @return the AiRequestStatusDto containing the request's current status and related metadata
+     */
     @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT')")
     @GetMapping("/ai/requests/{requestId}/status")
     public ResponseEntity<AiRequestStatusDto> getRequestStatus(@PathVariable UUID requestId, @AuthenticationPrincipal CustomUserDetails userDetails) {

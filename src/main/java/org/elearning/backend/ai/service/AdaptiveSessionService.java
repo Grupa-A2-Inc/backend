@@ -83,18 +83,18 @@ public class AdaptiveSessionService {
     }
 
     /**
-     * This method processes the submission of an adaptive learning session by a student. It performs the following steps:
-     * 1. Validates that the session exists and is active for the given student.
-     * 2. Retrieves the exercises associated with the session and their correct answers.
-     * 3. Compares the student's submitted answers with the correct answers to calculate scores for each exercise.
-     * 4. Stores the student's answers and scores in the database.
-     * 5. Updates the session status to "COMPLETED".
-     * 6. Sends feedback data to an AI service and updates the session record if feedback was sent successfully.
+     * Process a student's submission for an adaptive learning session.
      *
-     * @param sessionId The ID of the adaptive session being submitted.
-     * @param studentId The ID of the student submitting the session.
-     * @param studentAnswers The answers provided by the student for each exercise in the session.
-     * @return An AdaptiveResultDto containing the total score, detailed results for each exercise, and whether AI feedback was sent.
+     * Validates the session belongs to the student, is active, and not expired; grades each exercise, persists answers and scores,
+     * marks the session as completed, and attempts to send AI feedback (best-effort).
+     *
+     * @param sessionId the adaptive session ID being submitted
+     * @param studentId the student submitting the session
+     * @param studentAnswers the student's answers for the session's exercises
+     * @return an AdaptiveResultDto containing the session ID, total score, per-exercise results, and whether AI feedback was sent
+     * @throws DoesNotExistException if no session exists for the given sessionId and studentId
+     * @throws ResourceConflictException if the session is not active or has expired
+     * @throws ValidationException if stored correct answers cannot be parsed or if serialization of given answers fails
      */
     @Transactional(noRollbackFor = ResourceConflictException.class)
     public AdaptiveResultDto submitSession(UUID sessionId, UUID studentId, AdaptiveSubmitRequestDto studentAnswers) {
@@ -187,18 +187,16 @@ public class AdaptiveSessionService {
     }
 
     /**
-     * This method calculates the score for a given exercise based on the type of exercise, the answers provided by the student, and the correct answers.
-     * The scoring logic is as follows:
-     * - For SINGLE_CHOICE and TRUE_FALSE: 1 point if the given answer matches the correct answer, otherwise 0 points.
-     * - For MULTIPLE_CHOICE:
-     *   - 1 point if all given answers match all correct answers (order does not matter).
-     *   - 0.5 points if the given answers are a subset of the correct answers (i.e., all given answers are correct but not all correct answers are given).
-     *   - 0 points if any given answer is incorrect or if there are extra incorrect answers.
+     * Compute the score for an exercise based on its type and the provided answers.
      *
-     * @param type The type of exercise (e.g., SINGLE_CHOICE, TRUE_FALSE, MULTIPLE_CHOICE).
-     * @param given The list of answers provided by the student.
-     * @param correct The list of correct answers for the exercise.
-     * @return The calculated score for the exercise.
+     * Scoring:
+     * - SINGLE_CHOICE, TRUE_FALSE: 1.0 if the first given answer equals the first correct answer, 0.0 otherwise.
+     * - MULTIPLE_CHOICE: 1.0 if the sets of given and correct answers are equal; 0.5 if given answers are a non-empty subset of correct answers; 0.0 otherwise.
+     *
+     * @param type    the exercise type identifier (e.g., "SINGLE_CHOICE", "TRUE_FALSE", "MULTIPLE_CHOICE")
+     * @param given   the answers provided by the student (may be null or empty)
+     * @param correct the correct answers for the exercise (may be null or empty)
+     * @return        the score for the exercise: `1.0`, `0.5`, or `0.0` depending on correctness
      */
     private double calculateScore(String type, List<String> given, List<String> correct) {
         if (given == null || given.isEmpty() || correct == null || correct.isEmpty()) {
@@ -232,12 +230,13 @@ public class AdaptiveSessionService {
     }
 
     /**
-     * This method converts a given object to its JSON string representation using the ObjectMapper.
-     * If the object is null, it returns an empty JSON array "[]".
-     * If there is an error during serialization, it logs the error and throws a ValidationException.
+     * Serialize the given object to its JSON string representation.
      *
-     * @param object The object to be converted to JSON.
-     * @return The JSON string representation of the object.
+     * If the provided object is null, returns the JSON empty array string "[]".
+     *
+     * @param object the object to serialize; may be null
+     * @return the JSON string representation of the object, or "[]" if the object is null
+     * @throws ValidationException if serialization fails
      */
     private String convertToJson(Object object) {
         if (object == null) {
