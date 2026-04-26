@@ -5,9 +5,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.analytics.dto.AdaptiveResultDto;
+import org.elearning.backend.analytics.dto.AdaptiveStartDto;
+import org.elearning.backend.analytics.dto.AdaptiveStartRequestDto;
 import org.elearning.backend.analytics.dto.AdaptiveSubmitRequestDto;
 import org.elearning.backend.analytics.service.AdaptiveSubmitService;
 import org.elearning.backend.security.auth.CustomUserDetails;
+import org.elearning.backend.analytics.service.AdaptiveSessionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +24,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AdaptiveController {
     private final AdaptiveSubmitService adaptiveSubmitService;
+    private final AdaptiveSessionService adaptiveSessionService;
 
     private static final String OK = "200";
     private static final String NOT_FOUND = "404";
@@ -43,5 +47,13 @@ public class AdaptiveController {
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
         return ResponseEntity.ok(adaptiveSubmitService.submitSession(sessionId, currentUser.getUserId(), body));
+    }
+
+    @PostMapping("/adaptive/start")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<AdaptiveStartDto> startAdaptiveSession(@RequestBody AdaptiveStartRequestDto request, @AuthenticationPrincipal CustomUserDetails userDetails)
+    {
+        UUID studentId = userDetails.getUserId();
+        return ResponseEntity.ok(adaptiveSessionService.startSession(studentId, request.getSubjectId(), request.getTopicId(), request.getCount()));
     }
 }

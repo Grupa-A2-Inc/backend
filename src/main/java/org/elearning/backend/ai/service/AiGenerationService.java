@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.ai.dto.AiGenerateResponse;
 import org.elearning.backend.ai.dto.AiQuestionDto;
+import org.elearning.backend.ai.dto.AiRequestStatusDto;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.elearning.backend.analytics.exception.WithoutAccessException;
@@ -16,6 +17,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -25,6 +27,7 @@ public class AiGenerationService {
     private final LessonRepository lessonRepository;
     private final AiApiClient aiApiClient;
     private final ObjectMapper objectMapper;
+    private final AiAsyncWorker aiAsyncWorker;
 
     public UUID generateForLesson(UUID lessonId, UUID userId, RoleName role, Integer subjectId, Integer topicId) {
         validateUserAccess(lessonId, userId, role);
@@ -38,19 +41,8 @@ public class AiGenerationService {
         request = questionRequestRepository.save(request);
         UUID requestId = request.getId();
 
-        try {
-            AiGenerateResponse response = aiApiClient.generateTest(requestId, lessonId);
-            request.setStatus(AiRequestStatus.SUCCESS);
-            List<AiQuestionDto> generatedQuestions = response.getQuestions();
-            request.setGeneratedQuestions(objectMapper.writeValueAsString(generatedQuestions));
-        }
-        catch (AiTimeoutException exception) {
-            request.setStatus(AiRequestStatus.FALLBACK);
-        }
-        catch (AiApiException | JsonProcessingException exception) {
-            request.setStatus(AiRequestStatus.FAILED);
-        }
-        questionRequestRepository.save(request);
+        aiAsyncWorker.processAiGenerationInBackground(requestId, lessonId, request);
+
         return requestId;
     }
 
@@ -68,5 +60,18 @@ public class AiGenerationService {
             throw new WithoutAccessException(userId);
 
         }
+    }
+
+    public AiRequestStatusDto getRequestStatus(UUID requestId, UUID userId, RoleName role) {
+        AiQuestionRequest request = questionRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        UUID lessonId = request.getLessonId();
+        validateUserAccess(lessonId, userId, role);
+
+        AiRequestStatusDto statusDto = new AiRequestStatusDto();
+        statusDto.setRequestId(requestId);
+        statusDto.setStatus(request.getStatus());
+
+        return statusDto;
     }
 }
