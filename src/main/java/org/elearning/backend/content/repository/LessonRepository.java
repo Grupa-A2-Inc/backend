@@ -103,18 +103,38 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     @Query("SELECT l FROM Lesson l LEFT JOIN FETCH l.lessonResources WHERE l.chapter.course.id = :courseId ORDER BY l.orderIndex ASC")
     List<Lesson> findLessonsWithResourcesByCourseId(@Param("courseId") UUID courseId);
 
+    /**
+     * Gets all lesson IDs associated with the specified course.
+     *
+     * @param courseId the UUID of the course whose lessons are queried
+     * @return a list of lesson UUIDs belonging to the course, or an empty list if none exist
+     */
     @Query("""
         SELECT l.id FROM Lesson l
         WHERE l.chapter.course.id = :courseId
     """)
     List<UUID> findAllLessonIdsByCourseId(@Param("courseId") UUID courseId);
 
+    /**
+     * Checks whether the course that contains the specified lesson was created by the given professor.
+     *
+     * @param lessonId    the UUID of the lesson to check
+     * @param professorId the UUID of the professor to verify as the course creator
+     * @return            `true` if the lesson's course was created by the professor identified by `professorId`, `false` otherwise
+     */
     @Query("SELECT COUNT(l) > 0 FROM Lesson l " +
             "JOIN l.chapter ch " +
             "JOIN ch.course c " +
             "WHERE l.id = :lessonId AND c.createdBy = :professorId")
     boolean isLessonOwnedByProfessor(@Param("lessonId") UUID lessonId, @Param("professorId") UUID professorId);
 
+    /**
+     * Checks whether a student is enrolled in the course that contains the specified lesson.
+     *
+     * @param lessonId  the UUID of the lesson whose course enrollment will be checked
+     * @param studentId the UUID of the student to verify enrollment for
+     * @return `true` if the student is enrolled in the lesson's course, `false` otherwise
+     */
     @Query("SELECT COUNT(l) > 0 FROM Lesson l " +
             "JOIN l.chapter ch " +
             "JOIN CourseEnrollment ce ON ce.courseId = ch.course.id " +

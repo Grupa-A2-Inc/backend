@@ -25,6 +25,9 @@ public class AnalyticsQueryService {
     private static final String TEST_DOES_NOT_EXIST = "Test does not exist";
     private static final String COURSE_DOES_NOT_EXIST = "Course does not exist";
 
+    /**
+     * Creates an AnalyticsQueryService backed by the provided repositories.
+     */
     public AnalyticsQueryService(TestRepository testRepository, CourseRepository courseRepository, TestResultRepository testResultRepository) {
         this.testRepository = testRepository;
         this.courseRepository = courseRepository;
@@ -36,12 +39,15 @@ public class AnalyticsQueryService {
      */
 
     /**
-     * Get statistic data about the class average of a given test. Some parameters will be null if nobody took the test,
-     * it's best the returned value is checked to not be null when used.
-     * @param testId the given test we want the class stats of
-     * @param professorId the professor id to attest if the professor has access to test data or not
-     * @return the test id, test title, the total count of results, the number of passed/failed tests, the average score,
-     *  the lowest score, the best score and failure rate, inside a ClassAverageDto
+     * Fetch aggregated class statistics for the specified test.
+     *
+     * Throws DoesNotExistException(TEST_DOES_NOT_EXIST) if the test cannot be found.
+     * Throws WithoutAccessException(professorId) if the provided professorId is not the test's creator.
+     * If no results exist for the test, returns a ClassAverageDto with counts set to 0, score fields set to BigDecimal.ZERO, and failure rate 0.0.
+     *
+     * @param testId      the identifier of the test to query
+     * @param professorId the professor's identifier used to validate access to the test data
+     * @return a ClassAverageDto containing the test id and title, total result count, passed and failed counts, average score, lowest score, highest score, and failure rate
      */
 
     public ClassAverageDto getClassAverage(UUID testId, UUID professorId){
@@ -61,13 +67,16 @@ public class AnalyticsQueryService {
     }
 
     /**
-     * Gets the student data of a given course. The given data are limited by the pageable parameter, that limits the amount
-     *  of data the professor gets, making sure the data can be split in multiple pages
-     * @param courseId the course the data is extracted from
-     * @param pageable the page settings (e.g. third page with 20 students)
-     * @param professorId the professor id to attest if the professor has access to course data or not
-     * @return a page with a certain amount of students, containing the student ID, their average/lowest/best score,
-     * total test count, how many were passed, how many were failed and day of their latest test attempt
+     * Retrieve a paginated page of per-student average analytics for the specified course.
+     *
+     * @param courseId    the course identifier to query
+     * @param professorId the professor identifier used to verify access to the course
+     * @param pageable    paging and sorting parameters for the returned page
+     * @return            a page of StudentAverageDto objects containing per-student aggregates:
+     *                    student ID, average/lowest/best score, total test count, passed count,
+     *                    failed count, and timestamp of the latest test attempt
+     * @throws DoesNotExistException if no course exists with the given `courseId`
+     * @throws WithoutAccessException if the `professorId` is not the creator of the course
      */
 
     public Page<StudentAverageDto> getStudentAverages(UUID courseId, UUID professorId, Pageable pageable){

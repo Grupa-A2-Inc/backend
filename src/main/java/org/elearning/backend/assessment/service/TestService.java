@@ -109,6 +109,17 @@ public class TestService {
 
 
 
+    /**
+     * Updates modifiable fields of a draft test and returns the updated test DTO.
+     *
+     * Only non-null fields in {@code editableContent} are applied; updates are permitted only when the test is in draft status.
+     *
+     * @param editableContent DTO containing fields to update (null fields are ignored)
+     * @param testId          identifier of the test to update
+     * @return                the updated test mapped to a {@code TestEntityDto}
+     * @throws DoesNotExistException      if no test exists with the given {@code testId}
+     * @throws TestMustBeDraftException   if the test exists but its status is not draft
+     */
     @Transactional
     public TestEntityDto updateTest(TestEditDto editableContent, UUID testId){
         Test test = testRepository.findById(testId)
@@ -130,6 +141,13 @@ public class TestService {
         return testMapper.toEntityDto(testRepository.save(test));
     }
 
+    /**
+     * Deletes the test with the given id only if it is in draft status.
+     *
+     * @param testId the UUID of the test to delete
+     * @throws TestNotPublishedException if no test exists with the provided id
+     * @throws TestMustBeDraftException if the test exists but its status is not DRAFT
+     */
     @Transactional
     public void deleteTest(UUID testId){
         Test test = testRepository.findById(testId)
@@ -167,13 +185,14 @@ public class TestService {
     }
 
     /**
-     * Returns a list containing all the data the questions of a given test have. Teachers have access to the list
-     * of correct answers as well, IF they are the author of the test. Students have access to the list of question
-     * data, minus the correct options ONLY IF they are enrolled to the course related to the question
-     * @param testId - the given testId for the wanted test
-     * @param roleName - the role of the person making the call
-     * @return Question data that changes depending on the user who calls it, if they have access to it.
-     */
+         * Retrieve question data for a test, with correct answers included when the caller is a teacher.
+         *
+         * @param testId   the identifier of the test whose questions are requested
+         * @param roleName the role of the caller used to determine the level of information returned
+         * @return a list of QuestionDataForUsersDto representing the test questions; for callers with teacher role the returned items include correct answers
+         * @throws DoesNotExistException if no test exists with the given id
+         * @throws UserHasNoPermissionException if the caller's role is not permitted to view the questions
+         */
 
     public List<QuestionDataForUsersDto> getListOfQuestions(UUID testId, RoleName roleName){
 

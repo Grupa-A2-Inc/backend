@@ -30,6 +30,16 @@ public class MyTestStatsDto {
     private Integer rank;
     private BigDecimal percentile;
 
+    /**
+     * Creates a MyTestStatsDto by combining personal test metrics with class-level aggregates and ranking.
+     *
+     * @param myPersonalTestStatsDto source of personal metrics: testId, testTitle, totalAttemptCount, bestScore, lowestScore and averageScore
+     * @param lastScore              the student's most recent score for the test
+     * @param myClassTestAverageDto  source of class-level aggregates: totalStudentCount and classAverage
+     * @param classMedian            the class median score for the test
+     * @param rank                   the student's rank within the class
+     * @param percentile             the student's percentile within the class
+     */
     public MyTestStatsDto(MyPersonalTestStatsDto myPersonalTestStatsDto,
                           BigDecimal lastScore,
                           MyClassTestAverageDto myClassTestAverageDto,

@@ -28,6 +28,13 @@ public class AiController {
     private static final String CONFLICT = "409";
     private static final String UNPROCESSABLE_CONTENT = "422";
 
+    /**
+     * Injects AI-generated questions from the specified AI request into a test.
+     *
+     * @param requestId   the UUID of the AI generation request to process
+     * @param requestBody optional payload containing an optional `testIdOpt`; when absent, a new test will be created and questions will be injected into it
+     * @return            an InjectionResultDto describing the outcome of the injection operation
+     */
     @Operation(summary = "Inject AI-generated questions into a test", description = "Processes the AI request and injects generated questions into the specified test. If no test ID is provided, a new test will be created.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Questions injected successfully"),
