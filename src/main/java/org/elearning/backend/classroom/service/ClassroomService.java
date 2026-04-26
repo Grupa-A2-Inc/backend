@@ -139,43 +139,22 @@ public class ClassroomService {
 
     @Transactional
     public ClassroomResponse addClassroomStudents(UUID classroomId,
-                                                     ModifyClassroomStudentsRequest request,
-                                                     UUID currentUserId) {
+                                                  ModifyClassroomStudentsRequest request,
+                                                  UUID currentUserId) {
+        Classroom classroom = getClassroomOrThrow(classroomId);
+        List<User> students = getValidStudentsForClassroom(request.getStudentIds(), classroom);
 
-        Classroom classroom = classroomRepository.findById(classroomId)
-                .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found."));
-
-        Set<UUID> studentsIds = request.getStudentIds();
-        List<User> users = userRepository.findAllById(studentsIds);
-
-        if (users.size() != studentsIds.size()) {
-            throw new UserNotFoundException("One or more students do not exist.");
-        }
-
-        UUID classroomOrgId = classroom.getOrganization().getId();
-
-        for (User user : users) {
-
-            if (user.getRole().getName() != RoleName.STUDENT) {
-                throw new ClassroomBadRequestException("User " + user.getId() + " is not a STUDENT.");
-            }
-
-            if (user.getOrganization() == null || !classroomOrgId.equals(user.getOrganization().getId())) {
-                throw new ClassroomBadRequestException("User " + user.getId() + " is not in the same organization.");
-
-            }
-
+        for (User student : students) {
             boolean alreadyExists = classroomMembershipRepository
                     .existsByClassroomIdAndUserIdAndMembershipType(
-                            classroomId, user.getId(), MembershipType.STUDENT
+                            classroomId, student.getId(), MembershipType.STUDENT
                     );
 
             if (!alreadyExists) {
                 ClassroomMembership membership = new ClassroomMembership();
                 membership.setClassroom(classroom);
-                membership.setUser(user);
+                membership.setUser(student);
                 membership.setMembershipType(MembershipType.STUDENT);
-
                 classroomMembershipRepository.save(membership);
             }
         }
@@ -186,47 +165,59 @@ public class ClassroomService {
     @Transactional
     public ClassroomResponse deleteClassroomStudents(UUID classroomId,
                                                      @Valid ModifyClassroomStudentsRequest request,
-                                                     UUID userId) {
+                                                     UUID currentUserId) {
+        Classroom classroom = getClassroomOrThrow(classroomId);
+        List<User> students = getValidStudentsForClassroom(request.getStudentIds(), classroom);
 
-        Classroom classroom = classroomRepository.findById(classroomId)
-                .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found."));
-
-        Set<UUID> studentsIds = request.getStudentIds();
-        List<User> users = userRepository.findAllById(studentsIds);
-
-        if (users.size() != studentsIds.size()) {
-            throw new UserNotFoundException("One or more students do not exist.");
-        }
-
-        UUID classroomOrgId = classroom.getOrganization().getId();
-
-        for (User user : users) {
-
-            if (user.getRole().getName() != RoleName.STUDENT) {
-                throw new ClassroomBadRequestException("User " + user.getId() + " is not a STUDENT.");
-            }
-
-            if (user.getOrganization() == null || !classroomOrgId.equals(user.getOrganization().getId())) {
-                throw new ClassroomBadRequestException("User " + user.getId() + " is not in the same organization.");
-
-            }
-
-            boolean alreadyExists = classroomMembershipRepository
-                    .existsByClassroomIdAndUserIdAndMembershipType(
-                            classroomId, user.getId(), MembershipType.STUDENT
-                    );
-
-            if (alreadyExists) {
-                classroomMembershipRepository.deleteByClassroomIdAndUserIdAndMembershipType(classroomId, user.getId(), MembershipType.STUDENT);
-            }
-
+        for (User student : students) {
+            classroomMembershipRepository.deleteByClassroomIdAndUserIdAndMembershipType(
+                    classroomId,
+                    student.getId(),
+                    MembershipType.STUDENT
+            );
         }
 
         return toResponse(classroom);
-
     }
 
+    private Classroom getClassroomOrThrow(UUID classroomId) {
+        return classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found."));
+    }
+
+    private List<User> getValidStudentsForClassroom(Set<UUID> studentIds, Classroom classroom) {
+        List<User> students = userRepository.findAllById(studentIds);
+
+        if (students.size() != studentIds.size()) {
+            throw new UserNotFoundException("One or more students do not exist.");
+        }
+
+        UUID classroomOrganizationId = classroom.getOrganization().getId();
+
+        for (User student : students) {
+            validateStudentCanBeModified(student, classroomOrganizationId);
+        }
+
+        return students;
+    }
+
+    private void validateStudentCanBeModified(User student, UUID classroomOrganizationId) {
+        if (student.getRole().getName() != RoleName.STUDENT) {
+            throw new ClassroomBadRequestException("User " + student.getId() + " is not a STUDENT.");
+        }
+
+        if (student.getOrganization() == null || !classroomOrganizationId.equals(student.getOrganization().getId())) {
+            throw new ClassroomBadRequestException("User " + student.getId() + " is not in the same organization.");
+        }
+    }
+
+    // TODO: aici pregatesc partea pentru auto enrollment
     private void handleStudentAddedToClassroom(Classroom classroom, User student) {
-        // TODO: aici pregatesc partea pentru auto enrollment
+        throw new UnsupportedOperationException(
+                "Auto enrollment is not implemented yet for classroom "
+                        + classroom.getId()
+                        + " and student "
+                        + student.getId()
+        );
     }
 }
