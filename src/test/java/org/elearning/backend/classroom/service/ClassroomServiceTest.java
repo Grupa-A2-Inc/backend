@@ -567,11 +567,6 @@ class ClassroomServiceTest {
 
         when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
         when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(student1, student2));
-        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
-                classroomId, student1Id, MembershipType.STUDENT)).thenReturn(true);
-        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
-                classroomId, student2Id, MembershipType.STUDENT)).thenReturn(true);
-
         classroomService.deleteClassroomStudents(classroomId, request, requesterId);
 
         verify(classroomMembershipRepository).deleteByClassroomIdAndUserIdAndMembershipType(
@@ -582,7 +577,7 @@ class ClassroomServiceTest {
     }
 
     @Test
-    void deleteClassroomStudents_shouldDoNothing_whenMembershipDoesNotExist() {
+    void deleteClassroomStudents_shouldAttemptDelete_whenMembershipDoesNotExist() {
         UUID classroomId = UUID.randomUUID();
         UUID orgId = UUID.randomUUID();
         UUID requesterId = UUID.randomUUID();
@@ -596,13 +591,10 @@ class ClassroomServiceTest {
 
         when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
         when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(student));
-        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
-                classroomId, studentId, MembershipType.STUDENT)).thenReturn(false);
-
         assertDoesNotThrow(() -> classroomService.deleteClassroomStudents(classroomId, request, requesterId));
 
-        verify(classroomMembershipRepository, never())
-                .deleteByClassroomIdAndUserIdAndMembershipType(any(), any(), any());
+        verify(classroomMembershipRepository)
+                .deleteByClassroomIdAndUserIdAndMembershipType(classroomId, studentId, MembershipType.STUDENT);
     }
 
     @Test
@@ -666,18 +658,6 @@ class ClassroomServiceTest {
         assertThrows(ClassroomNotFoundException.class,
                 () -> classroomService.addClassroomStudents(classroomId, request, requesterId));
     }
-
-//    private Classroom mockClassroom(UUID classroomId, UUID orgId) {
-//        Classroom classroom = mock(Classroom.class);
-//        Organization organization = mock(Organization.class);
-//
-//        when(classroom.getId()).thenReturn(classroomId);
-//        when(classroom.getOrganization()).thenReturn(organization);
-//        when(organization.getId()).thenReturn(orgId);
-//
-//        return classroom;
-//    }
-
 
     private Classroom buildClassroom(UUID classroomId, UUID orgId) {
         Organization organization = new Organization();

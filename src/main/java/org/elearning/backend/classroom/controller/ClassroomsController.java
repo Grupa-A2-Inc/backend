@@ -88,6 +88,8 @@ public class ClassroomsController {
                 classroomCourseService.assignCourses(classroomId, request, currentUser.getUserId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     @PostMapping("/{classroomId}/students")
     @PreAuthorize("@accessService.canManageClassroom(authentication, #classroomId)")
     public ResponseEntity<ClassroomResponse> addClassroomStudents(
