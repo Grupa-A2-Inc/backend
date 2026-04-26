@@ -138,7 +138,7 @@ public class AuthController {
             description = "Invalid request data",
             content = @Content
     )
-    @PostMapping("/forgot-password")
+    @PostMapping("/password-reset/request")
     public ResponseEntity<ResetPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request){
         ResetPasswordResponse response = resetService.forgotPassword(request);
         return ResponseEntity.ok(response);
@@ -161,7 +161,7 @@ public class AuthController {
             description = "Invalid request data or reset token",
             content = @Content
     )
-    @PostMapping("/reset-password")
+    @PostMapping("/password-reset/confirm")
     public ResponseEntity<ResetPasswordResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request){
         ResetPasswordResponse response = resetService.resetPassword(request);
         return ResponseEntity.ok(response);

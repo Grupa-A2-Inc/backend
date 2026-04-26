@@ -3,10 +3,14 @@ package org.elearning.backend.classroom.service;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
 import org.elearning.backend.classroom.dto.request.UpdateClassroomRequest;
 import org.elearning.backend.classroom.dto.response.ClassroomResponse;
+import org.elearning.backend.classroom.entity.ClassroomMembership;
+import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.entity.Classroom;
 import org.elearning.backend.classroom.exception.ClassroomBadRequestException;
+import org.elearning.backend.classroom.dto.request.ModifyClassroomStudentsRequest;
 import org.elearning.backend.classroom.exception.ClassroomConflictException;
 import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
+import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
@@ -26,14 +30,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ClassroomServiceTest {
@@ -46,6 +50,9 @@ class ClassroomServiceTest {
 
     @Mock
     private OrganizationRepository organizationRepository;
+
+    @Mock
+    private ClassroomMembershipRepository classroomMembershipRepository;
 
     @InjectMocks
     private ClassroomService classroomService;
@@ -411,5 +418,290 @@ class ClassroomServiceTest {
         classroom.setCreatedAt(LocalDateTime.of(2026, 4, 24, 10, 0));
         classroom.setUpdatedAt(LocalDateTime.of(2026, 4, 24, 11, 0));
         return classroom;
+    }
+
+    @Test
+    void modifyClassroomStudents_shouldAddStudents_whenAllAreValid() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID student1Id = UUID.randomUUID();
+        UUID student2Id = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student1 = buildUser(student1Id, orgId, RoleName.STUDENT);
+        User student2 = buildUser(student2Id, orgId, RoleName.STUDENT);
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(student1Id, student2Id));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(student1, student2));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, student1Id, MembershipType.STUDENT)).thenReturn(false);
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, student2Id, MembershipType.STUDENT)).thenReturn(false);
+
+        classroomService.addClassroomStudents(classroomId, request, requesterId);
+
+        ArgumentCaptor<ClassroomMembership> captor = ArgumentCaptor.forClass(ClassroomMembership.class);
+        verify(classroomMembershipRepository, times(2)).save(captor.capture());
+
+        List<ClassroomMembership> savedMemberships = captor.getAllValues();
+
+        ClassroomMembership first = savedMemberships.get(0);
+        ClassroomMembership second = savedMemberships.get(1);
+
+        org.junit.jupiter.api.Assertions.assertEquals(MembershipType.STUDENT, first.getMembershipType());
+        org.junit.jupiter.api.Assertions.assertEquals(MembershipType.STUDENT, second.getMembershipType());
+
+        verify(classroomMembershipRepository, never())
+                .deleteByClassroomIdAndUserIdAndMembershipType(any(), any(), any());
+    }
+
+    @Test
+    void modifyClassroomStudents_shouldNotCreateDuplicateMemberships() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student = buildUser(studentId, orgId, RoleName.STUDENT);
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(studentId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(student));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, studentId, MembershipType.STUDENT)).thenReturn(true);
+
+        classroomService.addClassroomStudents(classroomId, request, requesterId);
+
+        verify(classroomMembershipRepository, never()).save(any(ClassroomMembership.class));
+    }
+
+    @Test
+    void modifyClassroomStudents_shouldThrow_whenOneOrMoreUsersDoNotExist() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID student1Id = UUID.randomUUID();
+        UUID student2Id = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student1 = buildUser(student1Id, orgId, RoleName.STUDENT);
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(student1Id, student2Id));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(student1));
+
+        assertThrows(UserNotFoundException.class,
+                () -> classroomService.addClassroomStudents(classroomId, request, requesterId));
+
+        verify(classroomMembershipRepository, never()).save(any());
+    }
+
+    @Test
+    void modifyClassroomStudents_shouldThrow_whenUserIsNotStudent() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID teacherId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User teacher = buildUser(teacherId, orgId, RoleName.TEACHER);
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(teacherId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(teacher));
+
+        assertThrows(ClassroomBadRequestException.class,
+                () -> classroomService.addClassroomStudents(classroomId, request, requesterId));
+
+        verify(classroomMembershipRepository, never()).save(any());
+    }
+
+    @Test
+    void modifyClassroomStudents_shouldThrow_whenUserIsFromAnotherOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID classroomOrgId = UUID.randomUUID();
+        UUID otherOrgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, classroomOrgId);
+        User student = buildUser(studentId, otherOrgId, RoleName.STUDENT);
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(studentId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(student));
+
+        assertThrows(ClassroomBadRequestException.class,
+                () -> classroomService.addClassroomStudents(classroomId, request, requesterId));
+
+        verify(classroomMembershipRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteClassroomStudents_shouldDeleteMemberships_whenTheyExist() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID student1Id = UUID.randomUUID();
+        UUID student2Id = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student1 = buildUser(student1Id, orgId, RoleName.STUDENT);
+        User student2 = buildUser(student2Id, orgId, RoleName.STUDENT);
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(student1Id, student2Id));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(student1, student2));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, student1Id, MembershipType.STUDENT)).thenReturn(true);
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, student2Id, MembershipType.STUDENT)).thenReturn(true);
+
+        classroomService.deleteClassroomStudents(classroomId, request, requesterId);
+
+        verify(classroomMembershipRepository).deleteByClassroomIdAndUserIdAndMembershipType(
+                classroomId, student1Id, MembershipType.STUDENT);
+        verify(classroomMembershipRepository).deleteByClassroomIdAndUserIdAndMembershipType(
+                classroomId, student2Id, MembershipType.STUDENT);
+        verify(classroomMembershipRepository, never()).save(any(ClassroomMembership.class));
+    }
+
+    @Test
+    void deleteClassroomStudents_shouldDoNothing_whenMembershipDoesNotExist() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student = buildUser(studentId, orgId, RoleName.STUDENT);
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(studentId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(student));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, studentId, MembershipType.STUDENT)).thenReturn(false);
+
+        assertDoesNotThrow(() -> classroomService.deleteClassroomStudents(classroomId, request, requesterId));
+
+        verify(classroomMembershipRepository, never())
+                .deleteByClassroomIdAndUserIdAndMembershipType(any(), any(), any());
+    }
+
+    @Test
+    void deleteClassroomStudents_shouldThrow_whenUserIsNotStudent() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID teacherId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User teacher = buildUser(teacherId, orgId, RoleName.TEACHER);
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(teacherId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(teacher));
+
+        assertThrows(ClassroomBadRequestException.class,
+                () -> classroomService.deleteClassroomStudents(classroomId, request, requesterId));
+
+        verify(classroomMembershipRepository, never())
+                .deleteByClassroomIdAndUserIdAndMembershipType(any(), any(), any());
+    }
+
+    @Test
+    void deleteClassroomStudents_shouldThrow_whenUserIsFromAnotherOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID classroomOrgId = UUID.randomUUID();
+        UUID otherOrgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, classroomOrgId);
+        User student = buildUser(studentId, otherOrgId, RoleName.STUDENT);
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(studentId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getStudentIds())).thenReturn(List.of(student));
+
+        assertThrows(ClassroomBadRequestException.class,
+                () -> classroomService.deleteClassroomStudents(classroomId, request, requesterId));
+
+        verify(classroomMembershipRepository, never())
+                .deleteByClassroomIdAndUserIdAndMembershipType(any(), any(), any());
+    }
+
+    @Test
+    void modifyClassroomStudents_shouldThrow_whenClassroomDoesNotExist() {
+        UUID classroomId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        ModifyClassroomStudentsRequest request =
+                new ModifyClassroomStudentsRequest(Set.of(studentId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.empty());
+
+        assertThrows(ClassroomNotFoundException.class,
+                () -> classroomService.addClassroomStudents(classroomId, request, requesterId));
+    }
+
+//    private Classroom mockClassroom(UUID classroomId, UUID orgId) {
+//        Classroom classroom = mock(Classroom.class);
+//        Organization organization = mock(Organization.class);
+//
+//        when(classroom.getId()).thenReturn(classroomId);
+//        when(classroom.getOrganization()).thenReturn(organization);
+//        when(organization.getId()).thenReturn(orgId);
+//
+//        return classroom;
+//    }
+
+
+    private Classroom buildClassroom(UUID classroomId, UUID orgId) {
+        Organization organization = new Organization();
+        organization.setId(orgId);
+
+        Classroom classroom = new Classroom();
+        classroom.setId(classroomId);
+        classroom.setOrganization(organization);
+
+        return classroom;
+    }
+
+    private User buildUser(UUID userId, UUID orgId, RoleName roleName) {
+        Role role = new Role();
+        role.setName(roleName);
+
+        Organization organization = new Organization();
+        organization.setId(orgId);
+
+        User user = new User();
+        user.setId(userId);
+        user.setRole(role);
+        user.setOrganization(organization);
+
+        return user;
     }
 }
