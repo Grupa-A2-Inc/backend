@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.classroom.dto.request.ModifyClassroomStudentsRequest;
+import org.elearning.backend.classroom.dto.response.ClassroomMemberResponse;
+import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
 import org.elearning.backend.classroom.dto.request.UpdateClassroomRequest;
 import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
@@ -114,5 +116,14 @@ public class ClassroomsController {
                 classroomService.deleteClassroomStudents(classroomId, request, currentUser.getUserId());
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{classroomId}/members")
+    @PreAuthorize("@accessService.canListClassroomMembers(authentication, #classroomId)")
+    public ResponseEntity<List<ClassroomMemberResponse>> listClassroomMembers(
+            @P("classroomId") @PathVariable UUID classroomId,
+            @RequestParam(required = false) MembershipType role) {
+
+        return ResponseEntity.ok(classroomService.listClassroomMembers(classroomId, role));
     }
 }
