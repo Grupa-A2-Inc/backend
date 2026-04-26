@@ -29,6 +29,13 @@ public class TestResultController {
     private static final String FORBIDDEN = "403";
     private static final String NOT_FOUND = "404";
 
+    /**
+     * Retrieve the result of a specific test attempt for the authenticated user.
+     *
+     * @param attemptId  UUID of the attempt to fetch results for
+     * @param currentUser  the authenticated principal used to determine the requesting user's id
+     * @return  an AttemptReportDTO containing the attempt score and per-question details
+     */
     @Operation(summary = "Get the result of a test attempt, including score and question details")
     @ApiResponse(responseCode = OK, description = "Result retrieved successfully")
     @ApiResponse(responseCode = FORBIDDEN, description = "The attempt is still in progress")
@@ -41,6 +48,12 @@ public class TestResultController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieve the authenticated user's attempts for a given test, including score and status for each attempt.
+     *
+     * @param testId the UUID of the test whose attempts to retrieve
+     * @return a list of AttemptStatusDTO containing score and status for each attempt
+     */
     @Operation(summary = "Get the list of attempts for a specific test, including score and status for each attempt")
     @ApiResponse(responseCode = OK, description = "Attempts retrieved successfully")
     @GetMapping("/api/v1/tests/{testId}/my-attempts")
@@ -52,6 +65,12 @@ public class TestResultController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieve the authenticated user's best finished attempt for the specified test by score percentage.
+     *
+     * @param testId the UUID of the test to query
+     * @return the best finished AttemptStatusDTO for the authenticated user and specified test; if no finished attempts exist for the test a 404 response is produced
+     */
     @Operation(summary = "Get the best finished attempt for a specific test by score percentage")
     @ApiResponse(responseCode = OK, description = "Best attempt retrieved successfully")
     @ApiResponse(responseCode = NOT_FOUND, description = "No finished attempts found for the test")

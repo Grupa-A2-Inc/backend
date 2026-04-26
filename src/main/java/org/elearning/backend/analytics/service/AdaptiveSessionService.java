@@ -33,6 +33,17 @@ public class AdaptiveSessionService {
     private final ObjectMapper objectMapper;
     private final AdaptiveSessionExerciseRepository exerciseRepository;
 
+    /**
+     * Starts a new adaptive learning session for a student and returns its client-facing details.
+     *
+     * @param studentId the UUID of the student for whom the session is created
+     * @param subjectId the subject identifier for the session
+     * @param topicId   the topic identifier for the session
+     * @param count     the number of adaptive exercises to request
+     * @return an AdaptiveStartDto containing the persisted session ID, the session expiry timestamp, and the list of exercises safe to send to the client
+     * @throws AdaptiveServiceUnavailableException if the external adaptive exercise service is unavailable or times out
+     * @throws RuntimeException                    if exercise data cannot be serialized for persistence
+     */
     public AdaptiveStartDto startSession(UUID studentId, Integer subjectId, Integer topicId, int count) {
         AiAdaptiveResponse response;
         try {
