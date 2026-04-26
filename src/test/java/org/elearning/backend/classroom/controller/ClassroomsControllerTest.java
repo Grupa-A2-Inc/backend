@@ -1,8 +1,11 @@
 package org.elearning.backend.classroom.controller;
 
+import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
 import org.elearning.backend.classroom.dto.request.UpdateClassroomRequest;
+import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomResponse;
+import org.elearning.backend.classroom.service.ClassroomCourseService;
 import org.elearning.backend.classroom.service.ClassroomService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.user.entity.User;
@@ -29,6 +32,9 @@ class ClassroomsControllerTest {
 
     @InjectMocks
     private ClassroomsController classroomsController;
+
+    @Mock
+    private ClassroomCourseService classroomCourseService;
 
     @Test
     void createClassroom_returns201Created() {
@@ -97,6 +103,26 @@ class ClassroomsControllerTest {
         verify(classroomService).deleteClassroom(classroomId, userId);
         assertThat(response.getStatusCode().value()).isEqualTo(204);
         assertThat(response.getBody()).isNull();
+    }
+
+    @Test
+    void assignCourses_returns201Created() {
+        UUID userId = UUID.randomUUID();
+        UUID classroomId = UUID.randomUUID();
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(UUID.randomUUID()));
+
+        List<ClassroomCourseResponse> responseBody = List.of(
+                new ClassroomCourseResponse(UUID.randomUUID(), classroomId, UUID.randomUUID(),
+                        LocalDateTime.of(2026, 4, 24, 10, 0))
+        );
+        when(classroomCourseService.assignCourses(classroomId, request, userId)).thenReturn(responseBody);
+
+        ResponseEntity<List<ClassroomCourseResponse>> response =
+                classroomsController.assignCourses(classroomId, request, userDetails(userId));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(201);
+        assertThat(response.getBody()).isEqualTo(responseBody);
     }
 
     private ClassroomResponse makeResponse() {
