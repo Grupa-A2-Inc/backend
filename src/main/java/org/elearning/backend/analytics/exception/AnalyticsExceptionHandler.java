@@ -1,7 +1,5 @@
 package org.elearning.backend.analytics.exception;
 
-import org.elearning.backend.ai.exception.ResourceConflictException;
-import org.elearning.backend.ai.exception.ValidationException;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.common.GlobalExceptionHandler;
 import org.elearning.backend.content.exception.CourseNotFoundException;

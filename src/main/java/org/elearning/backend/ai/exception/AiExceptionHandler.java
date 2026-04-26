@@ -37,10 +37,10 @@ public class AiExceptionHandler extends GlobalExceptionHandler {
         return buildErrorResponse(exception, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(WithoutAccessException.class)
+    /*@ExceptionHandler(WithoutAccessException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(WithoutAccessException exception) {
         return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
-    }
+    }*/
 
     @ExceptionHandler(AdaptiveServiceUnavailableException.class)
     public ResponseEntity<Map<String, Object>> handleAdaptiveServiceUnavailable(AdaptiveServiceUnavailableException exception) {

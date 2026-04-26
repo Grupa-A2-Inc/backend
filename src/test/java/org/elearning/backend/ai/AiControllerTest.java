@@ -403,7 +403,7 @@ class AiControllerTest {
         mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                         .content("{}"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message", containsString("no access")));
+                .andExpect(jsonPath("$.message", containsString("Access denied")));
 
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", otherTeacherId);
     }
