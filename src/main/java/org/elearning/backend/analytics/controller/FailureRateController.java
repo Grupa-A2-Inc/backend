@@ -32,6 +32,16 @@ public class FailureRateController {
 
     private final FailureRateService failureRateService;
 
+    /**
+     * Retrieve failure-rate information for a specific test.
+     *
+     * The response contains the test's failure rate, the configured alert threshold, and whether the threshold
+     * currently triggers an alert for the professor identified by the provided authentication principal.
+     *
+     * @param testId      the UUID of the test to query
+     * @param currentUser the authenticated principal used to determine the professor's UUID
+     * @return            a FailureRateDTO with failure rate, threshold, and alert status
+     */
     @Operation(summary = "Get the failure rate for a specific test",
             description = "A teacher can get the failure rate for a specific test they created, along with the threshold and whether an alert is triggered.")
     @ApiResponse(responseCode = OK, description = "Failure rate data returned successfully")
@@ -44,6 +54,13 @@ public class FailureRateController {
         return ResponseEntity.ok(failureRateService.getTestFailureRate(testId, professorId));
     }
 
+    /**
+     * Retrieve the failure rate for the specified lesson, including the configured threshold and whether an alert is triggered.
+     *
+     * @param lessonId    the UUID of the lesson to query
+     * @param currentUser the authenticated user requesting the data
+     * @return the lesson's failure rate data, threshold, and alert status as a FailureRateDTO
+     */
     @Operation(summary = "Get the failure rate for a specific lesson",
             description = "A teacher can get the failure rate for a specific lesson they created, along with the threshold and whether an alert is triggered.")
     @ApiResponse(responseCode = OK, description = "Failure rate data returned successfully")
@@ -56,6 +73,16 @@ public class FailureRateController {
         return ResponseEntity.ok(failureRateService.getLessonFailureRate(lessonId, professorId));
     }
 
+    /**
+     * Create or update an analytics alert for the specified test.
+     *
+     * Creates or updates an alert that will be triggered when the test's failure rate exceeds the provided threshold.
+     *
+     * @param testId the UUID of the test to create or update the alert for
+     * @param currentUser the authenticated user performing the operation
+     * @param thresholdDTO DTO carrying the failure-rate threshold that will trigger the alert
+     * @return the created or updated AlertDTO
+     */
     @Operation(summary = "Create or update an analytics alert for a specific test",
             description = "A teacher can create or update an analytics alert for a specific test they created by providing a failure rate threshold." +
             " If the failure rate exceeds the threshold, an alert will be triggered.")
@@ -69,6 +96,12 @@ public class FailureRateController {
         return ResponseEntity.ok(failureRateService.createOrUpdateAlert(testId, professorId, BigDecimal.valueOf(thresholdDTO.getFailureThreshold())));
     }
 
+    /**
+     * Retrieve active analytics alerts for the authenticated professor's tests.
+     *
+     * @param currentUser the authenticated professor's details (provides professor id and role)
+     * @return a list of active AlertDTOs containing test info, failure-threshold, and trigger state for that professor
+     */
     @Operation(summary = "Get all active analytics alerts for the authenticated professor",
             description = "A teacher can get a list of all active analytics alerts for the tests they have created," +
                     " including the test information, failure rate threshold, and whether the alert is currently triggered.")
@@ -82,6 +115,14 @@ public class FailureRateController {
         return ResponseEntity.ok(failureRateService.getAlerts(professorId, roleName));
     }
 
+    /**
+     * Retrieve failure-rate chart data for every test in the specified course.
+     *
+     * The returned list contains a TestFailureRateChartDTO for each test, each providing daily failure rates suitable for trend visualization.
+     *
+     * @param courseId UUID of the course whose tests' failure-rate chart data will be returned
+     * @return a list of TestFailureRateChartDTO objects, one per test, containing daily failure rates for that test
+     */
     @Operation(summary = "Get failure rate chart data for each test in a specific course",
             description = "A teacher can get the failure rate chart data for all tests associated with a specific course they created. " +
                     "The chart data includes daily failure rates for each test, which can be used to visualize trends over time.")
@@ -95,6 +136,15 @@ public class FailureRateController {
         return ResponseEntity.ok(failureRateService.getFailureCharts(courseId, professorId));
     }
 
+    /**
+     * Obtain the UUID of the authenticated user.
+     *
+     * If the principal is a CustomUserDetails, returns its userId; otherwise parses the principal's
+     * username as a UUID.
+     *
+     * @param currentUser the authenticated principal provided by Spring Security
+     * @return the authenticated user's UUID
+     */
     private UUID extractUserId(UserDetails currentUser) {
         if (currentUser instanceof CustomUserDetails customUserDetails) {
             return customUserDetails.getUserId();

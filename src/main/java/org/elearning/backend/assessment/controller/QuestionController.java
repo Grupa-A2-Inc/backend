@@ -36,6 +36,15 @@ public class QuestionController {
     private static final String FORBIDDEN = "403";
     private static final String NOT_FOUND = "404";
 
+    /**
+     * Create a question (Single, Multi, or True/False) for the specified test.
+     *
+     * The test must be in DRAFT state and the caller must have ownership; access is enforced by security checks.
+     *
+     * @param testId     the UUID of the test to add the question to
+     * @param requestDto the question payload containing type, text, options, and metadata
+     * @return           the created QuestionResponseDto representing the new question
+     */
     @Operation(summary = "Add a question to a test.",
             description = "Creates a question (Single, Multi, T/F) for a test in DRAFT state.")
     @ApiResponses(value = {
@@ -56,6 +65,13 @@ public class QuestionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdQuestion);
     }
 
+    /**
+     * Retrieve the details of a question by its identifiers.
+     *
+     * @param testId     the UUID of the parent test
+     * @param questionId the numeric identifier of the question within the test
+     * @return the question details as a {@code QuestionResponseDto}
+     */
     @Operation(summary = "Get a specific question", description = "Retrieves the details of a specific question by its ID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Successfully retrieved the question"),
@@ -71,6 +87,16 @@ public class QuestionController {
         return ResponseEntity.ok(questionService.getQuestionById(testId, questionId));
     }
 
+    /**
+     * Retrieves questions for the specified test, optionally filtered by type and difficulty and ordered by the provided sort parameters.
+     *
+     * @param testId       the UUID of the test whose questions are requested
+     * @param questionType optional filter to include only questions of this type
+     * @param difficulty   optional filter to include only questions with this difficulty value
+     * @param sortBy       field name to sort by (defaults to "displayOrder")
+     * @param sortDir      sort direction, either "asc" or "desc" (defaults to "asc")
+     * @return             a list of QuestionResponseDto objects matching the filters and sort order (may be empty)
+     */
     @Operation(
             summary = "Get filtered and sorted questions for a test",
             description = "Retrieves a list of questions associated with a specific test. Supports optional filtering by question type and difficulty, and dynamic sorting."
@@ -93,6 +119,16 @@ public class QuestionController {
         );
     }
 
+    /**
+     * Replace an existing question and its options for the specified test.
+     *
+     * The test must be in DRAFT state and must be owned by the authenticated professor.
+     *
+     * @param testId      the UUID of the test containing the question
+     * @param questionId  the identifier of the question to update
+     * @param requestDto  the full question payload to save (replaces existing question and its options)
+     * @return            the updated question as a {@code QuestionResponseDto}
+     */
     @Operation(summary = "Update an existing question", description = "Fully updates a question and its options. The test must be in DRAFT state and owned by the authenticated professor.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Question updated successfully"),
@@ -113,6 +149,15 @@ public class QuestionController {
         return ResponseEntity.ok(updatedQuestion);
     }
 
+    /**
+     * Deletes the specified question and its associated options.
+     *
+     * The test must be in DRAFT state and the authenticated professor must own the test.
+     *
+     * @param testId     UUID of the test that contains the question
+     * @param questionId Identifier of the question to delete
+     * @param user       authenticated principal used to determine the acting professor
+     */
     @Operation(summary = "Delete a question", description = "Deletes a question and its associated options. The test must be in DRAFT state and owned by the authenticated professor.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = NO_CONTENT, description = "Question successfully deleted"),

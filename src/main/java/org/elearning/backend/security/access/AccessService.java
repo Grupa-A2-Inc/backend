@@ -379,6 +379,13 @@ public class AccessService {
         return canViewMyBestTestResult(authentication, testId);
     }
 
+    /**
+     * Determine whether the authenticated user is allowed to view a specific test attempt result.
+     *
+     * @param authentication the current authentication principal (may be null)
+     * @param attemptId      the identifier of the test attempt to check
+     * @return               `true` if the specified attempt belongs to the authenticated user, `false` otherwise
+     */
     @Description("Defines who can view a specific attempt result. Returns true if the attempt belongs to the user")
     public boolean canViewAttemptResult(Authentication authentication, UUID attemptId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
@@ -395,11 +402,24 @@ public class AccessService {
         return currentUser.getUserId().equals(attempt.getStudentId());
     }
 
+    /**
+     * Allow adaptive session submission only for users with the STUDENT role.
+     *
+     * @param authentication the authentication token representing the current user
+     * @param sessionId      the adaptive session identifier (ignored; permission is determined solely by user role)
+     * @return               `true` if the authenticated user has role `STUDENT`, `false` otherwise
+     */
     @Description("Defines who can submit an adaptive session. Returns true only for students")
     public boolean canSubmitAdaptiveSession(Authentication authentication, UUID sessionId) {
         return isStudent(authentication);
     }
 
+    /**
+     * Determines whether the current authenticated user is allowed to inject AI-generated questions.
+     *
+     * @param requestId an optional request identifier associated with the injection attempt
+     * @return `true` if the current authenticated user has role `TEACHER`, `false` otherwise (including when there is no authenticated user)
+     */
     @Description("Defines who can inject AI-generated questions. Returns true only for teachers")
     public boolean canInjectAiQuestions(Authentication authentication, UUID requestId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
@@ -411,6 +431,12 @@ public class AccessService {
         return currentUser.getRoleName() == RoleName.TEACHER;
     }
 
+    /**
+     * Determines whether the authenticated user can manage the course that contains the specified chapter.
+     *
+     * @param targetChapterId the ID of the chapter whose containing course will be checked
+     * @return `true` if the current user can manage the chapter's course, `false` otherwise
+     */
     private boolean canManageChapterCourse(Authentication authentication, UUID targetChapterId) {
         Chapter chapter = chapterRepository.findById(targetChapterId).orElse(null);
         if (chapter == null) {

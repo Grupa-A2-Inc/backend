@@ -39,22 +39,16 @@ public class AiQuestionInjectorService {
     private final ObjectMapper objectMapper;
 
     /**
-     * This method injects AI-generated questions into a test based on a completed AI question generation request. It performs the following steps:
-     * 1. Validates that the AI question request exists and is successful.
-     * 2. Validates that the associated lesson exists and that the professor has permission to modify it.
-     * 3. If a test ID is provided, it validates that the test exists; otherwise, it creates a new test in DRAFT status.
-     * 4. Parses the generated questions from the AI request and validates each question's content, options, and correct answers.
-     * 5. Saves the valid questions to the database, associating them with the test.
-     * 6. Updates the AI question request with the test ID and returns an InjectionResultDto containing details of the injection outcome.
+     * Injects AI-generated questions from a completed AI question generation request into a test.
      *
-     * @param requestId The ID of the AI question generation request containing the generated questions.
-     * @param professorId The ID of the professor attempting to inject the questions (used for access control).
-     * @param testIdOpt An optional ID of an existing test to inject questions into; if null, a new test will be created.
-     * @return An InjectionResultDto containing the ID of the test, whether a new test was created, the number of questions injected, and the new total number of questions in the test.
-     * @throws DoesNotExistException if the AI question request, lesson, or specified test does not exist.
-     * @throws WithoutAccessException if the professor does not have permission to modify the lesson or test.
-     * @throws ResourceConflictException if the AI generation is not successful or if there is an error parsing generated questions.
-     * @throws ValidationException if any of the generated questions fail validation checks (e.g., empty text, insufficient options, incorrect answer definitions).
+     * @param requestId   the ID of the AI question generation request containing the generated questions
+     * @param professorId the ID of the professor performing the injection; used to verify course ownership for access control
+     * @param testIdOpt   an optional existing test ID to inject questions into; if null a new DRAFT test will be created for the lesson
+     * @return an InjectionResultDto containing the test ID, whether a new test was created, the number of questions injected, the updated total number of questions in the test, and the lesson ID
+     * @throws DoesNotExistException     if the AI question request, the associated lesson, or the specified test (when provided) does not exist
+     * @throws WithoutAccessException   if the professorId does not match the course creator for the lesson
+     * @throws ResourceConflictException if the AI request status is not SUCCESS
+     * @throws ValidationException      if generated questions cannot be parsed or any parsed question fails validation (e.g., empty text, insufficient options, incorrect correct-answer definitions)
      */
     @Transactional
     public InjectionResultDto injectQuestions(UUID requestId, UUID professorId, UUID testIdOpt) {
@@ -147,12 +141,26 @@ public class AiQuestionInjectorService {
     }
 
     /**
-     * Validates the AI-generated question DTO to ensure it meets the necessary criteria for injection.
-     * This includes checks for non-empty text, a minimum number of options, and correct answer definitions based on question type.
+     * Validate an AI-generated question DTO and throw a ValidationException if it violates required constraints.
      *
-     * @param dto The AI question DTO to validate.
-     * @param index The index of the question in the list (used for error messages).
-     * @throws ValidationException if any validation rule is violated.
+     * <p>Checks performed:
+     * <ul>
+     *   <li>Question text must be non-empty.</li>
+     *   <li>At least two answer options must be present.</li>
+     *   <li>At least one option must be marked correct.</li>
+     *   <li>Question type must be provided.</li>
+     *   <li>Type-specific rules:
+     *     <ul>
+     *       <li>SINGLE_CHOICE: exactly one correct option.</li>
+     *       <li>TRUE_FALSE: exactly two options and exactly one correct option.</li>
+     *       <li>MULTIPLE_CHOICE: no additional constraints beyond the shared rules.</li>
+     *     </ul>
+     *   </li>
+     * </ul>
+     *
+     * @param dto the AI question DTO to validate
+     * @param index the 1-based index of the question in the input list, used to compose error messages
+     * @throws ValidationException if any validation rule is violated (message includes the question index)
      */
     private void validateAiQuestion(AiQuestionDto dto, int index) {
         if (dto.getText() == null || dto.getText().trim().isEmpty()) {

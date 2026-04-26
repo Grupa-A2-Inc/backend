@@ -22,6 +22,16 @@ public class AlertCheckService {
     private final TestResultRepository testResultRepository;
     private final AnalyticsAlertRepository analyticsAlertRepository;
 
+    /**
+     * Evaluates the active analytics alert for the given test and updates its state based on recent best attempts.
+     *
+     * If an active alert exists, computes the current failure rate from the repository's best attempts, sets
+     * the alert's `currentFailureRate` (zero if no attempts), and, if the computed rate is greater than the
+     * alert's `failureThreshold` and the alert has not been previously triggered, sets `triggeredAt` to now.
+     * The updated alert is persisted.
+     *
+     * @param testId the UUID of the test whose alerts should be checked and updated
+     */
     public void checkAlerts(UUID testId) {
         try {
             Optional<AnalyticsAlert> alertOptional = analyticsAlertRepository.findByTestIdAndIsActiveTrue(testId);

@@ -29,6 +29,17 @@ public class AiGenerationService {
     private final ObjectMapper objectMapper;
     private final AiAsyncWorker aiAsyncWorker;
 
+    /**
+     * Creates an AI question-generation request for the specified lesson and enqueues asynchronous processing.
+     *
+     * @param lessonId  identifier of the lesson for which questions should be generated
+     * @param userId    identifier of the user initiating the request (used for access checks)
+     * @param role      role of the user used to enforce access control
+     * @param subjectId identifier of the subject to target for question generation
+     * @param topicId   identifier of the topic to target for question generation
+     * @return          the UUID of the created AI question request
+     * @throws WithoutAccessException if the user does not have access to the lesson
+     */
     public UUID generateForLesson(UUID lessonId, UUID userId, RoleName role, Integer subjectId, Integer topicId) {
         validateUserAccess(lessonId, userId, role);
 
@@ -46,6 +57,14 @@ public class AiGenerationService {
         return requestId;
     }
 
+    /**
+     * Enforces that the specified user has permission to access the given lesson according to their role.
+     *
+     * @param lessonId the lesson identifier to validate access for
+     * @param userId   the user identifier whose access is being validated
+     * @param role     the role of the user which determines the required access check
+     * @throws WithoutAccessException if the user does not have the required access to the lesson
+     */
     private void validateUserAccess(UUID lessonId, UUID userId, RoleName role)
     {
         if (role==RoleName.TEACHER)
@@ -62,6 +81,16 @@ public class AiGenerationService {
         }
     }
 
+    /**
+     * Retrieves the status of an AI question generation request and validates that the given user has access to the associated lesson.
+     *
+     * @param requestId the identifier of the AI generation request to fetch
+     * @param userId    the identifier of the user requesting the status
+     * @param role      the role of the user used for access validation
+     * @return          an AiRequestStatusDto containing the requestId and the request's current status
+     * @throws RuntimeException        if no request exists for the provided requestId
+     * @throws WithoutAccessException if the user is not authorized to access the lesson associated with the request
+     */
     public AiRequestStatusDto getRequestStatus(UUID requestId, UUID userId, RoleName role) {
         AiQuestionRequest request = questionRequestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found"));

@@ -35,11 +35,23 @@ public class AnalyticsAndStatsController {
     private final AnalyticsQueryService analyticsQueryService;
     private final StudentsStatsService studentsStatsService;
 
+    /**
+     * Create a new AnalyticsAndStatsController wired with the services required to serve analytics and student statistics endpoints.
+     *
+     * @param analyticsQueryService service providing analytics queries such as class averages and student averages
+     * @param studentsStatsService  service providing per-student statistics and summary data
+     */
     public AnalyticsAndStatsController(AnalyticsQueryService analyticsQueryService, StudentsStatsService studentsStatsService) {
         this.analyticsQueryService = analyticsQueryService;
         this.studentsStatsService = studentsStatsService;
     }
 
+    /**
+     * Retrieve class average statistics for a specific test.
+     *
+     * @param testId UUID of the test to fetch class average for
+     * @return ClassAverageDto containing aggregated class average metrics for the authenticated teacher's class
+     */
     @Operation(summary = "Get class average",
             description = "A teacher can get the results of their class at a given test they created.")
     @ApiResponse(responseCode = OK, description = "Data returned")
@@ -56,6 +68,13 @@ public class AnalyticsAndStatsController {
         return ResponseEntity.ok().body(analyticsQueryService.getClassAverage(testId, userId));
     }
 
+    /**
+     * Retrieve paginated per-student average statistics for a course.
+     *
+     * @param courseId the UUID of the course to fetch student averages for
+     * @param pageable pagination and sorting information for the returned page
+     * @return a page of StudentAverageDto containing average statistics for each student in the requested course page
+     */
     @Operation(summary = "Get individual student data",
             description = "A teacher can get individual results from each student at a course from a given page.")
     @ApiResponse(responseCode = OK, description = "Data returned")
@@ -72,6 +91,13 @@ public class AnalyticsAndStatsController {
         return ResponseEntity.ok().body(analyticsQueryService.getStudentAverages(courseId, userId, pageable));
     }
 
+    /**
+     * Retrieve the authenticated student's statistics for the specified test.
+     *
+     * @param testId the UUID of the test
+     * @param currentUser the authenticated user's details
+     * @return the student's test statistics as a MyTestStatsDto
+     */
     @Operation(summary = "Get personal test data",
             description = "A student can view their own statistics from a given test.")
     @ApiResponse(responseCode = OK, description = "Data returned")
@@ -87,6 +113,16 @@ public class AnalyticsAndStatsController {
         return ResponseEntity.ok().body(studentsStatsService.getMyTestStats(userId, testId));
     }
 
+    /**
+     * Retrieve the authenticated student's summary statistics for a specific course.
+     *
+     * The returned summary includes total tests taken, total tests passed, best score,
+     * average score, worst score, the three lessons where the student is struggling the most,
+     * and the last five attempts.
+     *
+     * @param courseId the UUID of the course to fetch statistics for
+     * @return a MySummaryDataDto containing the student's course summary (totals, scores, top-three struggling lessons, and last five attempts)
+     */
     @Operation(summary = "Get personal course data",
             description = "A student can view their own statistics from course involving the total numbers of tests taken," +
                     " total tests passed, best score, average score, worst score, three lessons where the student is the" +
