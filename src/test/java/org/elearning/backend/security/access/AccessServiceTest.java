@@ -1,6 +1,8 @@
 package org.elearning.backend.security.access;
 
 import org.elearning.backend.classroom.entity.Classroom;
+import org.elearning.backend.classroom.entity.MembershipType;
+import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
@@ -38,6 +40,15 @@ class AccessServiceTest {
 
     @Mock
     private ClassroomRepository classroomRepository;
+
+    @Mock
+    private ClassroomMembershipRepository classroomMembershipRepository;
+
+    @Mock
+    private Authentication authentication;
+
+    @Mock
+    private CustomUserDetails currentUser;
 
     @InjectMocks
     private AccessService accessService;
@@ -610,5 +621,93 @@ class AccessServiceTest {
         boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
 
         assertFalse(result);
+    }
+
+    @Test
+    void canListClassroomMembers_shouldReturnTrue_forOrganizationAdminInSameOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(orgId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        boolean result = accessService.canListClassroomMembers(authentication, classroomId);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void canListClassroomMembers_shouldReturnFalse_forOrganizationAdminFromAnotherOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID classroomOrgId = UUID.randomUUID();
+        UUID otherOrgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, classroomOrgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(otherOrgId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        boolean result = accessService.canListClassroomMembers(authentication, classroomId);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void canListClassroomMembers_shouldReturnTrue_forTeacherMemberOfClassroom() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID teacherId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.TEACHER);
+        when(currentUser.getUserId()).thenReturn(teacherId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, teacherId, MembershipType.TEACHER))
+                .thenReturn(true);
+
+        boolean result = accessService.canListClassroomMembers(authentication, classroomId);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void canListClassroomMembers_shouldReturnFalse_forTeacherWhoIsNotMemberOfClassroom() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID teacherId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.TEACHER);
+        when(currentUser.getUserId()).thenReturn(teacherId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, teacherId, MembershipType.TEACHER))
+                .thenReturn(false);
+
+        boolean result = accessService.canListClassroomMembers(authentication, classroomId);
+
+        assertFalse(result);
+    }
+
+    private Classroom buildClassroom(UUID classroomId, UUID orgId) {
+        Organization organization = new Organization();
+        organization.setId(orgId);
+
+        Classroom classroom = new Classroom();
+        classroom.setId(classroomId);
+        classroom.setOrganization(organization);
+
+        return classroom;
     }
 }

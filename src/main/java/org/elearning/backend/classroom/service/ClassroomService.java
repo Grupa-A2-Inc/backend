@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
 import org.elearning.backend.classroom.dto.request.ModifyClassroomStudentsRequest;
 import org.elearning.backend.classroom.dto.request.UpdateClassroomRequest;
+import org.elearning.backend.classroom.dto.response.ClassroomMemberResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomResponse;
 import org.elearning.backend.classroom.entity.Classroom;
 import org.elearning.backend.classroom.entity.ClassroomMembership;
@@ -225,6 +226,30 @@ public class ClassroomService {
         return toResponse(classroom);
 
     }
+
+    public List<ClassroomMemberResponse> listClassroomMembers(UUID classroomId, MembershipType membershipType){
+
+        Classroom classroom = classroomRepository.findById(classroomId)
+                .orElseThrow(()-> new ClassroomNotFoundException("Classroom not found"));
+
+        List<ClassroomMembership> classroomMemberships;
+        if(membershipType == null){
+            classroomMemberships = classroomMembershipRepository.findAllByClassroomId(classroomId);
+        }
+        else{
+           classroomMemberships =  classroomMembershipRepository.findAllByClassroomIdAndMembershipType(classroomId, membershipType);
+        }
+
+        return classroomMemberships.stream()
+                .map(membership -> new ClassroomMemberResponse(
+                        membership.getUser().getId(),
+                        membership.getUser().getEmail(),
+                        membership.getMembershipType()
+                ))
+                .toList();
+
+    }
+
 
     private void handleStudentAddedToClassroom(Classroom classroom, User student) {
         // TODO: aici pregatesc partea pentru auto enrollment
