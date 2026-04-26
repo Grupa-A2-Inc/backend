@@ -21,4 +21,8 @@ public interface ClassroomMembershipRepository extends JpaRepository<ClassroomMe
     List<ClassroomMembership> findAllByUserId(UUID userId);
 
     boolean existsByClassroomIdAndUserId(UUID classroomID, UUID userId);
+
+    boolean existsByClassroomIdAndUserIdAndMembershipType(UUID classroomId, UUID userId, MembershipType membershipType);
+
+    void deleteByClassroomIdAndUserIdAndMembershipType(UUID classroomId, UUID userId, MembershipType membershipType);
 }

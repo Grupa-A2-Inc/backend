@@ -3,6 +3,7 @@ package org.elearning.backend.classroom.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
+import org.elearning.backend.classroom.dto.request.ModifyClassroomStudentsRequest;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
 import org.elearning.backend.classroom.dto.request.UpdateClassroomRequest;
 import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
@@ -87,5 +88,29 @@ public class ClassroomsController {
                 classroomCourseService.assignCourses(classroomId, request, currentUser.getUserId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    @PostMapping("/{classroomId}/students")
+    @PreAuthorize("@accessService.canManageClassroom(authentication, #classroomId)")
+    public ResponseEntity<ClassroomResponse> addClassroomStudents(
+            @P("classroomId") @PathVariable UUID classroomId,
+            @Valid @RequestBody ModifyClassroomStudentsRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+
+        ClassroomResponse response =
+                classroomService.addClassroomStudents(classroomId, request, currentUser.getUserId());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{classroomId}/students")
+    @PreAuthorize("@accessService.canManageClassroom(authentication, #classroomId)")
+    public ResponseEntity<ClassroomResponse> deleteClassroomStudents(
+            @P("classroomId") @PathVariable UUID classroomId,
+            @Valid @RequestBody ModifyClassroomStudentsRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+
+        ClassroomResponse response =
+                classroomService.deleteClassroomStudents(classroomId, request, currentUser.getUserId());
+
+        return ResponseEntity.ok(response);
     }
 }
