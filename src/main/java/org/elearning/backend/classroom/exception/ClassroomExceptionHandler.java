@@ -42,4 +42,9 @@ public class ClassroomExceptionHandler extends GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         return buildErrorResponse(ex, HttpStatus.FORBIDDEN);
     }
+
+    @ExceptionHandler(CourseNotEligibleException.class)
+    public ResponseEntity<Map<String, Object>> handleCourseNotEligible(CourseNotEligibleException ex) {
+        return buildErrorResponse(ex, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
 }
