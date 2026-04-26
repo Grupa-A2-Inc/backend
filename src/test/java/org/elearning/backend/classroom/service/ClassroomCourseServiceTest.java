@@ -1,0 +1,238 @@
+package org.elearning.backend.classroom.service;
+
+import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
+import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
+import org.elearning.backend.classroom.entity.Classroom;
+import org.elearning.backend.classroom.entity.ClassroomCourse;
+import org.elearning.backend.classroom.exception.ClassroomBadRequestException;
+import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
+import org.elearning.backend.classroom.exception.CourseNotEligibleException;
+import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
+import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.repository.CourseRepository;
+import org.elearning.backend.organization.entity.Organization;
+import org.elearning.backend.user.entity.User;
+import org.elearning.backend.user.exception.UserNotFoundException;
+import org.elearning.backend.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class ClassroomCourseServiceTest {
+
+    @Mock private ClassroomRepository classroomRepository;
+    @Mock private ClassroomCourseRepository classroomCourseRepository;
+    @Mock private CourseRepository courseRepository;
+    @Mock private UserRepository userRepository;
+
+    @InjectMocks
+    private ClassroomCourseService classroomCourseService;
+
+    private UUID userId;
+    private UUID orgId;
+    private UUID classroomId;
+    private UUID courseId;
+    private User requester;
+    private Organization organization;
+    private Classroom classroom;
+    private Course course;
+    private User courseCreator;
+
+    @BeforeEach
+    void setUp() {
+        userId = UUID.randomUUID();
+        orgId = UUID.randomUUID();
+        classroomId = UUID.randomUUID();
+        courseId = UUID.randomUUID();
+
+        organization = new Organization();
+        organization.setId(orgId);
+
+        requester = new User();
+        requester.setId(userId);
+        requester.setOrganization(organization);
+
+        classroom = new Classroom();
+        classroom.setId(classroomId);
+        classroom.setOrganization(organization);
+
+        courseCreator = new User();
+        courseCreator.setId(UUID.randomUUID());
+        courseCreator.setOrganization(organization);
+
+        course = new Course();
+        course.setId(courseId);
+        course.setCreatedBy(courseCreator.getId());
+    }
+
+    @Test
+    void assignCourses_savesNewAssociation() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.of(courseCreator));
+        when(classroomCourseRepository.existsByClassroomIdAndCourseId(classroomId, courseId)).thenReturn(false);
+
+        ClassroomCourse saved = new ClassroomCourse();
+        saved.setId(UUID.randomUUID());
+        saved.setClassroomId(classroomId);
+        saved.setCourseId(courseId);
+        saved.setAssignedAt(LocalDateTime.now());
+        when(classroomCourseRepository.saveAll(any())).thenReturn(List.of(saved));
+
+        List<ClassroomCourseResponse> result = classroomCourseService.assignCourses(classroomId, request, userId);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getClassroomId()).isEqualTo(classroomId);
+        assertThat(result.get(0).getCourseId()).isEqualTo(courseId);
+    }
+
+    @Test
+    void assignCourses_skipsDuplicates() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.of(courseCreator));
+        when(classroomCourseRepository.existsByClassroomIdAndCourseId(classroomId, courseId)).thenReturn(true);
+        when(classroomCourseRepository.saveAll(any())).thenReturn(List.of());
+
+        List<ClassroomCourseResponse> result = classroomCourseService.assignCourses(classroomId, request, userId);
+
+        assertThat(result).isEmpty();
+        verify(classroomCourseRepository, never()).save(any());
+    }
+
+    @Test
+    void assignCourses_throwsUserNotFound_whenUserMissing() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> classroomCourseService.assignCourses(classroomId, request, userId))
+                .isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void assignCourses_throwsBadRequest_whenUserHasNoOrganization() {
+        requester.setOrganization(null);
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+
+        assertThatThrownBy(() -> classroomCourseService.assignCourses(classroomId, request, userId))
+                .isInstanceOf(ClassroomBadRequestException.class);
+    }
+
+    @Test
+    void assignCourses_throwsClassroomNotFound_whenClassroomMissing() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> classroomCourseService.assignCourses(classroomId, request, userId))
+                .isInstanceOf(ClassroomNotFoundException.class);
+    }
+
+    @Test
+    void assignCourses_throwsBadRequest_whenCourseNotFound() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> classroomCourseService.assignCourses(classroomId, request, userId))
+                .isInstanceOf(ClassroomBadRequestException.class);
+    }
+
+    @Test
+    void assignCourses_throwsCourseNotEligible_whenCourseHasNoCreator() {
+        course.setCreatedBy(null);
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+
+        assertThatThrownBy(() -> classroomCourseService.assignCourses(classroomId, request, userId))
+                .isInstanceOf(CourseNotEligibleException.class)
+                .hasMessageContaining("no creator");
+    }
+
+    @Test
+    void assignCourses_throwsCourseNotEligible_whenCreatorNotFound() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> classroomCourseService.assignCourses(classroomId, request, userId))
+                .isInstanceOf(CourseNotEligibleException.class)
+                .hasMessageContaining("not found");
+    }
+
+    @Test
+    void assignCourses_throwsCourseNotEligible_whenCreatorHasNoOrganization() {
+        courseCreator.setOrganization(null);
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.of(courseCreator));
+
+        assertThatThrownBy(() -> classroomCourseService.assignCourses(classroomId, request, userId))
+                .isInstanceOf(CourseNotEligibleException.class)
+                .hasMessageContaining("does not belong");
+    }
+
+    @Test
+    void assignCourses_throwsCourseNotEligible_whenCreatorBelongsToDifferentOrg() {
+        Organization otherOrg = new Organization();
+        otherOrg.setId(UUID.randomUUID());
+        courseCreator.setOrganization(otherOrg);
+
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.of(courseCreator));
+
+        assertThatThrownBy(() -> classroomCourseService.assignCourses(classroomId, request, userId))
+                .isInstanceOf(CourseNotEligibleException.class)
+                .hasMessageContaining("does not belong");
+    }
+}

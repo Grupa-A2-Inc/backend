@@ -75,6 +75,14 @@ class ClassroomExceptionHandlerTest {
         assertThat(response.getBody()).containsEntry("message", "blocked");
     }
 
+    @Test
+    void handlesCourseNotEligible() {
+        var response = handler.handleCourseNotEligible(new CourseNotEligibleException("not eligible"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(response.getBody()).containsEntry("message", "not eligible");
+    }
+
     private MethodArgumentNotValidException validationException(List<FieldError> fieldErrors) {
         try {
             Method method = getClass().getDeclaredMethod("sampleValidationTarget", String.class);
