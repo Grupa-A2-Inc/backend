@@ -1,20 +1,27 @@
 spring:
-  autoconfigure:
-#    exclude:
-#      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration
-#      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
-#      - org.springframework.boot.actuate.autoconfigure.security.reactive.ReactiveManagementWebSecurityAutoConfiguration
-
   datasource:
-    url: jdbc:postgresql://localhost:5432/adaptive_tutor  # va fi suprascris de DynamicPropertySource
+    url: jdbc:postgresql://localhost:5432/adaptive_tutor_test
     username: user
     password: password
   jpa:
     hibernate:
       ddl-auto: none
+    show-sql: true
   flyway:
     enabled: true
+  # Dezactivează importul din .env — nu există pe CI
+  config:
+    import: ""
+
+# Dezactivează mail, AI etc. pentru teste
+app:
+  mail:
+    from: test@test.com
+
+ai:
+  api:
+    base-url: http://localhost:9999
+    key: test-key
+    timeout-generate-ms: 10000
+    timeout-feedback-ms: 5000
+    timeout-adaptive-ms: 10000

@@ -31,8 +31,17 @@ public class AnalyticsQueryService {
         this.testResultRepository = testResultRepository;
     }
 
-    /** ProfessorId can be removed once the proper pre-authorization for teachers to view the stats of a class are
+    /* ProfessorId can be removed once the proper pre-authorization for teachers to view the stats of a class are
      * implemented
+     */
+
+    /**
+     * Get statistic data about the class average of a given test. Some parameters will be null if nobody took the test,
+     * it's best the returned value is checked to not be null when used.
+     * @param testId the given test we want the class stats of
+     * @param professorId the professor id to attest if the professor has access to test data or not
+     * @return the test id, test title, the total count of results, the number of passed/failed tests, the average score,
+     *  the lowest score, the best score and failure rate, inside a ClassAverageDto
      */
 
     public ClassAverageDto getClassAverage(UUID testId, UUID professorId){
@@ -50,6 +59,16 @@ public class AnalyticsQueryService {
 
         return result;
     }
+
+    /**
+     * Gets the student data of a given course. The given data are limited by the pageable parameter, that limits the amount
+     *  of data the professor gets, making sure the data can be split in multiple pages
+     * @param courseId the course the data is extracted from
+     * @param pageable the page settings (e.g. third page with 20 students)
+     * @param professorId the professor id to attest if the professor has access to course data or not
+     * @return a page with a certain amount of students, containing the student ID, their average/lowest/best score,
+     * total test count, how many were passed, how many were failed and day of their latest test attempt
+     */
 
     public Page<StudentAverageDto> getStudentAverages(UUID courseId, UUID professorId, Pageable pageable){
 
