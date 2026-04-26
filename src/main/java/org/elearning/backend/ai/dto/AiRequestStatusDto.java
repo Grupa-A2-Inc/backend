@@ -1,10 +1,9 @@
 package org.elearning.backend.ai.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.elearning.backend.analytics.model.AiRequestStatus;
+import org.elearning.backend.ai.model.AiRequestStatus;
 
 import java.util.UUID;
 

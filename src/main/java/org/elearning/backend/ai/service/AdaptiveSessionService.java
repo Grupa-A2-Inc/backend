@@ -1,30 +1,86 @@
-package org.elearning.backend.analytics.service;
+package org.elearning.backend.ai.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.elearning.backend.ai.service.AiApiClient;
-import org.elearning.backend.analytics.dto.*;
-import org.elearning.backend.analytics.exception.ResourceConflictException;
-import org.elearning.backend.analytics.exception.ValidationException;
+import org.elearning.backend.ai.dto.*;
+import org.elearning.backend.ai.exception.AiApiException;
+import org.elearning.backend.ai.exception.AiTimeoutException;
+import org.elearning.backend.ai.exception.AdaptiveServiceUnavailableException;
+import org.elearning.backend.ai.exception.ResourceConflictException;
+import org.elearning.backend.ai.exception.ValidationException;
+import org.elearning.backend.ai.model.AdaptiveSession;
+import org.elearning.backend.ai.model.AdaptiveSessionAnswer;
+import org.elearning.backend.ai.model.AdaptiveSessionExercise;
+import org.elearning.backend.ai.repository.AdaptiveSessionAnswerRepository;
+import org.elearning.backend.ai.repository.AdaptiveSessionExerciseRepository;
+import org.elearning.backend.ai.repository.AdaptiveSessionRepository;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
-import org.elearning.backend.assessment.exception.TimerExpiredException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AdaptiveSubmitService {
-
-    private final JdbcTemplate jdbcTemplate;
-    private final ObjectMapper objectMapper;
+public class AdaptiveSessionService {
+    private final AdaptiveSessionRepository adaptiveSessionRepository;
     private final AiApiClient aiApiClient;
+    private final ObjectMapper objectMapper;
+    private final AdaptiveSessionExerciseRepository exerciseRepository;
+    private final AdaptiveSessionAnswerRepository adaptiveSessionAnswerRepository;
+
+    public AdaptiveStartDto startSession(UUID studentId, Integer subjectId, Integer topicId, int count) {
+        AiAdaptiveResponse response;
+        try {
+            response = aiApiClient.requestAdaptiveExercises(UUID.randomUUID(), studentId, subjectId, topicId, count);
+        } catch (AiApiException | AiTimeoutException exception) {
+            log.error("Failed to start adaptive session: {}", exception.getMessage());
+            throw new AdaptiveServiceUnavailableException("Adaptive service is currently unavailable. Please try again later.");
+        }
+        AdaptiveSession session = AdaptiveSession.builder()
+                .studentId(studentId)
+                .subjectId(subjectId)
+                .topicId(topicId)
+                .expiresAt(LocalDateTime.now().plusMinutes(30))
+                .build();
+        session = adaptiveSessionRepository.save(session);
+        UUID sessionId = session.getId();
+        List<ClientExerciseDto> safeExercises = new ArrayList<>();
+        for (AiAdaptiveExerciseDto aiExercise : response.getExercises()) {
+            try {
+                String answersJson = objectMapper.writeValueAsString(aiExercise.getAnswers());
+                String correctAnswersJson = objectMapper.writeValueAsString(aiExercise.getCorrectAnswers());
+
+                AdaptiveSessionExercise exerciseEntity = AdaptiveSessionExercise.builder()
+                        .sessionId(sessionId)
+                        .mlExerciseId(aiExercise.getExerciseId())
+                        .exerciseText(aiExercise.getText())
+                        .exerciseType(aiExercise.getType().name())
+                        .answersRaw(answersJson)
+                        .correctAnswersRaw(correctAnswersJson)
+                        .difficulty(BigDecimal.valueOf(aiExercise.getDifficulty()))
+                        .build();
+                exerciseRepository.save(exerciseEntity);
+                safeExercises.add(new ClientExerciseDto(
+                        aiExercise.getExerciseId(),
+                        aiExercise.getText(),
+                        aiExercise.getType(),
+                        aiExercise.getAnswers()
+                ));
+            } catch(JsonProcessingException exception) {
+                log.error("Error serializing JSON for exercise {}", aiExercise.getExerciseId(), exception);
+                throw new RuntimeException("Failed to process exercise data.");
+            }
+        }
+
+        return new AdaptiveStartDto(sessionId, session.getExpiresAt(), safeExercises);
+    }
 
     /**
      * This method processes the submission of an adaptive learning session by a student. It performs the following steps:
@@ -43,47 +99,41 @@ public class AdaptiveSubmitService {
     @Transactional(noRollbackFor = ResourceConflictException.class)
     public AdaptiveResultDto submitSession(UUID sessionId, UUID studentId, AdaptiveSubmitRequestDto studentAnswers) {
 
-        String sessionSql = "SELECT subject_id, topic_id, status, expires_at FROM adaptive_sessions WHERE id = ? AND student_id = ?";
-        List<Map<String, Object>> sessions = jdbcTemplate.queryForList(sessionSql, sessionId, studentId);
+        AdaptiveSession session = adaptiveSessionRepository.findByIdAndStudentId(sessionId, studentId)
+                .orElseThrow(() -> new DoesNotExistException("The session with ID " + sessionId + " does not exist for the student."));
 
-        if (sessions.isEmpty()) {
-            throw new DoesNotExistException("The session with ID " + sessionId + " does not exist for the student.");
-        }
-
-        Map<String, Object> session = sessions.get(0);
-        String status = (String) session.get("status");
+        String status = session.getStatus();
 
         if (!"ACTIVE".equals(status)) {
             throw new ResourceConflictException("The session is not active and cannot be submitted. Current status: " + status);
         }
 
-        java.sql.Timestamp expiresAtSql = (java.sql.Timestamp) session.get("expires_at");
-        LocalDateTime expiresAt = expiresAtSql.toLocalDateTime();
+        LocalDateTime expiresAt = session.getExpiresAt();
 
         if (LocalDateTime.now().isAfter(expiresAt)) {
-            jdbcTemplate.update("UPDATE adaptive_sessions SET status = 'EXPIRED' WHERE id = ?", sessionId);
+            session.setStatus("EXPIRED");
+            adaptiveSessionRepository.save(session);
             throw new ResourceConflictException("The session has expired and cannot be submitted. Expiration time was: " + expiresAt);
         }
 
-        Integer subjectId = (Integer) session.get("subject_id");
-        Integer topicId = (Integer) session.get("topic_id");
+        Integer subjectId = session.getSubjectId();
+        Integer topicId = session.getTopicId();
 
-        String exercisesSql = "SELECT id, ml_exercise_id, exercise_type, correct_answers_raw::text FROM adaptive_session_exercises WHERE session_id = ?";
-        List<Map<String, Object>> dbExercises = jdbcTemplate.queryForList(exercisesSql, sessionId);
+        List<AdaptiveSessionExercise> dbExercises = exerciseRepository.findAllBySessionId(sessionId);
 
         List<FeedbackResultDto> mlFeedbackResults = new ArrayList<>();
         List<ClientResultDto> clientResults = new ArrayList<>();
         double totalScore = 0.0;
 
-        for (Map<String, Object> dbExercise : dbExercises) {
+        for (AdaptiveSessionExercise dbExercise : dbExercises) {
 
-            UUID dbExerciseUuid = (UUID) dbExercise.get("id");
-            String mlExerciseId = (String) dbExercise.get("ml_exercise_id");
-            String type = (String) dbExercise.get("exercise_type");
+            UUID dbExerciseUuid = dbExercise.getId();
+            String mlExerciseId = dbExercise.getMlExerciseId();
+            String type = dbExercise.getExerciseType();
             List<String> correctAnswers;
 
             try {
-                correctAnswers = objectMapper.readValue((String) dbExercise.get("correct_answers_raw"), new TypeReference<List<String>>() {});
+                correctAnswers = objectMapper.readValue(dbExercise.getCorrectAnswersRaw(), new TypeReference<List<String>>() {});
             } catch (Exception exception) {
                 throw new ValidationException("Error parsing correct answers from database for exercise " + mlExerciseId + ": " + exception.getMessage());
             }
@@ -105,21 +155,29 @@ public class AdaptiveSubmitService {
 
             totalScore += score;
 
-            jdbcTemplate.update("INSERT INTO adaptive_session_answers (session_id, exercise_id, given_answers, score, time_spent) VALUES (?, ?, ?::jsonb, ?, ?)",
-                    sessionId, dbExerciseUuid, convertToJson(givenAnswers), score, timeSpent);
+            adaptiveSessionAnswerRepository.save(AdaptiveSessionAnswer.builder()
+                    .sessionId(sessionId)
+                    .exerciseId(dbExerciseUuid)
+                    .givenAnswers(convertToJson(givenAnswers))
+                    .score(BigDecimal.valueOf(score))
+                    .timeSpent(timeSpent)
+                    .build());
 
             mlFeedbackResults.add(new FeedbackResultDto(mlExerciseId, score, timeSpent));
             clientResults.add(new ClientResultDto(mlExerciseId, score == 1.0, score, correctAnswers, givenAnswers));
         }
 
-        jdbcTemplate.update("UPDATE adaptive_sessions SET status = 'COMPLETED', completed_at = NOW() WHERE id = ?", sessionId);
+        session.setStatus("COMPLETED");
+        session.setCompletedAt(LocalDateTime.now());
+        adaptiveSessionRepository.save(session);
 
         boolean feedbackSent = false;
         try {
             AiFeedbackPayloadDto payload = new AiFeedbackPayloadDto(studentId, subjectId, topicId, mlFeedbackResults);
             aiApiClient.sendAdaptiveFeedback(payload);
 
-            jdbcTemplate.update("UPDATE adaptive_sessions SET ai_feedback_sent = true WHERE id = ?", sessionId);
+            session.setAiFeedbackSent(true);
+            adaptiveSessionRepository.save(session);
             feedbackSent = true;
         } catch (Exception exception) {
             log.warn("Error sending AI feedback for session {}: {}", sessionId, exception.getMessage());

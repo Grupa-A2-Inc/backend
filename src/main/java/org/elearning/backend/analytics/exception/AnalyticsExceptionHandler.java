@@ -1,7 +1,10 @@
 package org.elearning.backend.analytics.exception;
 
+import org.elearning.backend.ai.exception.ResourceConflictException;
+import org.elearning.backend.ai.exception.ValidationException;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.common.GlobalExceptionHandler;
+import org.elearning.backend.content.exception.CourseNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -22,18 +25,13 @@ public class AnalyticsExceptionHandler extends GlobalExceptionHandler {
         return buildErrorResponse(exception, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(ResourceConflictException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceConflict(ResourceConflictException exception){
-        return buildErrorResponse(exception, HttpStatus.CONFLICT);
-    }
-
-    @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationException(ValidationException exception){
-        return buildErrorResponse(exception, HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-
     @ExceptionHandler(StudentNotEnrolledInCourseException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(StudentNotEnrolledInCourseException exception){
         return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(CourseNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleCourseNotFound(CourseNotFoundException exception){
+        return buildErrorResponse(exception, HttpStatus.NOT_FOUND);
     }
 }

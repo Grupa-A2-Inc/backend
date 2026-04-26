@@ -1,18 +1,18 @@
-package org.elearning.backend.analytics.service;
+package org.elearning.backend.ai.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.analytics.dto.AiQuestionDto;
-import org.elearning.backend.analytics.dto.InjectionResultDto;
+import org.elearning.backend.ai.dto.AiQuestionDto;
+import org.elearning.backend.ai.dto.InjectionResultDto;
 import org.elearning.backend.analytics.exception.WithoutAccessException;
-import org.elearning.backend.analytics.exception.ResourceConflictException;
-import org.elearning.backend.analytics.exception.ValidationException;
-import org.elearning.backend.analytics.model.AiQuestionRequest;
-import org.elearning.backend.analytics.model.AiRequestStatus;
-import org.elearning.backend.analytics.model.QuestionSource;
-import org.elearning.backend.analytics.repository.AiQuestionRequestRepository;
+import org.elearning.backend.ai.exception.ResourceConflictException;
+import org.elearning.backend.ai.exception.ValidationException;
+import org.elearning.backend.ai.model.AiQuestionRequest;
+import org.elearning.backend.ai.model.AiRequestStatus;
+import org.elearning.backend.assessment.model.QuestionSource;
+import org.elearning.backend.ai.repository.AiQuestionRequestRepository;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.model.Question;
 import org.elearning.backend.assessment.model.QuestionOption;
@@ -25,9 +25,11 @@ import org.elearning.backend.content.repository.LessonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service()
 @RequiredArgsConstructor
@@ -96,7 +98,7 @@ public class AiQuestionInjectorService {
                     aiQuestionRequest.getGeneratedQuestions(),
                     new TypeReference<List<AiQuestionDto>>() {}
             );
-        } catch (JsonProcessingException e) {
+        } catch (JsonProcessingException exception) {
             throw new ValidationException("Error at parsing generated questions. Create questions manually or retry later.");
         }
 
@@ -106,26 +108,28 @@ public class AiQuestionInjectorService {
         for (AiQuestionDto dto : aiQuestions) {
             validateAiQuestion(dto, index);
 
-            Question q = new Question();
-            q.setTest(test);
-            q.setContent(dto.getText());
-            q.setQuestionType(dto.getType());
-            q.setIsActive(true);
-            q.setSource(QuestionSource.AI_GENERATED);
+            Question question = new Question();
+            question.setTest(test);
+            question.setContent(dto.getText());
+            question.setQuestionType(dto.getType());
+            question.setIsActive(true);
+            question.setSource(QuestionSource.AI_GENERATED);
+            question.setDifficulty(BigDecimal.valueOf(dto.getDifficulty()));
+            AtomicInteger displayOrder = new AtomicInteger(1);
 
-            List<QuestionOption> mappedOptions = dto.getOptions().stream()
-                    .map(opt -> {
-                        QuestionOption qo = new QuestionOption();
-                        qo.setText(opt.getText());
-                        qo.setDisplayOrder(opt.getDisplayOrder());
-                        qo.setIsCorrect(opt.getIsCorrect());
-                        qo.setQuestion(q);
-                        return qo;
+            List<QuestionOption> mappedOptions = dto.getAnswers().stream()
+                    .map(questionOptionString -> {
+                        QuestionOption questionOption = new QuestionOption();
+                        questionOption.setText(questionOptionString);
+                        questionOption.setDisplayOrder(displayOrder.getAndIncrement());
+                        questionOption.setIsCorrect(dto.getCorrectAnswers().contains(questionOptionString));
+                        questionOption.setQuestion(question);
+                        return questionOption;
                     })
                     .toList();
-            q.setOptions(mappedOptions);
+            question.setOptions(mappedOptions);
 
-            questionsToSave.add(q);
+            questionsToSave.add(question);
 
             index++;
         }
@@ -159,16 +163,20 @@ public class AiQuestionInjectorService {
             throw new ValidationException(String.format("Question %d: The text can't be empty", index));
         }
 
-        if (dto.getOptions() == null || dto.getOptions().size() < 2) {
+        if (dto.getAnswers() == null || dto.getAnswers().size() < 2) {
             throw new ValidationException(String.format("Question %d: Must have at least 2 answer options.", index));
         }
 
-        List<AiQuestionDto.OptionDto> correctOptions = dto.getOptions().stream()
-                .filter(opt -> opt.getIsCorrect() != null && opt.getIsCorrect())
-                .toList();
-
-        if (correctOptions.isEmpty()) {
+        if (dto.getCorrectAnswers().isEmpty()) {
             throw new ValidationException(String.format("Question %d: Must have at least 1 correct answer defined.", index));
+        }
+
+        List<String> correctOptions = dto.getAnswers().stream().filter(dto.getCorrectAnswers()::contains).toList();
+        if (correctOptions.isEmpty()) {
+            throw new ValidationException(String.format("Question %d: Correct answer(s) must be among the provided answer options.", index));
+        }
+        if(correctOptions.size() != dto.getCorrectAnswers().size()) {
+            throw new ValidationException(String.format("Question %d: Some correct answers are not among the provided answer options.", index));
         }
 
         if (dto.getType() == null) {
@@ -177,21 +185,21 @@ public class AiQuestionInjectorService {
 
         switch (dto.getType()) {
             case SINGLE_CHOICE:
-                if (correctOptions.size() != 1) {
+                if (dto.getCorrectAnswers().size() != 1) {
                     throw new ValidationException(String.format("Question %d: Being SINGLE_CHOICE type, it must have exactly 1 correct answer.", index));
                 }
                 break;
 
             case TRUE_FALSE:
-                if (dto.getOptions().size() != 2) {
+                if (dto.getAnswers().size() != 2) {
                     throw new ValidationException(String.format("Question %d: Being TRUE_FALSE type, it must have exactly 2 options (e.g., True/False).", index));
                 }
-                if (correctOptions.size() != 1) {
+                if (dto.getCorrectAnswers().size() != 1) {
                     throw new ValidationException(String.format("Question %d: Being TRUE_FALSE type, it must have exactly 1 correct answer.", index));
                 }
                 break;
 
-            case MULTIPLE_CHOICE:
+            case MULTI_CHOICE:
                 break;
         }
     }

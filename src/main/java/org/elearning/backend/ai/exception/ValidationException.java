@@ -1,4 +1,4 @@
-package org.elearning.backend.analytics.exception;
+package org.elearning.backend.ai.exception;
 
 public class ValidationException extends RuntimeException {
     public ValidationException(String message) {

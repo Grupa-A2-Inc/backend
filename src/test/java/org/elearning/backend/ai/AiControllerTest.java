@@ -1,10 +1,9 @@
-package org.elearning.backend.analytics;
+package org.elearning.backend.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.elearning.backend.analytics.dto.InjectRequestDto;
+import org.elearning.backend.ai.dto.InjectRequestDto;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
-import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -134,23 +134,16 @@ class AiControllerTest {
         return "[{" +
                 "\"text\": \"What is Java?\"," +
                 "\"type\": \"SINGLE_CHOICE\"," +
-                "\"options\": [" +
-                "  {\"text\": \"A language\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                "  {\"text\": \"A database\", \"displayOrder\": 2, \"isCorrect\": false}" +
-                "]" +
+                                "\"answers\": [\"A language\", \"A database\"]," +
+                                "\"correctAnswers\": [\"A language\"]," +
+                                "\"difficulty\": 0.6" +
                 "}]";
     }
 
     private String multipleQuestionsJson() {
         return "[" +
-                "{\"text\": \"Q1?\", \"type\": \"SINGLE_CHOICE\", \"options\": [" +
-                "  {\"text\": \"A\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                "  {\"text\": \"B\", \"displayOrder\": 2, \"isCorrect\": false}" +
-                "]}," +
-                "{\"text\": \"Q2?\", \"type\": \"TRUE_FALSE\", \"options\": [" +
-                "  {\"text\": \"True\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                "  {\"text\": \"False\", \"displayOrder\": 2, \"isCorrect\": false}" +
-                "]}" +
+                                "{\"text\": \"Q1?\", \"type\": \"SINGLE_CHOICE\", \"answers\": [\"A\", \"B\"], \"correctAnswers\": [\"A\"], \"difficulty\": 0.5}," +
+                                "{\"text\": \"Q2?\", \"type\": \"TRUE_FALSE\", \"answers\": [\"True\", \"False\"], \"correctAnswers\": [\"True\"], \"difficulty\": 0.4}" +
                 "]";
     }
 
@@ -158,10 +151,9 @@ class AiControllerTest {
         return "[{" +
                 "\"text\": \"\"," +
                 "\"type\": \"SINGLE_CHOICE\"," +
-                "\"options\": [" +
-                "  {\"text\": \"A\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                "  {\"text\": \"B\", \"displayOrder\": 2, \"isCorrect\": false}" +
-                "]" +
+                                "\"answers\": [\"A\", \"B\"]," +
+                                "\"correctAnswers\": [\"A\"]," +
+                                "\"difficulty\": 0.5" +
                 "}]";
     }
 
@@ -169,10 +161,9 @@ class AiControllerTest {
         return "[{" +
                 "\"text\": \"What is Java?\"," +
                 "\"type\": \"SINGLE_CHOICE\"," +
-                "\"options\": [" +
-                "  {\"text\": \"A language\", \"displayOrder\": 1, \"isCorrect\": false}," +
-                "  {\"text\": \"A database\", \"displayOrder\": 2, \"isCorrect\": false}" +
-                "]" +
+                                "\"answers\": [\"A language\", \"A database\"]," +
+                                "\"correctAnswers\": []," +
+                                "\"difficulty\": 0.7" +
                 "}]";
     }
 
@@ -180,10 +171,9 @@ class AiControllerTest {
         return "[{" +
                 "\"text\": \"What is Java?\"," +
                 "\"type\": \"SINGLE_CHOICE\"," +
-                "\"options\": [" +
-                "  {\"text\": \"A language\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                "  {\"text\": \"A database\", \"displayOrder\": 2, \"isCorrect\": true}" +
-                "]" +
+                                "\"answers\": [\"A language\", \"A database\"]," +
+                                "\"correctAnswers\": [\"A language\", \"A database\"]," +
+                                "\"difficulty\": 0.6" +
                 "}]";
     }
 
@@ -191,9 +181,9 @@ class AiControllerTest {
                 return "[{" +
                                 "\"text\": \"Question with one option\"," +
                                 "\"type\": \"SINGLE_CHOICE\"," +
-                                "\"options\": [" +
-                                "  {\"text\": \"Only option\", \"displayOrder\": 1, \"isCorrect\": true}" +
-                                "]" +
+                                "\"answers\": [\"Only option\"]," +
+                                "\"correctAnswers\": [\"Only option\"]," +
+                                "\"difficulty\": 0.2" +
                                 "}]";
         }
 
@@ -201,11 +191,9 @@ class AiControllerTest {
                 return "[{" +
                                 "\"text\": \"Java is compiled?\"," +
                                 "\"type\": \"TRUE_FALSE\"," +
-                                "\"options\": [" +
-                                "  {\"text\": \"True\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                                "  {\"text\": \"False\", \"displayOrder\": 2, \"isCorrect\": false}," +
-                                "  {\"text\": \"Maybe\", \"displayOrder\": 3, \"isCorrect\": false}" +
-                                "]" +
+                                "\"answers\": [\"True\", \"False\", \"Maybe\"]," +
+                                "\"correctAnswers\": [\"True\"]," +
+                                "\"difficulty\": 0.3" +
                                 "}]";
         }
 
@@ -213,22 +201,19 @@ class AiControllerTest {
                 return "[{" +
                                 "\"text\": \"Java is object oriented?\"," +
                                 "\"type\": \"TRUE_FALSE\"," +
-                                "\"options\": [" +
-                                "  {\"text\": \"True\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                                "  {\"text\": \"False\", \"displayOrder\": 2, \"isCorrect\": true}" +
-                                "]" +
+                                "\"answers\": [\"True\", \"False\"]," +
+                                "\"correctAnswers\": [\"True\", \"False\"]," +
+                                "\"difficulty\": 0.3" +
                                 "}]";
         }
 
         private String validMultipleChoiceQuestionJson() {
                 return "[{" +
                                 "\"text\": \"Select JVM languages\"," +
-                                "\"type\": \"MULTIPLE_CHOICE\"," +
-                                "\"options\": [" +
-                                "  {\"text\": \"Java\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                                "  {\"text\": \"Kotlin\", \"displayOrder\": 2, \"isCorrect\": true}," +
-                                "  {\"text\": \"MySQL\", \"displayOrder\": 3, \"isCorrect\": false}" +
-                                "]" +
+                                "\"type\": \"MULTI_CHOICE\"," +
+                                "\"answers\": [\"Java\", \"Kotlin\", \"MySQL\"]," +
+                                "\"correctAnswers\": [\"Java\", \"Kotlin\"]," +
+                                "\"difficulty\": 0.8" +
                                 "}]";
         }
 
@@ -236,10 +221,9 @@ class AiControllerTest {
                 return "[{" +
                                 "\"text\": null," +
                                 "\"type\": \"SINGLE_CHOICE\"," +
-                                "\"options\": [" +
-                                "  {\"text\": \"A\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                                "  {\"text\": \"B\", \"displayOrder\": 2, \"isCorrect\": false}" +
-                                "]" +
+                                "\"answers\": [\"A\", \"B\"]," +
+                                "\"correctAnswers\": [\"A\"]," +
+                                "\"difficulty\": 0.5" +
                                 "}]";
         }
 
@@ -247,7 +231,9 @@ class AiControllerTest {
                 return "[{" +
                                 "\"text\": \"Question without options\"," +
                                 "\"type\": \"SINGLE_CHOICE\"," +
-                                "\"options\": null" +
+                                "\"answers\": null," +
+                                "\"correctAnswers\": [\"A\"]," +
+                                "\"difficulty\": 0.5" +
                                 "}]";
         }
 
@@ -255,21 +241,19 @@ class AiControllerTest {
                 return "[{" +
                                 "\"text\": \"Question with missing type\"," +
                                 "\"type\": null," +
-                                "\"options\": [" +
-                                "  {\"text\": \"A\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                                "  {\"text\": \"B\", \"displayOrder\": 2, \"isCorrect\": false}" +
-                                "]" +
+                                "\"answers\": [\"A\", \"B\"]," +
+                                "\"correctAnswers\": [\"A\"]," +
+                                "\"difficulty\": 0.5" +
                                 "}]";
         }
 
-        private String validQuestionsJson_withNullIsCorrectOption() {
+        private String invalidQuestionsJson_correctAnswerNotInAnswers() {
                 return "[{" +
                                 "\"text\": \"Pick the correct answer\"," +
                                 "\"type\": \"SINGLE_CHOICE\"," +
-                                "\"options\": [" +
-                                "  {\"text\": \"A\", \"displayOrder\": 1, \"isCorrect\": true}," +
-                                "  {\"text\": \"B\", \"displayOrder\": 2, \"isCorrect\": null}" +
-                                "]" +
+                                "\"answers\": [\"A\", \"B\"]," +
+                                "\"correctAnswers\": [\"C\"]," +
+                                "\"difficulty\": 0.4" +
                                 "}]";
         }
 
@@ -549,25 +533,26 @@ class AiControllerTest {
         }
 
         @Test
-        void injectQuestions_shouldThrowServletException_whenMultipleChoiceIsRejectedByDatabaseEnum() {
+        void injectQuestions_shouldReturn200_whenMultipleChoiceIsValid() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
                 UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validMultipleChoiceQuestionJson());
 
-                assertThrows(ServletException.class, () ->
-                                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
-                                                .content("{}"))
-                );
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                .content("{}"))
+                        .andDo(print())
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.injectedCount").value(1));
         }
 
         @Test
-        void injectQuestions_shouldThrowServletException_whenAnOptionHasNullIsCorrectBecauseDbConstraintRejectsIt() {
+        void injectQuestions_shouldReturn422_whenCorrectAnswerIsNotInAnswers() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validQuestionsJson_withNullIsCorrectOption());
+                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_correctAnswerNotInAnswers());
 
-                assertThrows(ServletException.class, () ->
-                                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
-                                                .content("{}"))
-                );
+                mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
+                                .content("{}"))
+                        .andExpect(status().isUnprocessableEntity())
+                        .andExpect(jsonPath("$.message", containsString("provided answer options")));
         }
 
     @Test

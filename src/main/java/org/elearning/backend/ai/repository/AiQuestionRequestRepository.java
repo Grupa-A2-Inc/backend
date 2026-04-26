@@ -1,6 +1,6 @@
-package org.elearning.backend.analytics.repository;
+package org.elearning.backend.ai.repository;
 
-import org.elearning.backend.analytics.model.AiQuestionRequest;
+import org.elearning.backend.ai.model.AiQuestionRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

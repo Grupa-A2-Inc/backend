@@ -1,4 +1,4 @@
-package org.elearning.backend.analytics.dto;
+package org.elearning.backend.ai.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

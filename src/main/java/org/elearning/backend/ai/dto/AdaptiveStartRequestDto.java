@@ -1,9 +1,6 @@
-package org.elearning.backend.analytics.dto;
+package org.elearning.backend.ai.dto;
 
 import lombok.Data;
-import org.elearning.backend.ai.dto.AiAdaptiveExerciseDto;
-
-import java.util.List;
 
 @Data
 public class AdaptiveStartRequestDto {
