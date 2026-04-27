@@ -99,14 +99,18 @@ class AnalyticsAndStatsControllerTest {
 
     private UUID insertUser(RoleName role) {
         UUID id = UUID.randomUUID();
+        String roleType = role == RoleName.STUDENT ? "STUDENT"
+                : role == RoleName.PARENT ? "PARENT"
+                : "User";
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
                 id,
                 role.name().toLowerCase() + "-" + id + "@test.com",
                 "hash",
                 "Test", "User",
                 role.name(),
+                roleType,
                 "ACTIVE"
         );
         return id;
@@ -303,10 +307,10 @@ class AnalyticsAndStatsControllerTest {
 
     @Test
     @Order(23)
-    @DisplayName("2.4 — student-averages -> 404 for non-existent courseId")
+    @DisplayName("2.4 — student-averages -> 403 for non-existent courseId (PreAuthorize rejects)")
     void studentAverages_ReturnsNotFound_WhenCourseDoesNotExist() throws Exception {
         mockMvc.perform(asTeacher(get(BASE + "/courses/{courseId}/analytics/student-averages", UUID.randomUUID())))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test

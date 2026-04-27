@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.parent.dto.ParentDTO;
 import org.elearning.backend.parent.service.ParentService;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@Tag(name = "Parents", description = "Endpoints for managing parents and their linked students")
 @RequestMapping("api/v1/parents")
 @RequiredArgsConstructor
 public class ParentController {

@@ -2,6 +2,7 @@ package org.elearning.backend.security.access;
 
 import org.elearning.backend.assessment.model.Question;
 import org.elearning.backend.assessment.model.TestAttempt;
+import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.assessment.repository.QuestionRepository;
 import org.elearning.backend.assessment.repository.TestAttemptRepository;
 import org.elearning.backend.assessment.repository.TestRepository;
@@ -74,6 +75,9 @@ class AccessServiceCoverageTest {
 
     @Mock
     private StudentRepository studentRepository;
+
+    @Mock
+    private ClassroomMembershipRepository classroomMembershipRepository;
 
     @Mock
     private TestRepository testRepository;
@@ -343,6 +347,7 @@ class AccessServiceCoverageTest {
 
         when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
         when(lessonRepository.findById(missingLessonId)).thenReturn(Optional.empty());
+        when(chapterRepository.findById(lesson.getChapter().getId())).thenReturn(Optional.of(lesson.getChapter()));
 
         User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
         Authentication student = authenticationFor(studentUser);
@@ -353,6 +358,8 @@ class AccessServiceCoverageTest {
 
         assertThat(accessService.canViewLessonResources(student, lessonId)).isTrue();
         assertThat(accessService.canViewLessonResources(student, missingLessonId)).isFalse();
+        assertThat(accessService.canViewChapterLessons(student, lesson.getChapter().getId())).isFalse();
+        assertThat(accessService.canViewChapterLessons(teacher, lesson.getChapter().getId())).isTrue();
         assertThat(accessService.canCreateLessonResource(teacher, lessonId)).isTrue();
         assertThat(accessService.canCreateLessonResource(teacher, missingLessonId)).isFalse();
         assertThat(accessService.canViewLessonTest(student, lessonId)).isTrue();
@@ -604,11 +611,13 @@ class AccessServiceCoverageTest {
         UUID lessonId = UUID.randomUUID();
         UUID courseId = UUID.randomUUID();
         User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+        User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
         Lesson lesson = lesson(lessonId, courseId);
 
         when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
         stubAccessibleCourse(courseId);
         stubEnrolledStudent(courseId, studentUser.getId());
+        stubManagedCourse(courseId, teacherUser.getId());
 
         assertThat(accessService.canMarkViewedLesson(null, lessonId)).isFalse();
         assertThat(accessService.canMarkViewedLesson(authenticationFor(studentUser), lessonId)).isTrue();
@@ -646,6 +655,29 @@ class AccessServiceCoverageTest {
         assertThat(accessService.canCreateChapter(orgAdmin, organizationCourseId)).isTrue();
         assertThat(accessService.canViewCourseChapters(parentAuthentication, parentCourseId)).isFalse();
         assertThat(accessService.canViewCourseChapters(authenticationFor(user(RoleName.STUDENT, organizationId)), parentCourseId)).isFalse();
+    }
+
+    @Test
+    void courseAccessPermissions_restrictStudentsAndTeachersToTheirCourses() {
+        UUID courseId = UUID.randomUUID();
+        User creator = user(RoleName.TEACHER, UUID.randomUUID());
+        creator.setId(UUID.randomUUID());
+        Course course = course(courseId, creator.getId());
+        User enrolledStudent = user(RoleName.STUDENT, UUID.randomUUID());
+        User otherStudent = user(RoleName.STUDENT, UUID.randomUUID());
+        User owningTeacher = user(RoleName.TEACHER, UUID.randomUUID());
+        owningTeacher.setId(creator.getId());
+        User otherTeacher = user(RoleName.TEACHER, UUID.randomUUID());
+
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(enrolledStudent.getId(), courseId)).thenReturn(true);
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(otherStudent.getId(), courseId)).thenReturn(false);
+
+        assertThat(accessService.canViewCourseFullView(authenticationFor(enrolledStudent), courseId)).isTrue();
+        assertThat(accessService.canViewCourseFullView(authenticationFor(otherStudent), courseId)).isFalse();
+        assertThat(accessService.canViewCourseFullView(authenticationFor(owningTeacher), courseId)).isTrue();
+        assertThat(accessService.canViewCourseFullView(authenticationFor(otherTeacher), courseId)).isFalse();
+        assertThat(accessService.canViewCourseFullView(authenticationFor(user(RoleName.PARENT, UUID.randomUUID())), courseId)).isFalse();
     }
 
     @Test

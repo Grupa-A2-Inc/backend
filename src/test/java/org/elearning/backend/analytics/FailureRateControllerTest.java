@@ -61,9 +61,9 @@ class FailureRateControllerTest {
     private UUID insertAuthenticatedUser() {
         UUID userId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
-                userId, "analytics-teacher-" + userId + "@test.com", "password", "Test", "Teacher", RoleName.TEACHER.name(), "ACTIVE"
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
+                userId, "analytics-teacher-" + userId + "@test.com", "password", "Test", "Teacher", RoleName.TEACHER.name(), "User", "ACTIVE"
         );
         return userId;
     }
