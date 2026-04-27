@@ -1,5 +1,6 @@
 package org.elearning.backend.content.controller;
 
+import org.elearning.backend.auth.service.AccountActivationService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -11,6 +12,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +31,9 @@ class LessonsControllerTests {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private AccountActivationService accountActivationService;
 
     private UUID chapterID;
     private UUID authenticatedUserId;
@@ -68,14 +73,15 @@ class LessonsControllerTests {
     private UUID insertAuthenticatedUser() {
         UUID userId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
                 userId,
-                "lessons-controller-" + userId + "@test.com",
+                "lesson-resource-controller-" + userId + "@test.com",
                 "password-hash",
                 "Test",
                 "User",
                 RoleName.TEACHER.name(),
+                "User",
                 "ACTIVE"
         );
         return userId;
@@ -620,13 +626,16 @@ class LessonsControllerTests {
     private UUID insertAuthenticatedStudent() {
         UUID userId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = 'STUDENT'), 'ACTIVE')",
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
                 userId,
                 "student-" + userId + "@test.com",
                 "password-hash",
                 "Student",
-                "User"
+                "User",
+                RoleName.STUDENT.name(),
+                "STUDENT",
+                "ACTIVE"
         );
         return userId;
     }
@@ -710,10 +719,10 @@ class LessonsControllerTests {
 
     /**
      * GET /api/v1/lessons/{id}
-     * Tests that a STUDENT WITHOUT ENROLLMENT gets the lesson, but NO progress is marked.
+     * Tests that a STUDENT WITHOUT ENROLLMENT cannot access the lesson.
      */
     @Test
-    void shouldGetLessonByIdAsStudentWithoutEnrollment() {
+    void shouldRejectLessonByIdAsStudentWithoutEnrollment() {
         UUID studentId = insertAuthenticatedStudent();
         authorizeAsStudent(studentId);
 
@@ -724,7 +733,7 @@ class LessonsControllerTests {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
         Integer progressCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM lesson_progress WHERE lesson_id = ? AND student_id = ?",

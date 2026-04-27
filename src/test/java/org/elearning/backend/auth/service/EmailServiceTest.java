@@ -42,4 +42,25 @@ class EmailServiceTest {
 
                 This token expires in 5 minutes.""");
     }
+
+    @Test
+    void sendActivationEmail_sendsExpectedMessage() {
+        ReflectionTestUtils.setField(emailService, "from", "noreply@example.com");
+        ReflectionTestUtils.setField(emailService, "frontendUrl", "http://localhost:3000");
+
+        emailService.sendActivationEmail("user@example.com", "Ion", "raw-activation-token");
+
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(javaMailSender).send(messageCaptor.capture());
+
+        SimpleMailMessage message = messageCaptor.getValue();
+
+        assertThat(message.getFrom()).isEqualTo("noreply@example.com");
+        assertThat(message.getTo()).containsExactly("user@example.com");
+        assertThat(message.getSubject()).isEqualTo("Activate your account");
+        assertThat(message.getText()).contains("Ion");
+        assertThat(message.getText()).contains("raw-activation-token");
+        assertThat(message.getText()).contains("http://localhost:3000/set-password?token=raw-activation-token");
+        assertThat(message.getText()).contains("60 minutes");
+    }
 }

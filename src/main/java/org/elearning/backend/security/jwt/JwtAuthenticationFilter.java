@@ -5,7 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.TokenBlackListService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.auth.CustomUserDetailsService;
 import org.springframework.http.HttpHeaders;
@@ -23,7 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService customUserDetailsService;
-    private final TokenBlacklistService tokenBlacklistService;
+    private final TokenBlackListService tokenBlacklistService;
     private static final int LENGTH_OF_BEARER_WORD = 7;
 
     @Override
@@ -48,6 +48,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
 
                 CustomUserDetails userDetails = customUserDetailsService.loadUserById(jwtUtil.extractId(token));
+                if (!userDetails.isEnabled()) {
+                    SecurityContextHolder.clearContext();
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 var authentication = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

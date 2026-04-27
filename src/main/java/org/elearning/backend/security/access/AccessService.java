@@ -9,6 +9,8 @@ import org.elearning.backend.assessment.model.TestAttempt;
 import org.elearning.backend.assessment.repository.QuestionRepository;
 import org.elearning.backend.assessment.repository.TestAttemptRepository;
 import org.elearning.backend.assessment.repository.TestRepository;
+import org.elearning.backend.classroom.entity.MembershipType;
+import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.Lesson;
@@ -17,9 +19,17 @@ import org.elearning.backend.content.repository.ChapterRepository;
 import org.elearning.backend.content.repository.CourseRepository;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.content.repository.LessonResourceRepository;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.repository.OrganizationRepository;
+import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.classroom.entity.Classroom;
+import org.elearning.backend.parent.entity.Parent;
+import org.elearning.backend.parent.repository.ParentRepository;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
+import org.elearning.backend.student.entity.Student;
+import org.elearning.backend.student.repository.StudentRepository;
+import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.repository.UserRepository;
@@ -40,6 +50,12 @@ public class AccessService {
     private final TestAttemptRepository testAttemptRepository;
     private final QuestionRepository questionRepository;
     private final CourseRepository courseRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
+    private final ParentRepository parentRepository;
+    private final StudentRepository studentRepository;
+    private final ClassroomRepository classroomRepository;
+    private final ClassroomMembershipRepository classroomMembershipRepository;
+
     public boolean canCreateUser(Authentication authentication, CreateUserRequest request) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
@@ -53,6 +69,25 @@ public class AccessService {
 
         return currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN && currentUser.getOrganizationId() != null
                 && currentUser.getOrganizationId().equals(request.getOrganizationId());
+    }
+
+    public boolean canImportUsers(Authentication authentication, CreateUserBulkRequest request) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
+            return false;
+        }
+
+        return request.getUsers().stream()
+                .allMatch(u -> currentUser.getOrganizationId().equals(u.getOrganizationId()));
     }
 
     public boolean canViewUser(Authentication authentication, UUID targetUserId) {
@@ -79,6 +114,30 @@ public class AccessService {
 
     public boolean canEditUser(Authentication authentication, UUID targetUserId) {
         return canViewUser(authentication, targetUserId);
+    }
+
+    public boolean canUpdateUserStatus(Authentication authentication, UUID targetUserId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
+            return false;
+        }
+
+        User targetUser = userRepository.findById(targetUserId).orElse(null);
+
+        if (targetUser == null || targetUser.getOrganization() == null) {
+            return false;
+        }
+
+        return currentUser.getOrganizationId().equals(targetUser.getOrganization().getId());
     }
 
     public boolean canViewOrganization(Authentication authentication, UUID organizationId) {
@@ -135,6 +194,59 @@ public class AccessService {
         }
 
         return currentUser.getUserId().equals(targetUserId);
+    }
+
+    public boolean canViewAllParents(Authentication authentication) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+        return currentUser != null && currentUser.getRoleName() == RoleName.ADMIN;
+    }
+
+    public boolean canViewParent(Authentication authentication, UUID parentId) {
+        return canAdminOrOrganizationAdminAccessUser(authentication, parentId);
+    }
+
+    public boolean canManageParentStudent(Authentication authentication, UUID parentId, UUID studentId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
+            return false;
+        }
+
+        Parent parent = parentRepository.findById(parentId).orElse(null);
+        Student student = studentRepository.findById(studentId).orElse(null);
+
+        return belongsToOrganization(parent, currentUser.getOrganizationId())
+                && belongsToOrganization(student, currentUser.getOrganizationId());
+    }
+
+    public boolean canViewParentStudents(Authentication authentication, UUID parentId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        Parent parent = parentRepository.findById(parentId).orElse(null);
+
+        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
+            return belongsToOrganization(parent, currentUser.getOrganizationId());
+        }
+
+        return currentUser.getRoleName() == RoleName.PARENT
+                && currentUser.getUserId().equals(parentId)
+                && belongsToOrganization(parent, currentUser.getOrganizationId());
     }
 
     @Description("Returns true if the user can view the lessons from the given chapter, false otherwise")
@@ -440,10 +552,64 @@ public class AccessService {
     private boolean canManageChapterCourse(Authentication authentication, UUID targetChapterId) {
         Chapter chapter = chapterRepository.findById(targetChapterId).orElse(null);
         if (chapter == null) {
+    public boolean canCreateClassroom(Authentication authentication) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        return currentUser != null
+                && currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN
+                && currentUser.getOrganizationId() != null;
+    }
+
+    public boolean canManageClassroom(Authentication authentication, UUID classroomId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null
+                || currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN //aici ar trebui adaigat si daca e admin mare?
+                || currentUser.getOrganizationId() == null) {
             return false;
         }
 
-        return canManageCourse(authentication, chapter.getCourse().getId());
+        Classroom classroom = classroomRepository.findById(classroomId).orElse(null);
+        return classroom != null
+                && classroom.getOrganization() != null
+                && currentUser.getOrganizationId().equals(classroom.getOrganization().getId());
+    }
+
+    public boolean canListClassroomMembers(Authentication authentication, UUID classroomId){
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if(currentUser == null){
+            return false;
+        }
+
+        Classroom classroom = classroomRepository.findById(classroomId).orElse(null);
+        if (classroom == null || classroom.getOrganization() == null) {
+            return false;
+        }
+
+        UUID classroomOrganizationId = classroom.getOrganization().getId();
+
+        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
+            return currentUser.getOrganizationId() != null
+                    && currentUser.getOrganizationId().equals(classroomOrganizationId);
+        }
+
+        if (currentUser.getRoleName() == RoleName.TEACHER) {
+            return classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                    classroomId,
+                    currentUser.getUserId(),
+                    MembershipType.TEACHER
+            );
+        }
+
+        return false;
+
+    }
+
+    private boolean canManageChapterCourse(Authentication authentication, UUID targetChapterId) {
+        return chapterRepository.findById(targetChapterId)
+                .map(chapter -> canManageCourse(authentication, chapter.getCourse().getId()))
+                .orElse(false);
     }
 
     private boolean canManageLessonCourse(Authentication authentication, UUID targetLessonId) {
@@ -548,8 +714,9 @@ public class AccessService {
         if (currentUser == null) {
             return false;
         }
-        //TO DO : check if student is entrollerd
-        return currentUser.getRoleName() == RoleName.STUDENT;
+
+        return currentUser.getRoleName() == RoleName.STUDENT
+                && canAccessLessonCourse(authentication, lessonId);
     }
 
 
@@ -563,6 +730,15 @@ public class AccessService {
 
         if (currentUser.getRoleName() == RoleName.ADMIN) {
             return true;
+        }
+
+        Course course = courseRepository.findById(courseId).orElse(null);
+        if (course == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
+            return isCourseCreatedInOrganization(course, currentUser.getOrganizationId());
         }
 
         if (currentUser.getRoleName() == RoleName.TEACHER) {
@@ -588,10 +764,55 @@ public class AccessService {
         if (currentUser.getRoleName() == RoleName.ADMIN) {
             return true;
         }
-        Course course = courseRepository.getReferenceById(courseId);
+        Course course = courseRepository.findById(courseId).orElse(null);
+        if (course == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
+            return isCourseCreatedInOrganization(course, currentUser.getOrganizationId());
+        }
 
         return currentUser.getRoleName() == RoleName.TEACHER
                 && currentUser.getUserId().equals(course.getCreatedBy());
+    }
+
+    private boolean isCourseCreatedInOrganization(Course course, UUID organizationId) {
+        if (course.getCreatedBy() == null || organizationId == null) {
+            return false;
+        }
+
+        User creator = userRepository.findById(course.getCreatedBy()).orElse(null);
+
+        return creator != null
+                && creator.getOrganization() != null
+                && organizationId.equals(creator.getOrganization().getId());
+    }
+
+    private boolean canAdminOrOrganizationAdminAccessUser(Authentication authentication, UUID targetUserId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
+            return false;
+        }
+
+        User targetUser = userRepository.findById(targetUserId).orElse(null);
+        return belongsToOrganization(targetUser, currentUser.getOrganizationId());
+    }
+
+    private boolean belongsToOrganization(User user, UUID organizationId) {
+        return user != null
+                && user.getOrganization() != null
+                && organizationId != null
+                && organizationId.equals(user.getOrganization().getId());
     }
 
     @Description("Returns true if the user can manage the given lesson resource, false otherwise")

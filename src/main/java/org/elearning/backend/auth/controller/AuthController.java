@@ -7,18 +7,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.auth.dto.request.ForgotPasswordRequest;
-import org.elearning.backend.auth.dto.request.LoginRequest;
-import org.elearning.backend.auth.dto.request.RegisterRequest;
-import org.elearning.backend.auth.dto.request.ResetPasswordRequest;
+import org.elearning.backend.auth.dto.request.*;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.response.RefreshResponse;
 import org.elearning.backend.auth.dto.response.ResetPasswordResponse;
 import org.elearning.backend.auth.exception.InvalidCredentialsException;
-import org.elearning.backend.auth.service.AuthService;
-import org.elearning.backend.auth.service.PasswordResetService;
-import org.elearning.backend.auth.service.RefreshTokenService;
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.*;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +35,7 @@ public class AuthController {
     private final AuthService authService;
     private final PasswordResetService resetService;
     private final RefreshTokenService refreshTokenService;
-    private final TokenBlacklistService tokenBlacklistService;
+    private final TokenBlackListService tokenBlacklistService;
     private final JwtUtil jwtUtil;
 
     @Value("${app.auth.api-path:/api/v1/auth}")
@@ -51,6 +45,8 @@ public class AuthController {
 
     @Value("${app.auth.secure-cookies:true}")
     private boolean secureCookies = true;
+
+    private final AccountActivationService accountActivationService;
 
     @Operation(
             summary = "Register a new account",
@@ -111,6 +107,21 @@ public class AuthController {
     }
 
     @Operation(
+            summary = "Activate account and set password",
+            description = "Consumes an activation token generated when an admin creates a user account, " +
+                    "sets the initial password, and marks the account as active. " +
+                    "This endpoint is separate from the forgot-password flow."
+    )
+    @ApiResponse(responseCode = "200", description = "Account activated and password set successfully",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResetPasswordResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid or expired token, or passwords do not match", content = @Content)
+    @PostMapping("/set-password")
+    public ResponseEntity<ResetPasswordResponse> setPassword(@Valid @RequestBody SetPasswordRequest request) {
+        ResetPasswordResponse response = accountActivationService.setPassword(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
             summary = "Request password reset",
             description = "Accepts an email address and always returns a generic response message. If the account exists, a reset token is generated and sent by email."
     )
@@ -127,7 +138,7 @@ public class AuthController {
             description = "Invalid request data",
             content = @Content
     )
-    @PostMapping("/forgot-password")
+    @PostMapping("/password-reset/request")
     public ResponseEntity<ResetPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request){
         ResetPasswordResponse response = resetService.forgotPassword(request);
         return ResponseEntity.ok(response);
@@ -150,7 +161,7 @@ public class AuthController {
             description = "Invalid request data or reset token",
             content = @Content
     )
-    @PostMapping("/reset-password")
+    @PostMapping("/password-reset/confirm")
     public ResponseEntity<ResetPasswordResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request){
         ResetPasswordResponse response = resetService.resetPassword(request);
         return ResponseEntity.ok(response);
@@ -210,7 +221,9 @@ public class AuthController {
             try {
                 LocalDateTime expiresAt = jwtUtil.extractExpiration(rawAccessToken);
                 tokenBlacklistService.revokeAccessToken(rawAccessToken, expiresAt);
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+                //Exceptions ignored
+            }
         }
 
         ResponseCookie expiredCookie = ResponseCookie.from(REFRESH_STRING_LITERAL, "")

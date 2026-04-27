@@ -25,6 +25,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       - SERVER_PORT=8067
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/adaptive_tutor
@@ -37,5 +39,7 @@ services:
       - MAIL_USERNAME
       - MAIL_PASSWORD
       - MAIL_FROM
+      - APP_FRONTEND_URL=http://localhost:3000
+
       - AI_API_BASE_URL
       - AI_API_KEY

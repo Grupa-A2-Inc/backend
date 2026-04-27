@@ -75,16 +75,29 @@ class ProgressControllerTest {
     private UUID insertUser(RoleName role) {
         UUID userId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), 'ACTIVE')",
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
                 userId,
                 "user-progress-" + userId + "@test.com",
                 "password-hash",
                 "Test",
                 "User",
-                role.name()
+                role.name(),
+                roleTypeFor(role),
+                "ACTIVE"
         );
         return userId;
+    }
+
+    /**
+      * Helper to be able to choose the role type to insert according to the role of the user
+     **/
+    private String roleTypeFor(RoleName role) {
+        return switch (role) {
+            case STUDENT -> "STUDENT";
+            case PARENT -> "PARENT";
+            default -> "User";
+        };
     }
 
     /**

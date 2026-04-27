@@ -13,6 +13,7 @@ spring:
   #    password: password
   flyway:
     enabled: true
+    repair-on-migrate: true
   jpa:
     hibernate:
       ddl-auto: validate

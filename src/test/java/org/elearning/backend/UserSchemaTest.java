@@ -113,14 +113,4 @@ class UserSchemaTest {
                 )
         );
     }
-
-    @Test
-    void shouldEnforceNotNullOnPasswordHash() {
-        org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () ->
-                jdbcTemplate.execute(
-                        "INSERT INTO users (id, email, first_name, last_name, role_id, status) " +
-                                "VALUES (gen_random_uuid(), 'test@test.com', 'Test', 'User', 1, 'ACTIVE')"
-                )
-        );
-    }
 }

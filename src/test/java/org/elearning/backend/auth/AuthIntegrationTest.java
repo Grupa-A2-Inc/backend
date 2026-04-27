@@ -9,10 +9,7 @@ import org.elearning.backend.auth.dto.response.UserDataResponse;
 import org.elearning.backend.auth.exception.AuthConflictException;
 import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.exception.InvalidCredentialsException;
-import org.elearning.backend.auth.service.AuthService;
-import org.elearning.backend.auth.service.PasswordResetService;
-import org.elearning.backend.auth.service.RefreshTokenService;
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.*;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.security.jwt.JwtUtil;
@@ -59,10 +56,13 @@ class AuthIntegrationTest {
     private RefreshTokenService refreshTokenService;
 
     @MockitoBean
-    private TokenBlacklistService tokenBlacklistService;
+    private TokenBlackListService tokenBlacklistService;
 
     @MockitoBean
     private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private AccountActivationService accountActivationService;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
