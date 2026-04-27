@@ -1,5 +1,6 @@
 package org.elearning.backend.classroom;
 
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.classroom.entity.Classroom;
 import org.elearning.backend.classroom.entity.ClassroomMembership;
 import org.elearning.backend.classroom.entity.MembershipType;
@@ -37,7 +38,8 @@ class ClassroomMembershipRepositoryTest {
 
     @Autowired
     ClassroomMembershipRepository membershipRepository;
-
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     ClassroomRepository classroomRepository;
 

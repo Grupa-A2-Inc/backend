@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.assessment.dto.test_dto.SubmitAnswerDto;
 import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
 import org.elearning.backend.auth.service.AccountActivationService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +51,9 @@ class AttemptControllerTest {
 
     @MockitoBean
     private AccountActivationService accountActivationService;
+
+    @MockitoBean
+    private EmailService emailService;
 
     private UUID studentId;
     private String accessToken;

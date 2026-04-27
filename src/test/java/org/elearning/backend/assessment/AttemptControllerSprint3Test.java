@@ -3,6 +3,7 @@ package org.elearning.backend.assessment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.assessment.dto.test_dto.SubmitAnswerDto;
 import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -34,7 +36,8 @@ class AttemptControllerSprint3Test {
 
     @Autowired
     private MockMvc mockMvc;
-
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private ObjectMapper objectMapper;
 

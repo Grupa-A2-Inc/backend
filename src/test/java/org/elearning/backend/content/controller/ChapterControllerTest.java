@@ -1,6 +1,7 @@
 package org.elearning.backend.content.controller;
 
 import org.elearning.backend.auth.service.AccountActivationService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -33,7 +34,8 @@ class ChapterControllerTest {
 
     @Autowired
     private JwtUtil jwtUtil;
-
+    @MockitoBean
+    private EmailService emailService;
     @MockitoBean
     private AccountActivationService accountActivationService;
 

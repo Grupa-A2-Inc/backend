@@ -9,6 +9,7 @@ import org.elearning.backend.ai.service.AdaptiveSessionService;
 import org.elearning.backend.ai.service.AiApiClient;
 import org.elearning.backend.ai.dto.AdaptiveSubmitRequestDto;
 import org.elearning.backend.assessment.model.QuestionType;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -46,7 +47,8 @@ class AdaptiveControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private ObjectMapper objectMapper;
 

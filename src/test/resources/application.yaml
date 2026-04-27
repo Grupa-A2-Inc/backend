@@ -10,6 +10,17 @@ spring:
       ddl-auto: none
   flyway:
     enabled: true
+  mail:
+    host: localhost
+    port: 25
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 
 logging:
   file:

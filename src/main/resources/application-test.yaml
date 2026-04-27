@@ -9,11 +9,20 @@ spring:
     show-sql: true
   flyway:
     enabled: true
-  # Dezactivează importul din .env — nu există pe CI
   config:
     import: ""
+  mail:
+    host: localhost
+    port: 25
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 
-# Dezactivează mail, AI etc. pentru teste
 app:
   mail:
     from: test@test.com

@@ -2,6 +2,7 @@ package org.elearning.backend.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.ai.dto.InjectRequestDto;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -40,7 +42,8 @@ class AiControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
 

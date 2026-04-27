@@ -2,6 +2,7 @@ package org.elearning.backend.content.controller;
 
 
 import org.elearning.backend.auth.service.AccountActivationService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -27,11 +28,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+
 class LessonResourceControllerTests {
 
     @Autowired
     private TestRestTemplate restTemplate;
 
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
 

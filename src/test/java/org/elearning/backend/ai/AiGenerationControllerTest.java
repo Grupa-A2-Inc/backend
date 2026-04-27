@@ -5,6 +5,7 @@ import org.elearning.backend.ai.dto.AiQuestionDto;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.elearning.backend.ai.service.AiApiClient;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -40,7 +41,8 @@ class AiGenerationControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
 

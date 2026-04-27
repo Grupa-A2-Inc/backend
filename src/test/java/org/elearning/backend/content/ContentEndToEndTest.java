@@ -1,6 +1,7 @@
 package org.elearning.backend.content;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.model.CourseVisibility;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -52,6 +54,8 @@ class ContentEndToEndTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private JwtUtil jwtUtil;
 

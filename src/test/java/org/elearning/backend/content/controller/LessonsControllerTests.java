@@ -1,6 +1,7 @@
 package org.elearning.backend.content.controller;
 
 import org.elearning.backend.auth.service.AccountActivationService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -25,7 +26,8 @@ class LessonsControllerTests {
 
     @Autowired
     private TestRestTemplate restTemplate;
-
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
 

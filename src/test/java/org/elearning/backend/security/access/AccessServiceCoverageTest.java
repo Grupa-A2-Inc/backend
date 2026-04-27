@@ -5,6 +5,7 @@ import org.elearning.backend.assessment.model.TestAttempt;
 import org.elearning.backend.assessment.repository.QuestionRepository;
 import org.elearning.backend.assessment.repository.TestAttemptRepository;
 import org.elearning.backend.assessment.repository.TestRepository;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.Lesson;
@@ -34,6 +35,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -50,6 +52,8 @@ class AccessServiceCoverageTest {
     @Mock
     private OrganizationRepository organizationRepository;
 
+    @MockitoBean
+    private EmailService emailService;
     @Mock
     private ChapterRepository chapterRepository;
 

@@ -1,5 +1,6 @@
 package org.elearning.backend.classroom;
 
+import org.elearning.backend.auth.service.EmailService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +21,8 @@ class ClassroomSchemaTest {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
-
+    @MockitoBean
+    private EmailService emailService;
     @MockitoBean
     JavaMailSender javaMailSender;
 
