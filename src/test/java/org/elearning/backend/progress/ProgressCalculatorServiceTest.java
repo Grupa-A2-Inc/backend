@@ -3,6 +3,7 @@ package org.elearning.backend.progress;
 import org.elearning.backend.assessment.model.*;
 import org.elearning.backend.content.model.*;
 import org.elearning.backend.enrollment.model.*;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.enrollment.dto.ProgressDto;
 import org.elearning.backend.enrollment.service.ProgressCalculatorService;
 import org.elearning.backend.content.repository.*;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,12 +23,13 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Transactional
 class ProgressCalculatorServiceTest {
 
     @Autowired private ProgressCalculatorService progressCalculatorService;
+    @MockitoBean private EmailService emailService;
     @Autowired private CourseRepository courseRepository;
     @Autowired private ChapterRepository chapterRepository;
     @Autowired private LessonRepository lessonRepository;
