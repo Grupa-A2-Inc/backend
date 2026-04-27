@@ -700,6 +700,73 @@ class AccessServiceTest {
         assertFalse(result);
     }
 
+    @Test
+    void canManageClassroom_shouldReturnTrue_forAdmin() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ADMIN);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        boolean result = accessService.canManageClassroom(authentication, classroomId);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void canManageClassroom_shouldReturnTrue_forOrganizationAdminFromSameOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(orgId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        boolean result = accessService.canManageClassroom(authentication, classroomId);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void canManageClassroom_shouldReturnFalse_forOrganizationAdminFromAnotherOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID classroomOrgId = UUID.randomUUID();
+        UUID otherOrgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, classroomOrgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(otherOrgId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        boolean result = accessService.canManageClassroom(authentication, classroomId);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void canManageClassroom_shouldReturnFalse_forTeacher() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.TEACHER);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        boolean result = accessService.canManageClassroom(authentication, classroomId);
+
+        assertFalse(result);
+    }
+
     private Classroom buildClassroom(UUID classroomId, UUID orgId) {
         Organization organization = new Organization();
         organization.setId(orgId);

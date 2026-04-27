@@ -542,18 +542,26 @@ public class AccessService {
     public boolean canManageClassroom(Authentication authentication, UUID classroomId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null
-                || currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN
-                || currentUser.getOrganizationId() == null) {
+        if (currentUser == null) {
             return false;
         }
 
         Classroom classroom = classroomRepository.findById(classroomId).orElse(null);
+        if (classroom == null || classroom.getOrganization() == null) {
+            return false;
+        }
 
-        return classroom != null
-                && classroom.getOrganization() != null
-                && currentUser.getOrganizationId().equals(classroom.getOrganization().getId());
-    }
+        if (currentUser.getRoleName() == RoleName.ADMIN) {
+            return true;
+        }
+
+        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
+            return currentUser.getOrganizationId() != null
+                    && currentUser.getOrganizationId().equals(classroom.getOrganization().getId());
+        }
+
+        return false;
+     }
 
     public boolean canListClassroomMembers(Authentication authentication, UUID classroomId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);

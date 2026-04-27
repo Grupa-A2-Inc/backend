@@ -96,7 +96,7 @@ class PasswordResetServiceTest {
         assertThat(savedToken.getTokenHash()).isEqualTo(hashToken(rawToken));
         assertThat(savedToken.getUsedAt()).isNull();
         assertThat(savedToken.getCreatedAt()).isBetween(beforeCall, afterCall);
-        assertThat(savedToken.getExpiresAt()).isBetween(beforeCall.plusMinutes(5), afterCall.plusMinutes(5));
+        assertThat(savedToken.getExpiresAt()).isBetween(beforeCall.plusMinutes(10), afterCall.plusMinutes(10));
     }
 
     @Test
@@ -136,7 +136,7 @@ class PasswordResetServiceTest {
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setTokenHash(hashToken("raw-token"));
         resetToken.setUsedAt(LocalDateTime.now());
-        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(10));
 
         when(passwordResetTokenRepository.findByTokenHash(hashToken("raw-token"))).thenReturn(Optional.of(resetToken));
 
@@ -178,7 +178,7 @@ class PasswordResetServiceTest {
         resetToken.setUser(user);
         resetToken.setTokenHash(hashToken("raw-token"));
         resetToken.setUsedAt(null);
-        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(10));
 
         when(passwordResetTokenRepository.findByTokenHash(hashToken("raw-token"))).thenReturn(Optional.of(resetToken));
         when(passwordEncoder.encode("new-password")).thenReturn("encoded-password");

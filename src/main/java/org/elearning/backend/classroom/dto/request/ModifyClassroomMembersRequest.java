@@ -14,9 +14,9 @@ import java.util.UUID;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class ModifyClassroomStudentsRequest {
+public class ModifyClassroomMembersRequest {
 
-    @NotEmpty(message = "Student ids are required")
-    private Set<@NotNull UUID> studentIds;
+    @NotEmpty(message = "Member ids are required")
+    private Set<@NotNull UUID> memberIds;
 
 }
