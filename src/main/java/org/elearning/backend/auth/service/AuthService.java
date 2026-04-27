@@ -39,7 +39,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
     private static final DateTimeFormatter LOCK_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
-    private static final int LOCK_OUT_TIME_IN_MINUTES = 5;
+    private static final int LOCK_OUT_TIME_IN_MINUTES = 10;
     private static final int NUMBER_OF_MAXIMUM_FAILED_ATTEMPTS = 5;
 
     @Transactional

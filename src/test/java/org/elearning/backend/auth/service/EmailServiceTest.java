@@ -40,7 +40,7 @@ class EmailServiceTest {
                 Use this reset token to change your password:
                    raw-reset-token
 
-                This token expires in 5 minutes.""");
+                This token expires in 10 minutes.""");
     }
 
     @Test

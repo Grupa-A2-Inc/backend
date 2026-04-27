@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
-import org.elearning.backend.classroom.dto.request.ModifyClassroomStudentsRequest;
+import org.elearning.backend.classroom.dto.request.ModifyClassroomMembersRequest;
 import org.elearning.backend.classroom.dto.response.ClassroomMemberResponse;
 import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
@@ -177,12 +177,12 @@ public class ClassroomsController {
     }
 
     @Operation(
-            summary = "Add students to classroom",
-            description = "Adds the provided students to the specified classroom."
+            summary = "Add members to classroom",
+            description = "Adds the provided members to the specified classroom."
     )
     @ApiResponse(
             responseCode = "200",
-            description = "Students added successfully",
+            description = "Members added successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomResponse.class)
@@ -190,27 +190,27 @@ public class ClassroomsController {
     )
     @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
     @ApiResponse(responseCode = "403", description = "User is not allowed to manage this classroom", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom or student not found", content = @Content)
-    @PostMapping("/{classroomId}/students")
+    @ApiResponse(responseCode = "404", description = "Classroom or member not found", content = @Content)
+    @PostMapping("/{classroomId}/members")
     @PreAuthorize("@accessService.canManageClassroom(authentication, #classroomId)")
-    public ResponseEntity<ClassroomResponse> addClassroomStudents(
+    public ResponseEntity<ClassroomResponse> addClassroomMembers(
             @P("classroomId") @PathVariable UUID classroomId,
-            @Valid @RequestBody ModifyClassroomStudentsRequest request,
+            @Valid @RequestBody ModifyClassroomMembersRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
         ClassroomResponse response =
-                classroomService.addClassroomStudents(classroomId, request, currentUser.getUserId());
+                classroomService.addClassroomMembers(classroomId, request, currentUser.getUserId());
 
         return ResponseEntity.ok(response);
     }
 
     @Operation(
-            summary = "Remove students from classroom",
-            description = "Removes the provided students from the specified classroom."
+            summary = "Remove members from classroom",
+            description = "Removes the provided members from the specified classroom."
     )
     @ApiResponse(
             responseCode = "200",
-            description = "Students removed successfully",
+            description = "Members removed successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomResponse.class)
@@ -218,16 +218,16 @@ public class ClassroomsController {
     )
     @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
     @ApiResponse(responseCode = "403", description = "User is not allowed to manage this classroom", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom or student not found", content = @Content)
-    @DeleteMapping("/{classroomId}/students")
+    @ApiResponse(responseCode = "404", description = "Classroom or member not found", content = @Content)
+    @DeleteMapping("/{classroomId}/members")
     @PreAuthorize("@accessService.canManageClassroom(authentication, #classroomId)")
-    public ResponseEntity<ClassroomResponse> deleteClassroomStudents(
+    public ResponseEntity<ClassroomResponse> deleteClassroomMembers(
             @P("classroomId") @PathVariable UUID classroomId,
-            @Valid @RequestBody ModifyClassroomStudentsRequest request,
+            @Valid @RequestBody ModifyClassroomMembersRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
         ClassroomResponse response =
-                classroomService.deleteClassroomStudents(classroomId, request, currentUser.getUserId());
+                classroomService.deleteClassroomMembers(classroomId, request, currentUser.getUserId());
 
         return ResponseEntity.ok(response);
     }
