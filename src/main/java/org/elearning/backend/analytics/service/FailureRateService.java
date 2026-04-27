@@ -157,14 +157,15 @@ public class FailureRateService {
         List<UUID> lessonIds = lessonRepository.findAllLessonIdsByCourseId(courseId);
         List<TestFailureRateChartDTO> chartList = new ArrayList<>();
         for (UUID lessonId : lessonIds) {
-            Test test = testRepository.findByLessonId(lessonId)
-                    .orElseThrow(() -> new DoesNotExistException("No test found for lesson with id " + lessonId));
-
-            List<Object[]> pointResults = analyticsAlertRepository.getDailyFailureRatesForTest(test.getId());
-            List<FailureRateChartPointDTO> points = pointResults.stream()
-                    .map(row -> new FailureRateChartPointDTO(((java.sql.Date) row[0]).toLocalDate(), ((Number) row[1]).doubleValue()))
-                    .toList();
-            chartList.add(new TestFailureRateChartDTO(points));
+            Optional<Test> testOptional = testRepository.findByLessonId(lessonId);
+            if (testOptional.isPresent()) {
+                Test test = testOptional.get();
+                List<Object[]> pointResults = analyticsAlertRepository.getDailyFailureRatesForTest(test.getId());
+                List<FailureRateChartPointDTO> points = pointResults.stream()
+                        .map(row -> new FailureRateChartPointDTO(((java.sql.Date) row[0]).toLocalDate(), ((Number) row[1]).doubleValue()))
+                        .toList();
+                chartList.add(new TestFailureRateChartDTO(points));
+            }
         }
 
         return chartList;
