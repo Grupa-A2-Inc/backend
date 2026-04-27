@@ -5,11 +5,16 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
+import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
+import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
+import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserResponse;
+import org.elearning.backend.user.service.UserImportService;
 import org.elearning.backend.user.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +30,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1/users")
 public class UserController {
     private final UserService userService;
+    private final UserImportService userImportService;
 
     @Operation(
             summary = "Create a new user",
@@ -55,9 +61,44 @@ public class UserController {
     )
     @PreAuthorize("@accessService.canCreateUser(authentication, #request)")
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(@P("request")@RequestBody CreateUserRequest request) {
+    public ResponseEntity<UserResponse> createUser(@P("request") @Valid @RequestBody CreateUserRequest request) {
         UserResponse response = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(
+            summary = "Bulk import users",
+            description = "Creates multiple users in a single request. Uses partial success — " +
+                    "each user is processed independently and the response contains a full report."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Import processed — check 'results' for individual outcomes",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = BulkImportResponse.class)
+            )
+    )
+    @ApiResponse(
+            responseCode = "400",
+            description = "Request body invalid",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "403",
+            description = "Access denied",
+            content = @Content
+    )
+    @PreAuthorize("@accessService.canImportUsers(authentication, #request)")
+    @PostMapping("/import")
+    public ResponseEntity<BulkImportResponse> importUsers(@Valid @RequestBody CreateUserBulkRequest request) {
+        BulkImportResponse response = userImportService.importUsers(request);
+        return ResponseEntity.ok(response);
     }
 
     @Operation(
@@ -82,10 +123,75 @@ public class UserController {
             description = "Access denied",
             content = @Content
     )
-    @PreAuthorize("hasAnyRole('ADMIN', 'ORGANIZATION_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    @Operation(
+            summary = "Get users",
+            description = "Returns the list of users that are part of the administrator's organization"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Users retrieved successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    array = @ArraySchema(schema = @Schema(implementation = UserResponse.class))
+            )
+    )
+    @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "403",
+            description = "Access denied",
+            content = @Content
+    )
+    @PreAuthorize("hasRole('ORGANIZATION_ADMIN')")
+    @GetMapping("/organization")
+    public ResponseEntity<List<UserResponse>> getOrganizationUsers() {
+        return ResponseEntity.ok(userService.getCurrentOrganizationUsers());
+    }
+
+    @Operation(
+            summary = "Update user status",
+            description = "Updates the user's status identified by the given UUID"
+    )
+    @ApiResponse(
+            responseCode = "204",
+            description = "User updated successfully",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "400",
+            description = "Bad request",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "403",
+            description = "Access denied",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "404",
+            description = "User not found",
+            content = @Content
+    )
+    @PreAuthorize("@accessService.canUpdateUserStatus(authentication, #id)")
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateUserStatus(@P("id") @PathVariable UUID id,
+                                                 @Valid @RequestBody UpdateUserStatusRequest request) {
+        userService.updateUserStatus(id, request);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     @Operation(

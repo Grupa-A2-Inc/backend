@@ -3,6 +3,7 @@ package org.elearning.backend.assessment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.assessment.dto.test_dto.SubmitAnswerDto;
 import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -34,7 +36,8 @@ class AttemptControllerSprint3Test {
 
     @Autowired
     private MockMvc mockMvc;
-
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -70,19 +73,20 @@ class AttemptControllerSprint3Test {
                 jdbcTemplate.update("DELETE FROM users WHERE id = ?", studentId);
     }
 
-        private void insertStudent(UUID userId) {
-                jdbcTemplate.update(
-                                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                                                "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
-                                userId,
-                                "student-" + userId + "@test.com",
-                                "password-hash",
-                                "Test",
-                                "Student",
-                                RoleName.STUDENT.name(),
-                                "ACTIVE"
-                );
-        }
+    private void insertStudent(UUID userId) {
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
+                userId,
+                "student-" + userId + "@test.com",
+                "password-hash",
+                "Test",
+                "Student",
+                RoleName.STUDENT.name(),
+                "STUDENT",
+                "ACTIVE"
+        );
+    }
 
         private MockHttpServletRequestBuilder authorized(MockHttpServletRequestBuilder requestBuilder) {
                 return requestBuilder.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);

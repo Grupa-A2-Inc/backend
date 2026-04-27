@@ -275,6 +275,30 @@ class AuthServiceTest {
     }
 
     @Test
+    void login_blockedUser_throwsClearExceptionBeforeAuthentication() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("blocked@test.com");
+        request.setPassword("parola123");
+
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setEmail("blocked@test.com");
+        user.setPasswordHash("hashed_parola");
+        user.setRole(new Role(RoleName.ORGANIZATION_ADMIN));
+        user.setStatus(UserStatus.BLOCKED);
+
+        when(userRepository.findByEmail("blocked@test.com")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Account is BLOCKED. Login is not allowed.");
+
+        verify(authenticationManager, never()).authenticate(any());
+        verify(jwtUtil, never()).generateAccessToken(any(), any());
+        verify(refreshTokenService, never()).storeRefreshToken(any(), any());
+    }
+
+    @Test
     void login_wrongPassword_throwsException() {
         LoginRequest request = new LoginRequest();
         request.setEmail("test@test.com");

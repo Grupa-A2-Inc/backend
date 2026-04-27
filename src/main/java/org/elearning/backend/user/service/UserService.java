@@ -1,20 +1,29 @@
 package org.elearning.backend.user.service;
 
 import lombok.AllArgsConstructor;
+import org.elearning.backend.auth.service.ActivationTokenService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
+import org.elearning.backend.parent.entity.Parent;
 import org.elearning.backend.role.entity.Role;
+import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
+import org.elearning.backend.security.auth.CustomUserDetails;
+import org.elearning.backend.student.entity.Student;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
+import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.exception.*;
 import org.elearning.backend.user.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,8 +35,13 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
+    private final ActivationTokenService activationTokenService;
+    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+
     private static final String USER_NO_EXIST = "User does not exist: ";
 
+    @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already exists: " + request.getEmail());
@@ -36,21 +50,25 @@ public class UserService {
         Role role = roleRepository.findByName(request.getRoleName())
                 .orElseThrow(() -> new UserRoleNotFoundException("Role does not exist: " + request.getRoleName()));
 
-        User user = new User();
+        User user = createUserEntityForRole(request.getRoleName());
         user.setEmail(request.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setPasswordHash(null);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setRole(role);
+        user.setStatus(UserStatus.PENDING);
 
         if (request.getOrganizationId() != null) {
             Organization org = organizationRepository.findById(request.getOrganizationId())
                     .orElseThrow(() -> new UserOrganizationNotFoundException("Organization not found: " + request.getOrganizationId()));
             user.setOrganization(org);
         }
-        user.setStatus(UserStatus.ACTIVE);
 
         User saved = userRepository.save(user);
+
+        String rawToken = activationTokenService.generateActivationToken(saved);
+        emailService.sendActivationEmail(saved.getEmail(), saved.getFirstName(), rawToken);
+
         return toResponse(saved);
     }
 
@@ -62,6 +80,27 @@ public class UserService {
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public List<UserResponse> getCurrentOrganizationUsers() {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        UUID currentUserId = userDetails.getUserId();
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + currentUserId));
+
+        Organization organization = currentUser.getOrganization();
+        if (organization == null) {
+            throw new UserOrganizationNotFoundException("Organization not found.");
+        }
+
+        UUID organizationId = organization.getId();
+
+        return userRepository.findByOrganizationId(organizationId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -84,6 +123,16 @@ public class UserService {
 
         User saved = userRepository.save(user);
         return toResponse(saved);
+    }
+
+    public void updateUserStatus(UUID userId, UpdateUserStatusRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + userId));
+
+        user.setStatus(request.getStatus());
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
     }
 
     public void deleteUser(UUID id) {
@@ -110,6 +159,13 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public List<UserResponse> getUsersByOrganizationId(UUID organizationId) {
+        return userRepository.findByOrganizationId(organizationId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private UserResponse toResponse(User user) {
         return new UserResponse(
                 user.getId(),
@@ -122,12 +178,11 @@ public class UserService {
         );
     }
 
-    public List<UserResponse> getUsersByOrganizationId(UUID organizationId) {
-        return userRepository.findByOrganizationId(organizationId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    private User createUserEntityForRole(RoleName roleName) {
+        return switch (roleName) {
+            case PARENT -> new Parent();
+            case STUDENT -> new Student();
+            default -> new User();
+        };
     }
-
-    private final PasswordEncoder passwordEncoder;
 }

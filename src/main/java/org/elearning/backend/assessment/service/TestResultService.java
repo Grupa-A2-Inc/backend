@@ -51,6 +51,13 @@ public class TestResultService {
         return attemptReportMapper.toAttemptReportDTO(resultDTO, questionResults);
     }
 
+    /**
+     * Constructs per-question report entries for the specified test attempt.
+     *
+     * @param attemptId the UUID of the test attempt
+     * @return a list of QuestionForAttemptReportDTO objects, each containing the question id, question type,
+     *         question content, the option ids selected in the attempt, and the correct option ids for that question
+     */
     private List<QuestionForAttemptReportDTO> buildQuestionResults(UUID attemptId) {
         List<AttemptAnswer> answers = answerRepository.findByAttemptId(attemptId);
 
@@ -74,9 +81,16 @@ public class TestResultService {
                             .correctOptionIds(correctOptionIds)
                             .build();
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
+    /**
+     * Retrieve attempt status summaries for a student on a specific test.
+     *
+     * @param testId    the identifier of the test
+     * @param studentId the identifier of the student
+     * @return a list of AttemptStatusDTO for the student's attempts on the test, ordered by attempt start time descending
+     */
     @Transactional
     public List<AttemptStatusDTO> getTestAttempts(UUID testId, UUID studentId) {
         List<TestResult> results = testResultRepository.findByStudentIdAndTestIdOrderByAttemptStartedAtDesc(studentId, testId);

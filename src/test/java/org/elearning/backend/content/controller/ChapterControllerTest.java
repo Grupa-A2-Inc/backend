@@ -1,5 +1,7 @@
 package org.elearning.backend.content.controller;
 
+import org.elearning.backend.auth.service.AccountActivationService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -13,6 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +34,10 @@ class ChapterControllerTest {
 
     @Autowired
     private JwtUtil jwtUtil;
+    @MockitoBean
+    private EmailService emailService;
+    @MockitoBean
+    private AccountActivationService accountActivationService;
 
     private UUID courseId;
     private UUID authenticatedUserId;
@@ -59,14 +66,15 @@ class ChapterControllerTest {
     private UUID insertAuthenticatedUser() {
         UUID userId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
                 userId,
-                "chapter-controller-" + userId + "@test.com",
+                "lesson-resource-controller-" + userId + "@test.com",
                 "password-hash",
                 "Test",
                 "User",
                 RoleName.TEACHER.name(),
+                "User",
                 "ACTIVE"
         );
         return userId;
@@ -141,7 +149,7 @@ class ChapterControllerTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -175,7 +183,7 @@ class ChapterControllerTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     /**

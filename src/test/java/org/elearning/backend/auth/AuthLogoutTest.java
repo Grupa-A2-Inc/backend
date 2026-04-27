@@ -5,7 +5,7 @@ import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.service.AuthService;
 import org.elearning.backend.auth.service.PasswordResetService;
 import org.elearning.backend.auth.service.RefreshTokenService;
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.TokenBlackListService;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
@@ -15,16 +15,19 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.elearning.backend.auth.service.AccountActivationService;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import(AuthExceptionHandler.class)
+@ActiveProfiles("test")
 class AuthLogoutTest {
 
     @Autowired
@@ -40,13 +43,16 @@ class AuthLogoutTest {
     private RefreshTokenService refreshTokenService;
 
     @MockitoBean
-    private TokenBlacklistService tokenBlacklistService;
+    private TokenBlackListService tokenBlacklistService;
 
     @MockitoBean
     private JwtUtil jwtUtil;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private AccountActivationService accountActivationService;
 
     @Test
     void logout_returns204NoContent() throws Exception {

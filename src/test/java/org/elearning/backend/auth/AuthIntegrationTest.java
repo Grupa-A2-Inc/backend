@@ -9,10 +9,7 @@ import org.elearning.backend.auth.dto.response.UserDataResponse;
 import org.elearning.backend.auth.exception.AuthConflictException;
 import org.elearning.backend.auth.exception.AuthExceptionHandler;
 import org.elearning.backend.auth.exception.InvalidCredentialsException;
-import org.elearning.backend.auth.service.AuthService;
-import org.elearning.backend.auth.service.PasswordResetService;
-import org.elearning.backend.auth.service.RefreshTokenService;
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.*;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtAuthenticationFilter;
 import org.elearning.backend.security.jwt.JwtUtil;
@@ -25,6 +22,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
@@ -41,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import(AuthExceptionHandler.class)
+@ActiveProfiles("test")
 class AuthIntegrationTest {
 
     @Autowired
@@ -59,10 +58,13 @@ class AuthIntegrationTest {
     private RefreshTokenService refreshTokenService;
 
     @MockitoBean
-    private TokenBlacklistService tokenBlacklistService;
+    private TokenBlackListService tokenBlacklistService;
 
     @MockitoBean
     private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private AccountActivationService accountActivationService;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;

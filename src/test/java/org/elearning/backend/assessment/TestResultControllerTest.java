@@ -5,6 +5,7 @@ import org.elearning.backend.assessment.dto.attempt_dto.AttemptReportDTO;
 import org.elearning.backend.assessment.dto.attempt_dto.AttemptStatusDTO;
 import org.elearning.backend.assessment.model.AttemptStatus;
 import org.elearning.backend.assessment.service.TestResultService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.security.access.AccessService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,8 @@ class TestResultControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
+    @MockitoBean
+    private EmailService emailService;
     @MockitoBean
     private TestResultService testResultService;
 

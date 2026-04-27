@@ -13,6 +13,7 @@ import org.elearning.backend.assessment.repository.QuestionOptionRepository;
 import org.elearning.backend.assessment.repository.QuestionRepository;
 import org.elearning.backend.assessment.repository.TestRepository;
 import org.elearning.backend.content.repository.LessonRepository;
+import org.elearning.backend.role.entity.RoleName;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class TestService {
 
     private static final String LESSON_DOES_NOT_EXIST = "Lesson does not exist";
     private static final String TEST_DOES_NOT_EXIST = "Test does not exist";
+    private static final String TEST_MUST_BE_DRAFT = "Test must be a draft for this operation";
 
 
 
@@ -107,10 +109,25 @@ public class TestService {
 
 
 
+    /**
+     * Updates modifiable fields of a draft test and returns the updated test DTO.
+     *
+     * Only non-null fields in {@code editableContent} are applied; updates are permitted only when the test is in draft status.
+     *
+     * @param editableContent DTO containing fields to update (null fields are ignored)
+     * @param testId          identifier of the test to update
+     * @return                the updated test mapped to a {@code TestEntityDto}
+     * @throws DoesNotExistException      if no test exists with the given {@code testId}
+     * @throws TestMustBeDraftException   if the test exists but its status is not draft
+     */
     @Transactional
     public TestEntityDto updateTest(TestEditDto editableContent, UUID testId){
         Test test = testRepository.findById(testId)
                 .orElseThrow(() -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
+
+        if(!test.getStatus().equals(TestStatus.DRAFT)){
+            throw new TestMustBeDraftException(TEST_MUST_BE_DRAFT);
+        }
 
         if(editableContent.getTitle() != null)
             test.setTitle(editableContent.getTitle());
@@ -124,33 +141,23 @@ public class TestService {
         return testMapper.toEntityDto(testRepository.save(test));
     }
 
+    /**
+     * Deletes the test with the given id only if it is in draft status.
+     *
+     * @param testId the UUID of the test to delete
+     * @throws TestNotPublishedException if no test exists with the provided id
+     * @throws TestMustBeDraftException if the test exists but its status is not DRAFT
+     */
     @Transactional
     public void deleteTest(UUID testId){
-        if(!testRepository.existsById(testId)){
-            throw new DoesNotExistException(TEST_DOES_NOT_EXIST);
+        Test test = testRepository.findById(testId)
+                        .orElseThrow(() -> new TestNotPublishedException(TEST_DOES_NOT_EXIST));
+
+        if(!test.getStatus().equals(TestStatus.DRAFT)){
+            throw new TestMustBeDraftException(TEST_MUST_BE_DRAFT);
         }
 
         testRepository.deleteTest(testId);
-
-    }
-
-    /**
-     * Returns a list of questions with all the options
-     * @param testId - the id of the test we want the questions from
-     * @return - a list of questions with data the student can see
-     */
-
-    private List<QuestionDataForUsersDto> studentGetListOfQuestions(UUID testId){
-
-        List<QuestionDataForUsersDto> questionsWithCorrectOptions = questionRepository.findByTestIdWithOptions(testId).stream()
-                .map(QuestionDataForUsersDto::new)
-                .toList();
-
-        questionsWithCorrectOptions
-                .forEach(instance -> instance.setOptions(questionOptionMapper
-                        .toDataForUsersDto(questionOptionRepository.findByQuestionId(instance.getId()))));
-
-        return questionsWithCorrectOptions;
 
     }
 
@@ -178,37 +185,28 @@ public class TestService {
     }
 
     /**
-     * Returns a list containing all the data the questions of a given test have. Teachers have access to the list
-     * of correct answers as well, IF they are the author of the test. Students have access to the list of question
-     * data, minus the correct options ONLY IF they are enrolled to the course related to the question
-     * @param testId - the given testId for the wanted test
-     * @param userId - the userId of the person calling the method
-     * @return Question data that changes depending on the user who calls it, if they have access to it.
-     */
+         * Retrieve question data for a test, with correct answers included when the caller is a teacher.
+         *
+         * @param testId   the identifier of the test whose questions are requested
+         * @param roleName the role of the caller used to determine the level of information returned
+         * @return a list of QuestionDataForUsersDto representing the test questions; for callers with teacher role the returned items include correct answers
+         * @throws DoesNotExistException if no test exists with the given id
+         * @throws UserHasNoPermissionException if the caller's role is not permitted to view the questions
+         */
 
-    public List<QuestionDataForUsersDto> getListOfQuestions(UUID testId, UUID userId){
-        boolean isTeacher = true;
+    public List<QuestionDataForUsersDto> getListOfQuestions(UUID testId, RoleName roleName){
 
         if(!testRepository.existsById(testId)){
             throw new DoesNotExistException(TEST_DOES_NOT_EXIST);
         }
 
-        /* It's true by default, the scrum masters will write the logic to verify if the user calling is a teacher
-          or a student
-        */
-
-        if(isTeacher){
-
-            /*
-            Might be modified by the scrum masters if they don't think this is a good way to handle it
-             */
-
-            if(!testRepository.existsByIdAndCreatedBy(testId,userId)){
-                throw new UserHasNoPermissionException("Only the test's author can access this field");
-            }
+        if(roleName.equals(RoleName.TEACHER)){
             return professorGetListOfQuestions(testId);
         }
-        return studentGetListOfQuestions(testId);
+        else{
+            throw new UserHasNoPermissionException("User must be the teacher of the course to view this");
+        }
+
     }
 
 

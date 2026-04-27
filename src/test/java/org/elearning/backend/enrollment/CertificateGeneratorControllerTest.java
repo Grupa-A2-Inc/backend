@@ -1,6 +1,6 @@
 package org.elearning.backend.enrollment;
 
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.TokenBlackListService;
 import org.elearning.backend.enrollment.controller.CertificateGeneratorController;
 import org.elearning.backend.enrollment.exception.*;
 import org.elearning.backend.enrollment.service.CertificateGeneratorService;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -26,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(CertificateGeneratorController.class)
+@ActiveProfiles("test")
 class CertificateGeneratorControllerTest {
 
     @Autowired
@@ -41,7 +43,7 @@ class CertificateGeneratorControllerTest {
     private CustomUserDetailsService customUserDetailsService;
 
     @MockitoBean
-    private TokenBlacklistService tokenBlacklistService;
+    private TokenBlackListService tokenBlacklistService;
 
     private UUID enrollmentId;
     private UUID studentId;

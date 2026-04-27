@@ -40,6 +40,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private static final DateTimeFormatter LOCK_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
     private static final int LOCK_OUT_TIME_IN_MINUTES = 5;
+    private static final int NUMBER_OF_MAXIMUM_FAILED_ATTEMPTS = 5;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -109,6 +110,8 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
 
+        validateUserCanLogin(user);
+
         handleExistingLock(user);
 
         try {
@@ -177,9 +180,9 @@ public class AuthService {
         failedAttempts++;
         user.setFailedLoginAttempts(failedAttempts);
 
-        if (failedAttempts >= 5) {
+        if (failedAttempts >= NUMBER_OF_MAXIMUM_FAILED_ATTEMPTS) {
             //pragul e de 5 failed attempts
-            user.setLockedUntil(LocalDateTime.now().plusMinutes(5));
+            user.setLockedUntil(LocalDateTime.now().plusMinutes(LOCK_OUT_TIME_IN_MINUTES));
         }
 
         user.setUpdatedAt(LocalDateTime.now());
@@ -191,5 +194,13 @@ public class AuthService {
             throw new AuthLockedAccount("Too many login attempts. Please try again after " +
                     lockedFormat);
         }
+    }
+
+    private void validateUserCanLogin(User user) {
+        if (user.getStatus() == UserStatus.ACTIVE) {
+            return;
+        }
+
+        throw new InvalidCredentialsException("Account is " + user.getStatus() + ". Login is not allowed.");
     }
 }

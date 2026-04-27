@@ -2,9 +2,11 @@ package org.elearning.backend.security.access;
 
 import org.elearning.backend.assessment.model.Question;
 import org.elearning.backend.assessment.model.TestAttempt;
+import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.assessment.repository.QuestionRepository;
 import org.elearning.backend.assessment.repository.TestAttemptRepository;
 import org.elearning.backend.assessment.repository.TestRepository;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.Lesson;
@@ -13,11 +15,17 @@ import org.elearning.backend.content.repository.ChapterRepository;
 import org.elearning.backend.content.repository.CourseRepository;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.content.repository.LessonResourceRepository;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
+import org.elearning.backend.parent.entity.Parent;
+import org.elearning.backend.parent.repository.ParentRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
+import org.elearning.backend.student.entity.Student;
+import org.elearning.backend.student.repository.StudentRepository;
+import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
@@ -28,6 +36,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -44,6 +53,8 @@ class AccessServiceCoverageTest {
     @Mock
     private OrganizationRepository organizationRepository;
 
+    @MockitoBean
+    private EmailService emailService;
     @Mock
     private ChapterRepository chapterRepository;
 
@@ -55,6 +66,18 @@ class AccessServiceCoverageTest {
 
     @Mock
     private CourseRepository courseRepository;
+
+    @Mock
+    private CourseEnrollmentRepository courseEnrollmentRepository;
+
+    @Mock
+    private ParentRepository parentRepository;
+
+    @Mock
+    private StudentRepository studentRepository;
+
+    @Mock
+    private ClassroomMembershipRepository classroomMembershipRepository;
 
     @Mock
     private TestRepository testRepository;
@@ -77,6 +100,195 @@ class AccessServiceCoverageTest {
         assertThat(accessService.canChangePassword(authenticationFor(admin), UUID.randomUUID())).isTrue();
         assertThat(accessService.canChangePassword(authenticationFor(student), student.getId())).isTrue();
         assertThat(accessService.canChangePassword(authenticationFor(student), UUID.randomUUID())).isFalse();
+    }
+
+    @Test
+    void userStatusPermissions_coverMissingAdminAndOrganizationPaths() {
+        UUID organizationId = UUID.randomUUID();
+        UUID targetUserId = UUID.randomUUID();
+        User admin = user(RoleName.ADMIN, UUID.randomUUID());
+        User orgAdmin = user(RoleName.ORGANIZATION_ADMIN, organizationId);
+        User targetUser = user(RoleName.STUDENT, organizationId);
+        User targetWithoutOrganization = user(RoleName.STUDENT, null);
+        UUID targetWithoutOrganizationId = UUID.randomUUID();
+        UUID missingTargetUserId = UUID.randomUUID();
+        targetUser.setId(targetUserId);
+        targetWithoutOrganization.setId(targetWithoutOrganizationId);
+
+        when(userRepository.findById(targetUserId)).thenReturn(Optional.of(targetUser));
+        when(userRepository.findById(targetWithoutOrganizationId)).thenReturn(Optional.of(targetWithoutOrganization));
+        when(userRepository.findById(missingTargetUserId)).thenReturn(Optional.empty());
+
+        assertThat(accessService.canUpdateUserStatus(null, targetUserId)).isFalse();
+        assertThat(accessService.canUpdateUserStatus(authenticationFor(admin), targetUserId)).isTrue();
+        assertThat(accessService.canUpdateUserStatus(authenticationFor(orgAdmin), targetUserId)).isTrue();
+        assertThat(accessService.canUpdateUserStatus(authenticationFor(user(RoleName.STUDENT, organizationId)), targetUserId)).isFalse();
+        assertThat(accessService.canUpdateUserStatus(authenticationFor(user(RoleName.ORGANIZATION_ADMIN, null)), targetUserId)).isFalse();
+        assertThat(accessService.canUpdateUserStatus(authenticationFor(orgAdmin), targetWithoutOrganizationId)).isFalse();
+        assertThat(accessService.canUpdateUserStatus(authenticationFor(orgAdmin), missingTargetUserId)).isFalse();
+    }
+
+    @Test
+    void createUserPermission_allowsOrganizationAdminOnlyInsideOwnOrganization() {
+        UUID organizationId = UUID.randomUUID();
+        UUID otherOrganizationId = UUID.randomUUID();
+        CreateUserRequest sameOrganizationRequest = CreateUserRequest.builder()
+                .email("student@example.com")
+                .firstName("Student")
+                .lastName("One")
+                .roleName(RoleName.STUDENT)
+                .organizationId(organizationId)
+                .build();
+        CreateUserRequest otherOrganizationRequest = CreateUserRequest.builder()
+                .email("student2@example.com")
+                .firstName("Student")
+                .lastName("Two")
+                .roleName(RoleName.STUDENT)
+                .organizationId(otherOrganizationId)
+                .build();
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+
+        assertThat(accessService.canCreateUser(orgAdmin, sameOrganizationRequest)).isTrue();
+        assertThat(accessService.canCreateUser(orgAdmin, otherOrganizationRequest)).isFalse();
+    }
+
+    @Test
+    void parentPermissions_coverAdminOrgAdminAndParentAccess() {
+        UUID organizationId = UUID.randomUUID();
+        UUID otherOrganizationId = UUID.randomUUID();
+        UUID parentId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        Parent parent = parent(parentId, organizationId);
+        Student student = student(studentId, organizationId);
+        Parent otherOrganizationParent = parent(UUID.randomUUID(), otherOrganizationId);
+
+        when(userRepository.findById(parentId)).thenReturn(Optional.of(parent));
+        when(parentRepository.findById(parentId)).thenReturn(Optional.of(parent));
+        when(parentRepository.findById(otherOrganizationParent.getId())).thenReturn(Optional.of(otherOrganizationParent));
+        when(studentRepository.findById(studentId)).thenReturn(Optional.of(student));
+
+        Authentication admin = authenticationFor(user(RoleName.ADMIN, UUID.randomUUID()));
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+        Authentication otherOrgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, otherOrganizationId));
+        Authentication parentAuthentication = authenticationFor(parent);
+        Authentication otherParent = authenticationFor(user(RoleName.PARENT, organizationId));
+
+        assertThat(accessService.canViewAllParents(admin)).isTrue();
+        assertThat(accessService.canViewAllParents(orgAdmin)).isFalse();
+        assertThat(accessService.canViewParent(admin, parentId)).isTrue();
+        assertThat(accessService.canViewParent(orgAdmin, parentId)).isTrue();
+        assertThat(accessService.canViewParent(otherOrgAdmin, parentId)).isFalse();
+        assertThat(accessService.canManageParentStudent(orgAdmin, parentId, studentId)).isTrue();
+        assertThat(accessService.canManageParentStudent(otherOrgAdmin, parentId, studentId)).isFalse();
+        assertThat(accessService.canViewParentStudents(parentAuthentication, parentId)).isTrue();
+        assertThat(accessService.canViewParentStudents(otherParent, parentId)).isFalse();
+        assertThat(accessService.canViewParentStudents(orgAdmin, otherOrganizationParent.getId())).isFalse();
+    }
+
+    @Test
+    void parentStudentManagement_rejectsMissingAndCrossOrganizationUsers() {
+        UUID organizationId = UUID.randomUUID();
+        UUID parentId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        UUID otherStudentId = UUID.randomUUID();
+        Parent parent = parent(parentId, organizationId);
+        Student otherOrganizationStudent = student(otherStudentId, UUID.randomUUID());
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+
+        when(parentRepository.findById(parentId)).thenReturn(Optional.of(parent));
+        when(studentRepository.findById(studentId)).thenReturn(Optional.empty());
+        when(studentRepository.findById(otherStudentId)).thenReturn(Optional.of(otherOrganizationStudent));
+
+        assertThat(accessService.canManageParentStudent(null, parentId, studentId)).isFalse();
+        assertThat(accessService.canManageParentStudent(orgAdmin, parentId, studentId)).isFalse();
+        assertThat(accessService.canManageParentStudent(orgAdmin, parentId, otherStudentId)).isFalse();
+        assertThat(accessService.canManageParentStudent(authenticationFor(user(RoleName.PARENT, organizationId)), parentId, otherStudentId)).isFalse();
+    }
+
+    @Test
+    void parentPermissions_coverAdminMissingOrganizationAndMissingTargetBranches() {
+        UUID organizationId = UUID.randomUUID();
+        UUID targetWithoutOrganizationId = UUID.randomUUID();
+        UUID missingParentId = UUID.randomUUID();
+        UUID parentWithoutOrganizationId = UUID.randomUUID();
+        UUID studentWithoutOrganizationId = UUID.randomUUID();
+        UUID validStudentId = UUID.randomUUID();
+        Parent targetWithoutOrganization = parent(targetWithoutOrganizationId, null);
+        Parent parentWithoutOrganization = parent(parentWithoutOrganizationId, null);
+        Student studentWithoutOrganization = student(studentWithoutOrganizationId, null);
+        Student validStudent = student(validStudentId, organizationId);
+
+        when(userRepository.findById(targetWithoutOrganizationId)).thenReturn(Optional.of(targetWithoutOrganization));
+        when(userRepository.findById(missingParentId)).thenReturn(Optional.empty());
+        when(parentRepository.findById(parentWithoutOrganizationId)).thenReturn(Optional.of(parentWithoutOrganization));
+        when(studentRepository.findById(validStudentId)).thenReturn(Optional.of(validStudent));
+        when(studentRepository.findById(studentWithoutOrganizationId)).thenReturn(Optional.of(studentWithoutOrganization));
+
+        Authentication admin = authenticationFor(user(RoleName.ADMIN, UUID.randomUUID()));
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+        Authentication orgAdminWithoutOrganization = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, null));
+
+        assertThat(accessService.canViewAllParents(null)).isFalse();
+        assertThat(accessService.canViewParent(null, missingParentId)).isFalse();
+        assertThat(accessService.canViewParent(orgAdminWithoutOrganization, missingParentId)).isFalse();
+        assertThat(accessService.canViewParent(orgAdmin, missingParentId)).isFalse();
+        assertThat(accessService.canViewParent(orgAdmin, targetWithoutOrganizationId)).isFalse();
+        assertThat(accessService.canManageParentStudent(admin, missingParentId, validStudentId)).isTrue();
+        assertThat(accessService.canManageParentStudent(orgAdminWithoutOrganization, parentWithoutOrganizationId, validStudentId)).isFalse();
+        assertThat(accessService.canManageParentStudent(orgAdmin, parentWithoutOrganizationId, validStudentId)).isFalse();
+        assertThat(accessService.canManageParentStudent(orgAdmin, parentWithoutOrganizationId, studentWithoutOrganizationId)).isFalse();
+    }
+
+    @Test
+    void parentStudentViewPermissions_coverAdminMissingAndUnsupportedRoleBranches() {
+        UUID organizationId = UUID.randomUUID();
+        UUID parentId = UUID.randomUUID();
+        UUID missingParentId = UUID.randomUUID();
+        Parent parent = parent(parentId, organizationId);
+
+        when(parentRepository.findById(parentId)).thenReturn(Optional.of(parent));
+        when(parentRepository.findById(missingParentId)).thenReturn(Optional.empty());
+
+        Authentication admin = authenticationFor(user(RoleName.ADMIN, UUID.randomUUID()));
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+        Authentication orgAdminWithoutOrganization = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, null));
+        Authentication parentAuthentication = authenticationFor(parent);
+        Authentication teacher = authenticationFor(user(RoleName.TEACHER, organizationId));
+        Parent parentWithoutOrganization = parent(UUID.randomUUID(), null);
+        Authentication parentWithoutOrganizationAuthentication = authenticationFor(parentWithoutOrganization);
+
+        when(parentRepository.findById(parentWithoutOrganization.getId())).thenReturn(Optional.of(parentWithoutOrganization));
+
+        assertThat(accessService.canViewParentStudents(null, parentId)).isFalse();
+        assertThat(accessService.canViewParentStudents(admin, missingParentId)).isTrue();
+        assertThat(accessService.canViewParentStudents(orgAdmin, parentId)).isTrue();
+        assertThat(accessService.canViewParentStudents(orgAdminWithoutOrganization, parentId)).isFalse();
+        assertThat(accessService.canViewParentStudents(orgAdmin, missingParentId)).isFalse();
+        assertThat(accessService.canViewParentStudents(parentAuthentication, missingParentId)).isFalse();
+        assertThat(accessService.canViewParentStudents(parentWithoutOrganizationAuthentication, parentWithoutOrganization.getId())).isFalse();
+        assertThat(accessService.canViewParentStudents(teacher, parentId)).isFalse();
+    }
+
+    @Test
+    void parentViewPermission_rejectsNonOrganizationAdminUsers() {
+        UUID parentId = UUID.randomUUID();
+
+        assertThat(accessService.canViewParent(authenticationFor(user(RoleName.TEACHER, UUID.randomUUID())), parentId)).isFalse();
+    }
+
+    @Test
+    void parentStudentManagement_rejectsParentWhenStudentOrganizationIsNull() {
+        UUID organizationId = UUID.randomUUID();
+        UUID parentId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        Parent parent = parent(parentId, organizationId);
+        Student studentWithoutOrganization = student(studentId, null);
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+
+        when(parentRepository.findById(parentId)).thenReturn(Optional.of(parent));
+        when(studentRepository.findById(studentId)).thenReturn(Optional.of(studentWithoutOrganization));
+
+        assertThat(accessService.canManageParentStudent(orgAdmin, parentId, studentId)).isFalse();
     }
 
     @Test
@@ -135,14 +347,19 @@ class AccessServiceCoverageTest {
 
         when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
         when(lessonRepository.findById(missingLessonId)).thenReturn(Optional.empty());
+        when(chapterRepository.findById(lesson.getChapter().getId())).thenReturn(Optional.of(lesson.getChapter()));
 
-        Authentication student = authenticationFor(user(RoleName.STUDENT, UUID.randomUUID()));
+        User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+        Authentication student = authenticationFor(studentUser);
         User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
         Authentication teacher = authenticationFor(teacherUser);
         stubManagedCourse(courseId, teacherUser.getId());
+        stubEnrolledStudent(courseId, studentUser.getId());
 
         assertThat(accessService.canViewLessonResources(student, lessonId)).isTrue();
         assertThat(accessService.canViewLessonResources(student, missingLessonId)).isFalse();
+        assertThat(accessService.canViewChapterLessons(student, lesson.getChapter().getId())).isFalse();
+        assertThat(accessService.canViewChapterLessons(teacher, lesson.getChapter().getId())).isTrue();
         assertThat(accessService.canCreateLessonResource(teacher, lessonId)).isTrue();
         assertThat(accessService.canCreateLessonResource(teacher, missingLessonId)).isFalse();
         assertThat(accessService.canViewLessonTest(student, lessonId)).isTrue();
@@ -179,8 +396,10 @@ class AccessServiceCoverageTest {
         Authentication admin = authenticationFor(user(RoleName.ADMIN, UUID.randomUUID()));
         User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
         Authentication teacher = authenticationFor(teacherUser);
-        Authentication student = authenticationFor(user(RoleName.STUDENT, UUID.randomUUID()));
+        User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+        Authentication student = authenticationFor(studentUser);
         stubManagedCourse(courseId, teacherUser.getId());
+        stubEnrolledStudent(courseId, studentUser.getId());
 
         assertThat(accessService.canCreateCourse(null)).isFalse();
         assertThat(accessService.canCreateCourse(admin)).isTrue();
@@ -220,8 +439,10 @@ class AccessServiceCoverageTest {
 
         User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
         Authentication teacher = authenticationFor(teacherUser);
-        Authentication student = authenticationFor(user(RoleName.STUDENT, UUID.randomUUID()));
+        User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+        Authentication student = authenticationFor(studentUser);
         stubManagedCourse(courseId, teacherUser.getId());
+        stubEnrolledStudent(courseId, studentUser.getId());
 
         assertThat(accessService.canViewTest(teacher, missingTestId)).isFalse();
         assertThat(accessService.canDeleteTest(teacher, orphanedTestId)).isFalse();
@@ -362,7 +583,8 @@ class AccessServiceCoverageTest {
 
         org.elearning.backend.assessment.model.Test orphanedTest = test(orphanedTestId, missingLessonId);
         org.elearning.backend.assessment.model.Test validTest = test(validTestId, validLessonId);
-        Lesson validLesson = lesson(validLessonId, UUID.randomUUID());
+        UUID courseId = UUID.randomUUID();
+        Lesson validLesson = lesson(validLessonId, courseId);
 
         when(testRepository.findById(missingTestId)).thenReturn(Optional.empty());
         when(testRepository.findById(orphanedTestId)).thenReturn(Optional.of(orphanedTest));
@@ -370,8 +592,11 @@ class AccessServiceCoverageTest {
         when(lessonRepository.findById(missingLessonId)).thenReturn(Optional.empty());
         when(lessonRepository.findById(validLessonId)).thenReturn(Optional.of(validLesson));
 
-        Authentication student = authenticationFor(user(RoleName.STUDENT, UUID.randomUUID()));
+        User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+        Authentication student = authenticationFor(studentUser);
         Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+        stubAccessibleCourse(courseId);
+        stubEnrolledStudent(courseId, studentUser.getId());
 
         assertThat(accessService.canViewMyBestTestResult(null, validTestId)).isFalse();
         assertThat(accessService.canViewMyBestTestResult(teacher, validTestId)).isFalse();
@@ -379,6 +604,116 @@ class AccessServiceCoverageTest {
         assertThat(accessService.canViewMyBestTestResult(student, orphanedTestId)).isFalse();
         assertThat(accessService.canViewMyBestTestResult(student, validTestId)).isTrue();
         assertThat(accessService.canViewMyTestAttempts(student, validTestId)).isTrue();
+    }
+
+    @Test
+    void markViewedPermission_requiresAuthenticationAndEnrolledStudent() {
+        UUID lessonId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+        User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+        User teacherUser = user(RoleName.TEACHER, UUID.randomUUID());
+        Lesson lesson = lesson(lessonId, courseId);
+
+        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
+        stubAccessibleCourse(courseId);
+        stubEnrolledStudent(courseId, studentUser.getId());
+        stubManagedCourse(courseId, teacherUser.getId());
+
+        assertThat(accessService.canMarkViewedLesson(null, lessonId)).isFalse();
+        assertThat(accessService.canMarkViewedLesson(authenticationFor(studentUser), lessonId)).isTrue();
+    }
+
+    @Test
+    void courseAccessPermissions_coverOrganizationAdminAndUnsupportedRoles() {
+        UUID organizationId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID organizationCourseId = UUID.randomUUID();
+        UUID parentCourseId = UUID.randomUUID();
+        UUID otherOrganizationCourseId = UUID.randomUUID();
+        UUID otherOrganizationId = UUID.randomUUID();
+        UUID otherCreatorId = UUID.randomUUID();
+        User creator = user(RoleName.TEACHER, organizationId);
+        creator.setId(creatorId);
+        User otherCreator = user(RoleName.TEACHER, otherOrganizationId);
+        otherCreator.setId(otherCreatorId);
+        Course organizationCourse = course(organizationCourseId, creatorId);
+        Course parentCourse = course(parentCourseId, creatorId);
+        Course otherOrganizationCourse = course(otherOrganizationCourseId, otherCreatorId);
+
+        when(courseRepository.findById(organizationCourseId)).thenReturn(Optional.of(organizationCourse));
+        when(courseRepository.findById(parentCourseId)).thenReturn(Optional.of(parentCourse));
+        when(courseRepository.findById(otherOrganizationCourseId)).thenReturn(Optional.of(otherOrganizationCourse));
+        when(userRepository.findById(creatorId)).thenReturn(Optional.of(creator));
+        when(userRepository.findById(otherCreatorId)).thenReturn(Optional.of(otherCreator));
+
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+        Authentication parentAuthentication = authenticationFor(user(RoleName.PARENT, organizationId));
+
+        assertThat(accessService.canViewCourseChapters(null, organizationCourseId)).isFalse();
+        assertThat(accessService.canViewCourseChapters(orgAdmin, organizationCourseId)).isTrue();
+        assertThat(accessService.canViewCourseChapters(orgAdmin, otherOrganizationCourseId)).isFalse();
+        assertThat(accessService.canCreateChapter(orgAdmin, organizationCourseId)).isTrue();
+        assertThat(accessService.canViewCourseChapters(parentAuthentication, parentCourseId)).isFalse();
+        assertThat(accessService.canViewCourseChapters(authenticationFor(user(RoleName.STUDENT, organizationId)), parentCourseId)).isFalse();
+    }
+
+    @Test
+    void courseAccessPermissions_restrictStudentsAndTeachersToTheirCourses() {
+        UUID courseId = UUID.randomUUID();
+        User creator = user(RoleName.TEACHER, UUID.randomUUID());
+        creator.setId(UUID.randomUUID());
+        Course course = course(courseId, creator.getId());
+        User enrolledStudent = user(RoleName.STUDENT, UUID.randomUUID());
+        User otherStudent = user(RoleName.STUDENT, UUID.randomUUID());
+        User owningTeacher = user(RoleName.TEACHER, UUID.randomUUID());
+        owningTeacher.setId(creator.getId());
+        User otherTeacher = user(RoleName.TEACHER, UUID.randomUUID());
+
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(enrolledStudent.getId(), courseId)).thenReturn(true);
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(otherStudent.getId(), courseId)).thenReturn(false);
+
+        assertThat(accessService.canViewCourseFullView(authenticationFor(enrolledStudent), courseId)).isTrue();
+        assertThat(accessService.canViewCourseFullView(authenticationFor(otherStudent), courseId)).isFalse();
+        assertThat(accessService.canViewCourseFullView(authenticationFor(owningTeacher), courseId)).isTrue();
+        assertThat(accessService.canViewCourseFullView(authenticationFor(otherTeacher), courseId)).isFalse();
+        assertThat(accessService.canViewCourseFullView(authenticationFor(user(RoleName.PARENT, UUID.randomUUID())), courseId)).isFalse();
+    }
+
+    @Test
+    void courseManagementPermissions_coverOrganizationCourseCreatorFailures() {
+        UUID organizationId = UUID.randomUUID();
+        UUID nullCreatorCourseId = UUID.randomUUID();
+        UUID missingCreatorCourseId = UUID.randomUUID();
+        UUID creatorWithoutOrganizationCourseId = UUID.randomUUID();
+        UUID nullOrganizationAdminCourseId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID creatorWithoutOrganizationId = UUID.randomUUID();
+
+        Course nullCreatorCourse = course(nullCreatorCourseId, null);
+        Course missingCreatorCourse = course(missingCreatorCourseId, creatorId);
+        Course creatorWithoutOrganizationCourse = course(creatorWithoutOrganizationCourseId, creatorWithoutOrganizationId);
+        Course nullOrganizationAdminCourse = course(nullOrganizationAdminCourseId, creatorId);
+        User creatorWithoutOrganization = user(RoleName.TEACHER, null);
+        creatorWithoutOrganization.setId(creatorWithoutOrganizationId);
+
+        when(courseRepository.findById(nullCreatorCourseId)).thenReturn(Optional.of(nullCreatorCourse));
+        when(courseRepository.findById(missingCreatorCourseId)).thenReturn(Optional.of(missingCreatorCourse));
+        when(courseRepository.findById(creatorWithoutOrganizationCourseId)).thenReturn(Optional.of(creatorWithoutOrganizationCourse));
+        when(courseRepository.findById(nullOrganizationAdminCourseId)).thenReturn(Optional.of(nullOrganizationAdminCourse));
+        when(userRepository.findById(creatorId)).thenReturn(Optional.empty());
+        when(userRepository.findById(creatorWithoutOrganizationId)).thenReturn(Optional.of(creatorWithoutOrganization));
+
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+        Authentication orgAdminWithoutOrganization = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, null));
+        Authentication otherTeacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+
+        assertThat(accessService.canCreateChapter(orgAdmin, nullCreatorCourseId)).isFalse();
+        assertThat(accessService.canCreateChapter(orgAdmin, missingCreatorCourseId)).isFalse();
+        assertThat(accessService.canCreateChapter(orgAdmin, creatorWithoutOrganizationCourseId)).isFalse();
+        assertThat(accessService.canCreateChapter(orgAdminWithoutOrganization, nullOrganizationAdminCourseId)).isFalse();
+        assertThat(accessService.canCreateChapter(otherTeacher, nullOrganizationAdminCourseId)).isFalse();
+        assertThat(accessService.canCreateChapter(authenticationFor(user(RoleName.PARENT, organizationId)), nullOrganizationAdminCourseId)).isFalse();
     }
 
     private Authentication authenticationFor(User user) {
@@ -401,6 +736,40 @@ class AccessServiceCoverageTest {
         }
 
         return user;
+    }
+
+    private Parent parent(UUID parentId, UUID organizationId) {
+        Parent parent = new Parent();
+        parent.setId(parentId);
+        parent.setEmail("parent-" + parentId + "@example.com");
+        parent.setPasswordHash("hashed");
+        parent.setRole(new Role(RoleName.PARENT));
+        parent.setStatus(UserStatus.ACTIVE);
+
+        if (organizationId != null) {
+            Organization organization = new Organization();
+            organization.setId(organizationId);
+            parent.setOrganization(organization);
+        }
+
+        return parent;
+    }
+
+    private Student student(UUID studentId, UUID organizationId) {
+        Student student = new Student();
+        student.setId(studentId);
+        student.setEmail("student-" + studentId + "@example.com");
+        student.setPasswordHash("hashed");
+        student.setRole(new Role(RoleName.STUDENT));
+        student.setStatus(UserStatus.ACTIVE);
+
+        if (organizationId != null) {
+            Organization organization = new Organization();
+            organization.setId(organizationId);
+            student.setOrganization(organization);
+        }
+
+        return student;
     }
 
     private Chapter chapter(UUID chapterId, UUID courseId) {
@@ -437,7 +806,15 @@ class AccessServiceCoverageTest {
     }
 
     private void stubManagedCourse(UUID courseId, UUID teacherId) {
-        when(courseRepository.getReferenceById(courseId)).thenReturn(course(courseId, teacherId));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId, teacherId)));
+    }
+
+    private void stubAccessibleCourse(UUID courseId) {
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId, UUID.randomUUID())));
+    }
+
+    private void stubEnrolledStudent(UUID courseId, UUID studentId) {
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)).thenReturn(true);
     }
 
     private Course course(UUID courseId, UUID teacherId) {

@@ -5,6 +5,7 @@ import org.elearning.backend.assessment.dto.question_dto.QuestionRequestDto;
 import org.elearning.backend.assessment.dto.question_dto.QuestionResponseDto;
 import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.assessment.service.QuestionService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.security.access.AccessService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,8 @@ class QuestionControllerTest {
 
     @MockitoBean
     private QuestionService questionService;
-
+    @MockitoBean
+    private EmailService emailService;
     @MockitoBean
     private AccessService accessService;
 

@@ -28,13 +28,30 @@ public class QuestionController {
 
     private final QuestionService questionService;
 
+    private static final String CREATED = "201";
+    private static final String OK = "200";
+    private static final String NO_CONTENT = "204";
+
+    private static final String BAD_REQUEST = "400";
+    private static final String FORBIDDEN = "403";
+    private static final String NOT_FOUND = "404";
+
+    /**
+     * Create a question (Single, Multi, or True/False) for the specified test.
+     *
+     * The test must be in DRAFT state and the caller must have ownership; access is enforced by security checks.
+     *
+     * @param testId     the UUID of the test to add the question to
+     * @param requestDto the question payload containing type, text, options, and metadata
+     * @return           the created QuestionResponseDto representing the new question
+     */
     @Operation(summary = "Add a question to a test.",
             description = "Creates a question (Single, Multi, T/F) for a test in DRAFT state.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Question created successfully."),
-            @ApiResponse(responseCode = "400", description = "Error validating options."),
-            @ApiResponse(responseCode = "403", description = "You are not the test owner or the test is not in DRAFT state."),
-            @ApiResponse(responseCode = "404", description = "Test was not found.")
+            @ApiResponse(responseCode = CREATED, description = "Question created successfully."),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Error validating options."),
+            @ApiResponse(responseCode = FORBIDDEN, description = "You are not the test owner or the test is not in DRAFT state."),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Test was not found.")
     })
     @PostMapping
     @PreAuthorize("@accessService.canCreateTestQuestion(authentication,#id)")
@@ -48,11 +65,18 @@ public class QuestionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdQuestion);
     }
 
+    /**
+     * Retrieve the details of a question by its identifiers.
+     *
+     * @param testId     the UUID of the parent test
+     * @param questionId the numeric identifier of the question within the test
+     * @return the question details as a {@code QuestionResponseDto}
+     */
     @Operation(summary = "Get a specific question", description = "Retrieves the details of a specific question by its ID.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved the question"),
-            @ApiResponse(responseCode = "400", description = "Validation error (the question does not belong to the specified test)"),
-            @ApiResponse(responseCode = "404", description = "Question not found")
+            @ApiResponse(responseCode = OK, description = "Successfully retrieved the question"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Validation error (the question does not belong to the specified test)"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Question not found")
     })
     @GetMapping("/{questionId}")
     @PreAuthorize("@accessService.canViewTestQuestion(authentication,#id1,#id2)")
@@ -63,13 +87,23 @@ public class QuestionController {
         return ResponseEntity.ok(questionService.getQuestionById(testId, questionId));
     }
 
+    /**
+     * Retrieves questions for the specified test, optionally filtered by type and difficulty and ordered by the provided sort parameters.
+     *
+     * @param testId       the UUID of the test whose questions are requested
+     * @param questionType optional filter to include only questions of this type
+     * @param difficulty   optional filter to include only questions with this difficulty value
+     * @param sortBy       field name to sort by (defaults to "displayOrder")
+     * @param sortDir      sort direction, either "asc" or "desc" (defaults to "asc")
+     * @return             a list of QuestionResponseDto objects matching the filters and sort order (may be empty)
+     */
     @Operation(
             summary = "Get filtered and sorted questions for a test",
             description = "Retrieves a list of questions associated with a specific test. Supports optional filtering by question type and difficulty, and dynamic sorting."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved the list of questions (returns an empty list if no questions match the filters)"),
-            @ApiResponse(responseCode = "400", description = "Invalid request parameters (e.g., wrong sorting direction or invalid enum value for question type)")
+            @ApiResponse(responseCode = OK, description = "Successfully retrieved the list of questions (returns an empty list if no questions match the filters)"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request parameters (e.g., wrong sorting direction or invalid enum value for question type)")
     })
     @GetMapping
     @PreAuthorize("@accessService.canViewTestQuestions(authentication,#id)")
@@ -85,12 +119,22 @@ public class QuestionController {
         );
     }
 
+    /**
+     * Replace an existing question and its options for the specified test.
+     *
+     * The test must be in DRAFT state and must be owned by the authenticated professor.
+     *
+     * @param testId      the UUID of the test containing the question
+     * @param questionId  the identifier of the question to update
+     * @param requestDto  the full question payload to save (replaces existing question and its options)
+     * @return            the updated question as a {@code QuestionResponseDto}
+     */
     @Operation(summary = "Update an existing question", description = "Fully updates a question and its options. The test must be in DRAFT state and owned by the authenticated professor.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Question updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Validation error (e.g., test is not DRAFT, options are invalid, or ID mismatch)"),
-            @ApiResponse(responseCode = "403", description = "Access denied (you are not the owner of the test)"),
-            @ApiResponse(responseCode = "404", description = "Question or test not found")
+            @ApiResponse(responseCode = OK, description = "Question updated successfully"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Validation error (e.g., test is not DRAFT, options are invalid, or ID mismatch)"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied (you are not the owner of the test)"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Question or test not found")
     })
     @PutMapping("/{questionId}")
     @PreAuthorize("@accessService.canEditTestQuestion(authentication,#id1,#id2)")
@@ -105,12 +149,21 @@ public class QuestionController {
         return ResponseEntity.ok(updatedQuestion);
     }
 
+    /**
+     * Deletes the specified question and its associated options.
+     *
+     * The test must be in DRAFT state and the authenticated professor must own the test.
+     *
+     * @param testId     UUID of the test that contains the question
+     * @param questionId Identifier of the question to delete
+     * @param user       authenticated principal used to determine the acting professor
+     */
     @Operation(summary = "Delete a question", description = "Deletes a question and its associated options. The test must be in DRAFT state and owned by the authenticated professor.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Question successfully deleted"),
-            @ApiResponse(responseCode = "400", description = "Validation error (e.g., test is not DRAFT or ID mismatch)"),
-            @ApiResponse(responseCode = "403", description = "Access denied (you are not the owner of the test)"),
-            @ApiResponse(responseCode = "404", description = "Question or test not found")
+            @ApiResponse(responseCode = NO_CONTENT, description = "Question successfully deleted"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Validation error (e.g., test is not DRAFT or ID mismatch)"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied (you are not the owner of the test)"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Question or test not found")
     })
     @DeleteMapping("/{questionId}")
     @PreAuthorize("@accessService.canDeleteTestQuestion(authentication,#id1,#id2)")

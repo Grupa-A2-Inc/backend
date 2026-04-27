@@ -1,5 +1,6 @@
 package org.elearning.backend.assessment;
 
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,7 +34,8 @@ class TestsControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private JwtUtil jwtUtil;
 
@@ -73,6 +76,9 @@ class TestsControllerTest {
     @AfterEach
     void tearDown() {
         restTemplate.getRestTemplate().setInterceptors(List.of());
+        jdbcTemplate.execute("DELETE FROM course_enrollments");
+        jdbcTemplate.execute("DELETE FROM question_options");
+        jdbcTemplate.execute("DELETE FROM questions");
         jdbcTemplate.execute("DELETE FROM lesson_resources");
         jdbcTemplate.execute("DELETE FROM lessons");
         jdbcTemplate.execute("DELETE FROM chapters");
@@ -83,14 +89,15 @@ class TestsControllerTest {
     private UUID insertAuthenticatedUser() {
         UUID userId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
                 userId,
                 "lesson-resource-controller-" + userId + "@test.com",
                 "password-hash",
                 "Test",
                 "User",
                 RoleName.TEACHER.name(),
+                "User",
                 "ACTIVE"
         );
         return userId;
@@ -246,6 +253,20 @@ class TestsControllerTest {
     }
 
     @Test
+    void shouldReturnConflictWhenDeletingPublicTest(){
+        UUID testId = insertTest("PublicTestBad", "Testing tests", 600, false, "PUBLISHED");
+
+        ResponseEntity<Void> response = restTemplate.exchange(
+                REQUEST_MAPPING + TESTS + testId,
+                HttpMethod.DELETE,
+                new HttpEntity<>(jsonHeaders()),
+                Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
     void shouldReturnForbiddenWhenDeletingMissingTestIsRejectedByPreAuth(){
         ResponseEntity<Void> response = restTemplate.exchange(
                 REQUEST_MAPPING + TESTS + UUID.randomUUID(),
@@ -332,6 +353,29 @@ class TestsControllerTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void shouldReturnConflictWhenUpdatingPublicTest(){
+        UUID testId = insertTest("PublicTest", "Testing tests", 600, false, "PUBLISHED");
+
+        String body = """
+            {
+                "title": "Updated Title",
+                "description": "Updated description",
+                "timeLimitSec": 300,
+                "aiEnabled": true
+            }
+            """;
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                REQUEST_MAPPING + TESTS + testId,
+                HttpMethod.PATCH,
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     }
 
     @Test
@@ -479,6 +523,39 @@ class TestsControllerTest {
                 LocalDateTime.class, testId
         );
         assertThat(updatedAt).isNotNull();
+    }
+
+    @Test
+    void shouldGetQuestionsForAuthorTeacherIncludingCorrectAnswers(){
+        UUID testId = insertTest("Test1", "desc", 600, false, "DRAFT");
+        insertQuestion(testId);
+
+        jdbcTemplate.update(
+                "INSERT INTO question_options (question_id, text, is_correct) " +
+                        "SELECT id, 'Correct option', true FROM questions WHERE test_id = ?",
+                testId
+        );
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + TESTS + testId + "/questions",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("correctAnswers");
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenTestHasNoQuestions(){
+        UUID testId = insertTest("TestEmpty", "no questions", 300, false, "DRAFT");
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + TESTS + testId + "/questions",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("[]");
     }
 
     @ParameterizedTest

@@ -1,17 +1,8 @@
 JWT_SECRET: your-secret-here-at-least-32-bites
 
 spring:
-#  autoconfigure:
-#    exclude:
-#      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration
-#      - org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration
-#      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
-#      - org.springframework.boot.actuate.autoconfigure.security.reactive.ReactiveManagementWebSecurityAutoConfiguration
   datasource:
-    url: jdbc:postgresql://localhost:5432/adaptive_tutor
+    url: jdbc:postgresql://localhost:5432/adaptive_tutor_test
     username: user
     password: password
   jpa:
@@ -19,6 +10,17 @@ spring:
       ddl-auto: none
   flyway:
     enabled: true
+  mail:
+    host: localhost
+    port: 25
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 
 logging:
   file:
@@ -29,3 +31,11 @@ logging:
 app:
   mail:
     from: test@example.com
+
+ai:
+  api:
+    base-url: "http://localhost:8080"
+    key: "test-key"
+    timeout-generate-ms: 10000
+    timeout-feedback-ms: 5000
+    timeout-adaptive-ms: 10000

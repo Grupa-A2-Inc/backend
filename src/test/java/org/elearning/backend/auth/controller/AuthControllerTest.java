@@ -1,15 +1,9 @@
 package org.elearning.backend.auth.controller;
 
-import org.elearning.backend.auth.dto.request.LoginRequest;
-import org.elearning.backend.auth.dto.request.RegisterRequest;
-import org.elearning.backend.auth.dto.request.ForgotPasswordRequest;
-import org.elearning.backend.auth.dto.request.ResetPasswordRequest;
+import org.elearning.backend.auth.dto.request.*;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.response.ResetPasswordResponse;
-import org.elearning.backend.auth.service.AuthService;
-import org.elearning.backend.auth.service.PasswordResetService;
-import org.elearning.backend.auth.service.RefreshTokenService;
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.*;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +36,10 @@ class AuthControllerTest {
     private AuthController authController;
 
     @Mock
-    private TokenBlacklistService tokenBlacklistService;
+    private TokenBlackListService tokenBlacklistService;
+
+    @Mock
+    private AccountActivationService accountActivationService;
 
     @Test
     void login_setsSecureRefreshCookieAndClearsTokenFromBody() {
@@ -102,6 +99,13 @@ class AuthControllerTest {
     }
 
     @Test
+    void logout_ignoresNonBearerAuthorizationHeader() {
+        ResponseEntity<Void> response = authController.logout(null, "Basic credentials");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+    }
+
+    @Test
     void forgotPassword_delegatesToResetService() {
         ForgotPasswordRequest request = new ForgotPasswordRequest();
         request.setEmail("user@example.com");
@@ -127,5 +131,21 @@ class AuthControllerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody().getMessage()).isEqualTo("changed");
+    }
+
+    @Test
+    void setPassword_delegatesToAccountActivationService() {
+        SetPasswordRequest request = new SetPasswordRequest();
+        request.setToken("activation-token");
+        request.setPassword("newPassword123");
+        request.setConfirmPassword("newPassword123");
+
+        when(accountActivationService.setPassword(request))
+                .thenReturn(new ResetPasswordResponse("Account activated successfully."));
+
+        ResponseEntity<ResetPasswordResponse> response = authController.setPassword(request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody().getMessage()).isEqualTo("Account activated successfully.");
     }
 }

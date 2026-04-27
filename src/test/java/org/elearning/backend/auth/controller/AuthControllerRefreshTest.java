@@ -4,7 +4,7 @@ import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.auth.service.AuthService;
 import org.elearning.backend.auth.service.PasswordResetService;
 import org.elearning.backend.auth.service.RefreshTokenService;
-import org.elearning.backend.auth.service.TokenBlacklistService;
+import org.elearning.backend.auth.service.TokenBlackListService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
@@ -32,7 +32,7 @@ class AuthControllerRefreshTest {
     @Mock private AuthService authService;
     @Mock private PasswordResetService resetService;
     @Mock private RefreshTokenService refreshTokenService;
-    @Mock private TokenBlacklistService tokenBlacklistService;
+    @Mock private TokenBlackListService tokenBlacklistService;
     @Mock private JwtUtil jwtUtil;
 
     @InjectMocks

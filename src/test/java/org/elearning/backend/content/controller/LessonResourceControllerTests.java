@@ -1,6 +1,8 @@
 package org.elearning.backend.content.controller;
 
 
+import org.elearning.backend.auth.service.AccountActivationService;
+import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -16,6 +18,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
 import java.util.List;
 import java.util.stream.Stream;
 import java.util.UUID;
@@ -24,16 +28,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+
 class LessonResourceControllerTests {
 
     @Autowired
     private TestRestTemplate restTemplate;
 
+    @MockitoBean
+    private EmailService emailService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private AccountActivationService accountActivationService;
 
     private UUID lessonId;
     private UUID chapterId;
@@ -78,14 +88,15 @@ class LessonResourceControllerTests {
     private UUID insertAuthenticatedUser() {
         UUID userId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, status) " +
-                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), CAST(? AS user_status))",
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = CAST(? AS role_name)), ?, CAST(? AS user_status))",
                 userId,
                 "lesson-resource-controller-" + userId + "@test.com",
                 "password-hash",
                 "Test",
                 "User",
                 RoleName.TEACHER.name(),
+                "User",
                 "ACTIVE"
         );
         return userId;

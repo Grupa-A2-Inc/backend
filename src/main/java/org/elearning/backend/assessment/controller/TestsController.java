@@ -55,11 +55,18 @@ public class TestsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(testService.createNewTest(lessonId, modifiableTestData, userId));
     }
 
+    /**
+     * Delete the test identified by the given UUID.
+     *
+     * @param testId the UUID of the test to delete
+     * @return a ResponseEntity with HTTP 204 No Content when deletion succeeds
+     */
     @Operation( summary = "Delete a test",
             description = "Deletes the test with a given ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = NO_CONTENT, description = "Test successfully deleted"),
-            @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test")
+            @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test"),
+            @ApiResponse(responseCode = CONFLICT, description = "Test is not a draft"),
     })
     @DeleteMapping("/tests/{testId}")
     @PreAuthorize("@accessService.canDeleteTest(authentication,#id)")
@@ -79,6 +86,12 @@ public class TestsController {
         return ResponseEntity.ok(testService.getTestFromLesson(lessonId));
     }
 
+    /**
+     * Retrieves details for the specified test.
+     *
+     * @param testId the UUID of the test to retrieve
+     * @return the test details as a TestEntityDto
+     */
     @Operation(summary = "Get test details",
             description = "Returns the details of a given test given via test id")
     @ApiResponse(responseCode = OK, description = "Test details successfully returned")
@@ -89,11 +102,23 @@ public class TestsController {
         return ResponseEntity.ok(testService.getTestDetails(testId));
     }
 
+    /**
+     * Update title, description, time duration, and AI usage flag of a draft test.
+     *
+     * Applies the provided editable fields to the test identified by testId. The operation
+     * is permitted only when the test is currently in draft state.
+     *
+     * @param testId               the UUID of the test to update
+     * @param editableTestContent  DTO containing updatable fields (title, description, time duration, AI usage toggle)
+     * @return                      the updated test entity DTO
+     */
     @Operation( summary = "Update test data",
-            description = "Updates the title, description, time duration and toggles the Ai usage of a given test via its ID")
+            description = "Updates the title, description, time duration and toggles the Ai usage of a given test" +
+                    " via its ID, as long as it's a draft")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Test successfully updated"),
-            @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test")
+            @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test"),
+            @ApiResponse(responseCode = CONFLICT, description = "Test is not a draft"),
 
     })
     @PatchMapping("/tests/{testId}")
@@ -119,20 +144,27 @@ public class TestsController {
     }
 
 
+    /**
+     * Retrieve questions for the specified test, including correct options when the caller has a teacher role.
+     *
+     * @param testId      the UUID of the test whose questions are requested
+     * @param currentUser the authenticated user; their role determines whether correct options are included
+     * @return            a list of question DTOs for the specified test; each DTO includes correct options if the caller is a teacher
+     */
     @Operation( summary = "Get questions",
             description = "Returns the list of each question associated with a given test. Includes the correct options" +
-                    "if the user is a teacher (WORK IN PROGRESS)")
+                    "if the user is a teacher")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Questions successfully returned"),
             @ApiResponse(responseCode = FORBIDDEN, description = "Access denied"),
             @ApiResponse(responseCode = NOT_FOUND, description = "Inexistent test")
 
     })
+
     @GetMapping("/tests/{testId}/questions")
     @PreAuthorize("@accessService.canViewTestQuestions(authentication,#id)")
     public ResponseEntity<List<QuestionDataForUsersDto>> getQuestions(@P("id") @PathVariable UUID testId,@AuthenticationPrincipal CustomUserDetails currentUser) {
-        UUID userId = currentUser.getUserId();
-        return ResponseEntity.ok(testService.getListOfQuestions(testId, userId));
+        return ResponseEntity.ok(testService.getListOfQuestions(testId, currentUser.getRoleName()));
     }
 
 

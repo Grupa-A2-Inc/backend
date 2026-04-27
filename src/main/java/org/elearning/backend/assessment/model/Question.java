@@ -93,6 +93,10 @@ public class Question {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "source")
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    private QuestionSource source;
+
     /**
      * This is a one-to-many relationship, as a question can have multiple options.
      */

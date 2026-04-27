@@ -12,7 +12,11 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 class BackendApplicationTests {
@@ -38,6 +42,29 @@ class BackendApplicationTests {
                 // Successful context creation is the contract under test.
             }
         });
+    }
+
+    @Test
+    void main_delegatesToApplicationRunner() {
+        String[] args = {"--spring.main.web-application-type=none"};
+        BiFunction<Class<?>, String[], ConfigurableApplicationContext> originalRunner = BackendApplication.applicationRunner;
+        AtomicReference<Class<?>> receivedSource = new AtomicReference<>();
+        AtomicReference<String[]> receivedArgs = new AtomicReference<>();
+
+        try {
+            BackendApplication.applicationRunner = (source, arguments) -> {
+                receivedSource.set(source);
+                receivedArgs.set(arguments);
+                return mock(ConfigurableApplicationContext.class);
+            };
+
+            BackendApplication.main(args);
+        } finally {
+            BackendApplication.applicationRunner = originalRunner;
+        }
+
+        assertThat(receivedSource.get()).isEqualTo(BackendApplication.class);
+        assertThat(receivedArgs.get()).isSameAs(args);
     }
 
     @TestConfiguration
