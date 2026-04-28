@@ -27,7 +27,12 @@ import java.time.LocalDateTime;
 
 
 @RestController
-@Tag(name = "Authentication", description = "Endpoints for authentication and session management")
+@Tag(
+        name = "Authentication",
+        description = "Endpoints for account registration, sign-in, token rotation, logout, account activation, and password recovery. " +
+                "These endpoints are generally role-agnostic because they are used before or during authentication, but the returned access token " +
+                "will later determine whether the caller acts as a platform-wide ADMIN, an organization-scoped ORGANIZATION_ADMIN, or another role."
+)
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
@@ -50,8 +55,11 @@ public class AuthController {
 
     @Operation(
             summary = "Register a new account",
-            description = "Registers a new organization account and returns the authentication response. A refresh token is also sent as an HttpOnly cookie," +
-                    "the refresh token field inside the body will always be null."
+            description = "Creates a new account through the public registration flow and immediately starts an authenticated session for the new user. " +
+                    "The endpoint returns the authentication payload in the response body and also sends a refresh token as an HttpOnly cookie. " +
+                    "For security reasons, the refresh token value is not exposed in the JSON body and the corresponding field in the response payload " +
+                    "will always be null. This endpoint is not meant for privileged staff provisioning; accounts created by ADMIN or ORGANIZATION_ADMIN " +
+                    "through internal management flows should use the user-management endpoints instead."
     )
     @ApiResponse(
             responseCode = "200",
@@ -79,8 +87,10 @@ public class AuthController {
 
     @Operation(
             summary = "Authenticate user",
-            description = "Authenticates a user with email and password, returns the authentication response, and sends a refresh token as an HttpOnly cookie," +
-                    "the refresh token field inside the body will always be null."
+            description = "Authenticates a user with email and password, returns a fresh access token in the response body, and sends a refresh token " +
+                    "as an HttpOnly cookie. The refresh token field inside the JSON response is intentionally cleared and will always be null. " +
+                    "This endpoint is shared by every role in the system, including ADMIN and ORGANIZATION_ADMIN. The distinction between those roles " +
+                    "does not affect login itself; it affects which protected endpoints can be used after authentication succeeds."
     )
     @ApiResponse(
             responseCode = "200",
@@ -110,7 +120,8 @@ public class AuthController {
             summary = "Activate account and set password",
             description = "Consumes an activation token generated when an admin creates a user account, " +
                     "sets the initial password, and marks the account as active. " +
-                    "This endpoint is separate from the forgot-password flow."
+                    "This endpoint is separate from the forgot-password flow. In practice, it is commonly used after an ADMIN or an ORGANIZATION_ADMIN " +
+                    "creates a managed account for someone else and the invited user needs to complete first-time access securely."
     )
     @ApiResponse(responseCode = "200", description = "Account activated and password set successfully",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResetPasswordResponse.class)))
@@ -123,7 +134,9 @@ public class AuthController {
 
     @Operation(
             summary = "Request password reset",
-            description = "Accepts an email address and always returns a generic response message. If the account exists, a reset token is generated and sent by email."
+            description = "Accepts an email address and always returns a generic response message, regardless of whether the address exists in the system. " +
+                    "If a matching account is found, a password reset token is generated and sent by email. This behavior helps avoid user-enumeration leaks. " +
+                    "The endpoint is available to every account type and is independent from ADMIN or ORGANIZATION_ADMIN privileges."
     )
     @ApiResponse(
             responseCode = "200",
@@ -146,7 +159,8 @@ public class AuthController {
 
     @Operation(
             summary = "Reset password",
-            description = "Consumes a password reset token and updates the user's password if the token is valid and not expired."
+            description = "Consumes a password reset token and replaces the user's password if the token is valid, belongs to the intended account, " +
+                    "and has not expired. This endpoint is part of the self-service recovery flow and does not rely on ADMIN or ORGANIZATION_ADMIN privileges."
     )
     @ApiResponse(
             responseCode = "200",
@@ -169,7 +183,10 @@ public class AuthController {
 
     @Operation(
             summary = "Refresh access token",
-            description = "Validates the refresh token from the HttpOnly cookie and issues a new access token and a new refresh token cookie."
+            description = "Validates the refresh token received through the HttpOnly cookie, rotates that refresh token, and issues a new access token. " +
+                    "The caller receives the new access token in the response body and a replacement refresh token cookie in the response headers. " +
+                    "This endpoint keeps existing role identity intact: if the user was authenticated as ADMIN or ORGANIZATION_ADMIN, the new access token " +
+                    "will preserve that role and its authorization scope."
     )
     @ApiResponse(responseCode = "200", description = "New access token issued and refresh token cookie sent",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = RefreshResponse.class)))
@@ -200,7 +217,9 @@ public class AuthController {
     @Operation(
             summary = "Logout user",
             description = "Clears the refresh token cookie by returning the same cookie with an empty value and Max-Age=0." +
-                    "Aditionally adds the current access token to a blacklist until expiration"
+                    " Aditionally adds the current access token to a blacklist until expiration. " +
+                    "This endpoint does not distinguish between ADMIN, ORGANIZATION_ADMIN, or any other authenticated role; " +
+                    "it simply terminates the current session material as safely as possible."
     )
     @ApiResponse(
             responseCode = "204",

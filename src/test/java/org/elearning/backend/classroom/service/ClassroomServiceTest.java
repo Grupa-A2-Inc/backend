@@ -28,6 +28,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -796,6 +799,66 @@ class ClassroomServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getMembershipType()).isEqualTo(MembershipType.TEACHER);
+    }
+
+    @Test
+    void addClassroomMembers_shouldThrow_whenUserHasNoOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student = buildUser(studentId, orgId, RoleName.STUDENT);
+        student.setOrganization(null);
+
+        ModifyClassroomMembersRequest request =
+                new ModifyClassroomMembersRequest(Set.of(studentId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getMemberIds())).thenReturn(List.of(student));
+
+        assertThrows(ClassroomBadRequestException.class,
+                () -> classroomService.addClassroomMembers(classroomId, request, requesterId));
+
+        verify(classroomMembershipRepository, never()).save(any());
+    }
+
+    @Test
+    void handleStudentAddedToClassroom_shouldThrowUnsupportedOperationException() throws Exception {
+        Method method = ClassroomService.class.getDeclaredMethod(
+                "handleStudentAddedToClassroom",
+                Classroom.class,
+                User.class
+        );
+        method.setAccessible(true);
+
+        Classroom classroom = buildClassroom(UUID.randomUUID(), UUID.randomUUID());
+        User student = buildUser(UUID.randomUUID(), classroom.getOrganization().getId(), RoleName.STUDENT);
+
+        InvocationTargetException exception = assertThrows(
+                InvocationTargetException.class,
+                () -> method.invoke(classroomService, classroom, student)
+        );
+
+        assertThat(exception.getCause()).isInstanceOf(UnsupportedOperationException.class);
+        assertThat(exception.getCause().getMessage()).contains(classroom.getId().toString(), student.getId().toString());
+    }
+
+    @Test
+    void resolveMembershipType_shouldThrowForUnsupportedRole() throws Exception {
+        Method method = ClassroomService.class.getDeclaredMethod("resolveMembershipType", User.class);
+        method.setAccessible(true);
+
+        User parent = buildUser(UUID.randomUUID(), UUID.randomUUID(), RoleName.PARENT);
+
+        InvocationTargetException exception = assertThrows(
+                InvocationTargetException.class,
+                () -> method.invoke(classroomService, parent)
+        );
+
+        assertThat(exception.getCause()).isInstanceOf(ClassroomBadRequestException.class);
+        assertThat(exception.getCause().getMessage()).contains(parent.getId().toString());
     }
 
     private Classroom buildClassroom(UUID classroomId, UUID orgId) {

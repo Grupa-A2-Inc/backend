@@ -12,13 +12,16 @@ import org.elearning.backend.classroom.exception.CourseNotEligibleException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.model.CourseVisibility;
 import org.elearning.backend.content.repository.CourseRepository;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.exception.UserNotFoundException;
 import org.elearning.backend.user.repository.UserRepository;
+import org.springframework.aot.generate.AccessControl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -81,8 +84,10 @@ public class ClassroomCourseService {
                     Course course = courseRepository.findById(cc.getCourseId())
                             .orElseThrow(() -> new ClassroomBadRequestException(
                                     "Course not found: " + cc.getCourseId()));
-                    return toCourseDetailsResponse(cc, course);
+                    return new AbstractMap.SimpleEntry<>(cc, course);
                 })
+                .filter(entry -> entry.getValue().getVisibility() == CourseVisibility.PUBLIC)
+                .map(entry -> toCourseDetailsResponse(entry.getKey(), entry.getValue()))
                 .toList();
     }
 

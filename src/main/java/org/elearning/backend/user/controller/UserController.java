@@ -34,7 +34,9 @@ public class UserController {
 
     @Operation(
             summary = "Create a new user",
-            description = "Creates a new user for a specific organization if you are the admin of that specific organization"
+            description = "Creates a new user account within a target organization. The distinction between ADMIN and ORGANIZATION_ADMIN matters here: " +
+                    "a platform ADMIN has broader authority across the system, while an ORGANIZATION_ADMIN may create users only for the organization they administer. " +
+                    "The request is evaluated against the target organization in the payload, so organization-scoped administrators cannot create users for another organization."
     )
     @ApiResponse(
             responseCode = "201",
@@ -69,7 +71,9 @@ public class UserController {
     @Operation(
             summary = "Bulk import users",
             description = "Creates multiple users in a single request. Uses partial success — " +
-                    "each user is processed independently and the response contains a full report."
+                    "each user is processed independently and the response contains a full report. The role distinction is especially important for imports: " +
+                    "a platform ADMIN can work across organizations, while an ORGANIZATION_ADMIN may import only users that belong to the administrator's own organization. " +
+                    "Mixed-organization imports are therefore not valid for organization-scoped administrators."
     )
     @ApiResponse(
             responseCode = "200",
@@ -103,7 +107,8 @@ public class UserController {
 
     @Operation(
             summary = "Get all users",
-            description = "Returns the list of all users visible to administrators"
+            description = "Returns the full platform-wide user list. This endpoint is reserved for the global ADMIN role and is intentionally not available to ORGANIZATION_ADMIN. " +
+                    "If you need an organization-scoped list instead of a cross-platform list, use the dedicated organization user endpoint."
     )
     @ApiResponse(
             responseCode = "200",
@@ -131,7 +136,8 @@ public class UserController {
 
     @Operation(
             summary = "Get users",
-            description = "Returns the list of users that are part of the administrator's organization"
+            description = "Returns the users that belong to the authenticated organization administrator's organization. This endpoint is specifically organization-scoped. " +
+                    "Unlike the global user-list endpoint for ADMIN, this one does not expose users from other organizations and is intended for tenant-level administration only."
     )
     @ApiResponse(
             responseCode = "200",
@@ -159,7 +165,9 @@ public class UserController {
 
     @Operation(
             summary = "Update user status",
-            description = "Updates the user's status identified by the given UUID"
+            description = "Updates the status of the user identified by the given UUID. Access is evaluated against the target account rather than by role name alone. " +
+                    "A platform ADMIN may update statuses broadly, while an ORGANIZATION_ADMIN may update only users from the same organization. " +
+                    "This prevents organization-scoped administrators from changing the lifecycle state of users belonging to another tenant."
     )
     @ApiResponse(
             responseCode = "204",
@@ -196,7 +204,9 @@ public class UserController {
 
     @Operation(
             summary = "Get user by id",
-            description = "Returns a single user identified by its UUID"
+            description = "Returns a single user identified by its UUID. The authorization rule distinguishes between global and organization-scoped administration. " +
+                    "A platform ADMIN can view any user, while an ORGANIZATION_ADMIN can view only users that belong to the same organization. " +
+                    "Some users may also be allowed to view their own record through the same access rule."
     )
     @ApiResponse(
             responseCode = "200",
@@ -229,7 +239,8 @@ public class UserController {
 
     @Operation(
             summary = "Update user",
-            description = "Updates the user identified by the given UUID"
+            description = "Updates the user identified by the given UUID. This endpoint follows the same scope model used by user viewing: platform ADMIN has global reach, " +
+                    "while ORGANIZATION_ADMIN is limited to users from the same organization. The operation is meant for administrative maintenance of account metadata and profile fields."
     )
     @ApiResponse(
             responseCode = "204",
@@ -265,7 +276,9 @@ public class UserController {
 
     @Operation(
             summary = "Delete user",
-            description = "Deletes the user identified by the given UUID"
+            description = "Deletes the user identified by the given UUID. Because deletion has a wider operational impact, the documentation makes the role boundary explicit: " +
+                    "ADMIN is platform-wide, while ORGANIZATION_ADMIN can delete only users inside the administrator's own organization. No organization-scoped administrator " +
+                    "should expect to remove users from another tenant."
     )
     @ApiResponse(
             responseCode = "204",
@@ -296,7 +309,9 @@ public class UserController {
 
     @Operation(
             summary = "Change password",
-            description = "Changes the password of user that has the specified UUID"
+            description = "Changes the password of the user identified by the given UUID. This endpoint is not the same as self-service password reset and is subject to access checks. " +
+                    "A platform ADMIN may change passwords broadly, while ordinary users may generally change only their own password through the authorization rule that backs this endpoint. " +
+                    "An ORGANIZATION_ADMIN does not automatically inherit unrestricted password control over every account in the system."
     )
     @ApiResponse(
             responseCode = "204",

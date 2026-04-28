@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.model.Question;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.model.TestAttempt;
+import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.assessment.repository.QuestionRepository;
 import org.elearning.backend.assessment.repository.TestAttemptRepository;
 import org.elearning.backend.assessment.repository.TestRepository;
@@ -537,6 +538,38 @@ public class AccessService {
         return currentUser != null
                 && currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN
                 && currentUser.getOrganizationId() != null;
+    }
+
+    public boolean canAssignCoursesToClassroom(Authentication authentication,
+                                               UUID classroomId,
+                                               AssignCoursesToClassroomRequest request) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() != RoleName.TEACHER
+                || currentUser.getOrganizationId() == null
+                || request == null
+                || request.getCourseIds() == null
+                || request.getCourseIds().isEmpty()) {
+            return false;
+        }
+
+        Classroom classroom = classroomRepository.findById(classroomId).orElse(null);
+        if (classroom == null || classroom.getOrganization() == null) {
+            return false;
+        }
+
+        if (!currentUser.getOrganizationId().equals(classroom.getOrganization().getId())) {
+            return false;
+        }
+
+        return request.getCourseIds().stream()
+                .allMatch(courseId -> courseRepository.findById(courseId)
+                        .map(course -> currentUser.getUserId().equals(course.getCreatedBy()))
+                        .orElse(false));
     }
 
     public boolean canManageClassroom(Authentication authentication, UUID classroomId) {
