@@ -3,6 +3,8 @@ package org.elearning.backend.assessment.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+// SWAGGER ADDED
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.elearning.backend.assessment.dto.question_dto.QuestionDataForUsersDto;
 import org.elearning.backend.assessment.dto.assigment_dto.TestEditDto;
 import org.elearning.backend.assessment.dto.assigment_dto.TestEntityDto;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+// SWAGGER ADDED
+@Tag(name = "Tests", description = "Test lifecycle management")
 @RestController
 @RequestMapping("/api/v1")
 public class TestsController {

@@ -2,6 +2,8 @@ package org.elearning.backend.analytics.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+// SWAGGER ADDED
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.elearning.backend.analytics.dto.statistics.student.MySummaryDataDto;
 import org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto;
 import org.elearning.backend.analytics.dto.statistics.student.MyTestStatsDto;
@@ -23,6 +25,8 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
 
+// SWAGGER ADDED
+@Tag(name = "Analytics & Stats", description = "Course and test analytics for teachers and students")
 @RestController
 @RequestMapping("/api/v1")
 public class AnalyticsAndStatsController {
