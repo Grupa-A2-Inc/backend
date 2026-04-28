@@ -196,8 +196,8 @@ public class ClassroomService {
 
     public List<ClassroomMemberResponse> listClassroomMembers(UUID classroomId, MembershipType membershipType){
 
-        Classroom classroom = classroomRepository.findById(classroomId)
-                .orElseThrow(()-> new ClassroomNotFoundException("Classroom not found"));
+        classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found"));
 
         List<ClassroomMembership> classroomMemberships;
         if(membershipType == null){

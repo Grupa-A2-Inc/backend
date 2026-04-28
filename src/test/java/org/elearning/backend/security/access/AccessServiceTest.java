@@ -107,9 +107,9 @@ class AccessServiceTest {
 
     @Test
     void canViewUser_returnsFalseWhenAuthenticationPrincipalIsUnsupported() {
-        Authentication authentication = new UsernamePasswordAuthenticationToken("plain-user", "secret");
+        Authentication unsupportedAuthentication = new UsernamePasswordAuthenticationToken("plain-user", "secret");
 
-        assertThat(accessService.canViewUser(authentication, UUID.randomUUID())).isFalse();
+        assertThat(accessService.canViewUser(unsupportedAuthentication, UUID.randomUUID())).isFalse();
     }
 
     @Test
@@ -122,17 +122,17 @@ class AccessServiceTest {
 
     @Test
     void canViewUser_returnsTrueWhenUserRequestsOwnRecord() {
-        User currentUser = makeUser(RoleName.STUDENT, UUID.randomUUID());
+        User requestingUser = makeUser(RoleName.STUDENT, UUID.randomUUID());
 
-        assertThat(accessService.canViewUser(authenticationFor(currentUser), currentUser.getId())).isTrue();
+        assertThat(accessService.canViewUser(authenticationFor(requestingUser), requestingUser.getId())).isTrue();
         verifyNoInteractions(userRepository);
     }
 
     @Test
     void canViewUser_returnsFalseForNonOrganizationAdminLookingUpAnotherUser() {
-        User currentUser = makeUser(RoleName.TEACHER, UUID.randomUUID());
+        User requestingUser = makeUser(RoleName.TEACHER, UUID.randomUUID());
 
-        assertThat(accessService.canViewUser(authenticationFor(currentUser), UUID.randomUUID())).isFalse();
+        assertThat(accessService.canViewUser(authenticationFor(requestingUser), UUID.randomUUID())).isFalse();
         verifyNoInteractions(userRepository);
     }
 
@@ -370,9 +370,9 @@ class AccessServiceTest {
     @Test
     void extractCurrentUser_returnsWrappedUserDetails() {
         User user = makeUser(RoleName.ADMIN, UUID.randomUUID());
-        Authentication authentication = authenticationFor(user);
+        Authentication userAuthentication = authenticationFor(user);
 
-        assertThat(accessService.extractCurrentUser(authentication).getUser()).isSameAs(user);
+        assertThat(accessService.extractCurrentUser(userAuthentication).getUser()).isSameAs(user);
     }
 
     @Test
@@ -382,9 +382,9 @@ class AccessServiceTest {
 
     @Test
     void extractCurrentUser_returnsNullWhenPrincipalIsUnsupported() {
-        Authentication authentication = new UsernamePasswordAuthenticationToken("plain-user", "secret");
+        Authentication unsupportedAuthentication = new UsernamePasswordAuthenticationToken("plain-user", "secret");
 
-        assertThat(accessService.extractCurrentUser(authentication)).isNull();
+        assertThat(accessService.extractCurrentUser(unsupportedAuthentication)).isNull();
     }
 
     @Test
@@ -518,12 +518,12 @@ class AccessServiceTest {
         UUID orgId = UUID.randomUUID();
         UUID targetUserId = UUID.randomUUID();
 
-        Authentication authentication = mock(Authentication.class);
-        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+        Authentication userAuthentication = mock(Authentication.class);
+        CustomUserDetails authenticatedUser = mock(CustomUserDetails.class);
 
-        when(authentication.getPrincipal()).thenReturn(currentUser);
-        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
-        when(currentUser.getOrganizationId()).thenReturn(orgId);
+        when(userAuthentication.getPrincipal()).thenReturn(authenticatedUser);
+        when(authenticatedUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(authenticatedUser.getOrganizationId()).thenReturn(orgId);
 
         Organization organization = mock(Organization.class);
         when(organization.getId()).thenReturn(orgId);
@@ -534,7 +534,7 @@ class AccessServiceTest {
 
         when(userRepository.findById(targetUserId)).thenReturn(Optional.of(targetUser));
 
-        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+        boolean result = accessService.canUpdateUserStatus(userAuthentication, targetUserId);
 
         assertTrue(result);
     }
@@ -545,12 +545,12 @@ class AccessServiceTest {
         UUID targetOrgId = UUID.randomUUID();
         UUID targetUserId = UUID.randomUUID();
 
-        Authentication authentication = mock(Authentication.class);
-        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+        Authentication userAuthentication = mock(Authentication.class);
+        CustomUserDetails authenticatedUser = mock(CustomUserDetails.class);
 
-        when(authentication.getPrincipal()).thenReturn(currentUser);
-        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
-        when(currentUser.getOrganizationId()).thenReturn(currentOrgId);
+        when(userAuthentication.getPrincipal()).thenReturn(authenticatedUser);
+        when(authenticatedUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(authenticatedUser.getOrganizationId()).thenReturn(currentOrgId);
 
         Organization organization = mock(Organization.class);
         when(organization.getId()).thenReturn(targetOrgId);
@@ -561,7 +561,7 @@ class AccessServiceTest {
 
         when(userRepository.findById(targetUserId)).thenReturn(Optional.of(targetUser));
 
-        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+        boolean result = accessService.canUpdateUserStatus(userAuthentication, targetUserId);
 
         assertFalse(result);
     }
@@ -570,13 +570,13 @@ class AccessServiceTest {
     void canUpdateUserStatus_shouldReturnFalse_forRegularUser() {
         UUID targetUserId = UUID.randomUUID();
 
-        Authentication authentication = mock(Authentication.class);
-        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+        Authentication userAuthentication = mock(Authentication.class);
+        CustomUserDetails authenticatedUser = mock(CustomUserDetails.class);
 
-        when(authentication.getPrincipal()).thenReturn(currentUser);
-        when(currentUser.getRoleName()).thenReturn(RoleName.STUDENT);
+        when(userAuthentication.getPrincipal()).thenReturn(authenticatedUser);
+        when(authenticatedUser.getRoleName()).thenReturn(RoleName.STUDENT);
 
-        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+        boolean result = accessService.canUpdateUserStatus(userAuthentication, targetUserId);
 
         assertFalse(result);
     }
@@ -586,16 +586,16 @@ class AccessServiceTest {
         UUID orgId = UUID.randomUUID();
         UUID targetUserId = UUID.randomUUID();
 
-        Authentication authentication = mock(Authentication.class);
-        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+        Authentication userAuthentication = mock(Authentication.class);
+        CustomUserDetails authenticatedUser = mock(CustomUserDetails.class);
 
-        when(authentication.getPrincipal()).thenReturn(currentUser);
-        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
-        when(currentUser.getOrganizationId()).thenReturn(orgId);
+        when(userAuthentication.getPrincipal()).thenReturn(authenticatedUser);
+        when(authenticatedUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(authenticatedUser.getOrganizationId()).thenReturn(orgId);
 
         when(userRepository.findById(targetUserId)).thenReturn(Optional.empty());
 
-        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+        boolean result = accessService.canUpdateUserStatus(userAuthentication, targetUserId);
 
         assertFalse(result);
     }
@@ -605,12 +605,12 @@ class AccessServiceTest {
         UUID orgId = UUID.randomUUID();
         UUID targetUserId = UUID.randomUUID();
 
-        Authentication authentication = mock(Authentication.class);
-        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+        Authentication userAuthentication = mock(Authentication.class);
+        CustomUserDetails authenticatedUser = mock(CustomUserDetails.class);
 
-        when(authentication.getPrincipal()).thenReturn(currentUser);
-        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
-        when(currentUser.getOrganizationId()).thenReturn(orgId);
+        when(userAuthentication.getPrincipal()).thenReturn(authenticatedUser);
+        when(authenticatedUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(authenticatedUser.getOrganizationId()).thenReturn(orgId);
 
         User targetUser = new User();
         targetUser.setId(targetUserId);
@@ -618,7 +618,7 @@ class AccessServiceTest {
 
         when(userRepository.findById(targetUserId)).thenReturn(Optional.of(targetUser));
 
-        boolean result = accessService.canUpdateUserStatus(authentication, targetUserId);
+        boolean result = accessService.canUpdateUserStatus(userAuthentication, targetUserId);
 
         assertFalse(result);
     }
