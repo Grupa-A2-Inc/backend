@@ -3,6 +3,8 @@ package org.elearning.backend.enrollment.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+// SWAGGER ADDED
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.enrollment.dto.EnrolledCourseDto;
 import org.elearning.backend.enrollment.dto.EnrollmentDto;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+// SWAGGER ADDED
+@Tag(name = "Course Enrollment", description = "Student course enrollment management")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")

@@ -3,6 +3,8 @@ package org.elearning.backend.ai.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+// SWAGGER ADDED
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.ai.dto.AdaptiveResultDto;
 import org.elearning.backend.ai.dto.AdaptiveStartDto;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+// SWAGGER ADDED
+@Tag(name = "Adaptive Sessions", description = "Adaptive learning session management")
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor

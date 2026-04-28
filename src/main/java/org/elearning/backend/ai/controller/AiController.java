@@ -3,6 +3,8 @@ package org.elearning.backend.ai.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+// SWAGGER ADDED
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.ai.dto.InjectRequestDto;
 import org.elearning.backend.ai.dto.InjectionResultDto;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+// SWAGGER ADDED
+@Tag(name = "AI Questions", description = "AI-generated question injection into tests")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
