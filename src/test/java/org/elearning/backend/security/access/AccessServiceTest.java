@@ -767,6 +767,126 @@ class AccessServiceTest {
         assertFalse(result);
     }
 
+    @Test
+    void canViewClassroomCourses_returnsFalse_whenNotAuthenticated() {
+        assertThat(accessService.canViewClassroomCourses(null, UUID.randomUUID())).isFalse();
+    }
+
+    @Test
+    void canViewClassroomCourses_returnsTrue_forAdmin() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ADMIN);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertTrue(accessService.canViewClassroomCourses(authentication, classroomId));
+    }
+
+    @Test
+    void canViewClassroomCourses_returnsTrue_forOrganizationAdminInSameOrg() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(orgId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertTrue(accessService.canViewClassroomCourses(authentication, classroomId));
+    }
+
+    @Test
+    void canViewClassroomCourses_returnsTrue_forTeacherMemberOfClassroom() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID teacherId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.TEACHER);
+        when(currentUser.getUserId()).thenReturn(teacherId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserId(classroomId, teacherId))
+                .thenReturn(true);
+
+        assertTrue(accessService.canViewClassroomCourses(authentication, classroomId));
+    }
+
+    @Test
+    void canViewClassroomCourses_returnsFalse_forTeacherNotMemberOfClassroom() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID teacherId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.TEACHER);
+        when(currentUser.getUserId()).thenReturn(teacherId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserId(classroomId, teacherId))
+                .thenReturn(false);
+
+        assertFalse(accessService.canViewClassroomCourses(authentication, classroomId));
+    }
+
+    @Test
+    void canViewClassroomCourses_returnsTrue_forStudentMemberOfClassroom() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.STUDENT);
+        when(currentUser.getUserId()).thenReturn(studentId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserId(classroomId, studentId))
+                .thenReturn(true);
+
+        assertTrue(accessService.canViewClassroomCourses(authentication, classroomId));
+    }
+
+    @Test
+    void canViewClassroomCourses_returnsFalse_forStudentNotMemberOfClassroom() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.STUDENT);
+        when(currentUser.getUserId()).thenReturn(studentId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserId(classroomId, studentId))
+                .thenReturn(false);
+
+        assertFalse(accessService.canViewClassroomCourses(authentication, classroomId));
+    }
+
+    @Test
+    void canViewClassroomCourses_returnsFalse_forOtherRole() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.PARENT);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertFalse(accessService.canViewClassroomCourses(authentication, classroomId));
+    }
+
     private Classroom buildClassroom(UUID classroomId, UUID orgId) {
         Organization organization = new Organization();
         organization.setId(orgId);

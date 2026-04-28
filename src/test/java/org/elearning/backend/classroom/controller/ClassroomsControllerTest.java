@@ -3,6 +3,7 @@ package org.elearning.backend.classroom.controller;
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
 import org.elearning.backend.classroom.dto.request.UpdateClassroomRequest;
+import org.elearning.backend.classroom.dto.response.ClassroomCourseDetailsResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomResponse;
 import org.elearning.backend.classroom.service.ClassroomCourseService;
@@ -122,6 +123,25 @@ class ClassroomsControllerTest {
                 classroomsController.assignCourses(classroomId, request, userDetails(userId));
 
         assertThat(response.getStatusCode().value()).isEqualTo(201);
+        assertThat(response.getBody()).isEqualTo(responseBody);
+    }
+
+    @Test
+    void getClassroomCourses_returns200Ok() {
+        UUID classroomId = UUID.randomUUID();
+
+        ClassroomCourseDetailsResponse details = new ClassroomCourseDetailsResponse();
+        details.setCourseId(UUID.randomUUID());
+        details.setTitle("Math 101");
+        details.setAssignedAt(LocalDateTime.of(2026, 4, 28, 10, 0));
+
+        List<ClassroomCourseDetailsResponse> responseBody = List.of(details);
+        when(classroomCourseService.getClassroomCourses(classroomId)).thenReturn(responseBody);
+
+        ResponseEntity<List<ClassroomCourseDetailsResponse>> response =
+                classroomsController.getClassroomCourses(classroomId);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).isEqualTo(responseBody);
     }
 

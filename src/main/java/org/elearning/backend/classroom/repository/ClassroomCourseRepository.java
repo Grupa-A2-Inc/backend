@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public interface ClassroomCourseRepository extends JpaRepository<ClassroomCourse, UUID> {
     List<ClassroomCourse> findAllByClassroomId(UUID classroomId);
+    List<ClassroomCourse> findAllByClassroomIdOrderByAssignedAtAsc(UUID classroomId);
 
     boolean existsByClassroomIdAndCourseId(UUID classroomId, UUID courseId);
 }
