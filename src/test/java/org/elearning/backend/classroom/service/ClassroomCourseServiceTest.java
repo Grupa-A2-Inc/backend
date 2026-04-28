@@ -1,6 +1,7 @@
 package org.elearning.backend.classroom.service;
 
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
+import org.elearning.backend.classroom.dto.response.ClassroomCourseDetailsResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
 import org.elearning.backend.classroom.entity.Classroom;
 import org.elearning.backend.classroom.entity.ClassroomCourse;
@@ -234,5 +235,63 @@ class ClassroomCourseServiceTest {
         assertThatThrownBy(() -> classroomCourseService.assignCourses(classroomId, request, userId))
                 .isInstanceOf(CourseNotEligibleException.class)
                 .hasMessageContaining("does not belong");
+    }
+
+    @Test
+    void getClassroomCourses_throwsNotFound_whenClassroomDoesNotExist() {
+        when(classroomRepository.existsById(classroomId)).thenReturn(false);
+
+        assertThatThrownBy(() -> classroomCourseService.getClassroomCourses(classroomId))
+                .isInstanceOf(ClassroomNotFoundException.class)
+                .hasMessageContaining(classroomId.toString());
+    }
+
+    @Test
+    void getClassroomCourses_returnsEmptyList_whenNoCoursesAssigned() {
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of());
+
+        List<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getClassroomCourses_returnsMappedDetails_whenCoursesExist() {
+        ClassroomCourse cc = new ClassroomCourse();
+        cc.setClassroomId(classroomId);
+        cc.setCourseId(courseId);
+        cc.setAssignedAt(LocalDateTime.of(2026, 4, 28, 10, 0));
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(cc));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+
+        List<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getCourseId()).isEqualTo(courseId);
+        assertThat(result.get(0).getAssignedAt()).isEqualTo(cc.getAssignedAt());
+    }
+
+    @Test
+    void getClassroomCourses_throwsBadRequest_whenCourseNotFoundDuringMapping() {
+        ClassroomCourse cc = new ClassroomCourse();
+        cc.setClassroomId(classroomId);
+        cc.setCourseId(courseId);
+        cc.setAssignedAt(LocalDateTime.now());
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(cc));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> classroomCourseService.getClassroomCourses(classroomId))
+                .isInstanceOf(ClassroomBadRequestException.class)
+                .hasMessageContaining(courseId.toString());
     }
 }

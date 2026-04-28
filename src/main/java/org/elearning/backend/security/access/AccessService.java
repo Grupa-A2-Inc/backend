@@ -594,6 +594,26 @@ public class AccessService {
         return false;
     }
 
+    public boolean canViewClassroomCourses(Authentication authentication, UUID classroomId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null) {
+            return false;
+        }
+
+        if (canManageClassroom(authentication, classroomId)) {
+            return true;
+        }
+
+        if (currentUser.getRoleName() == RoleName.TEACHER
+                || currentUser.getRoleName() == RoleName.STUDENT) {
+            return classroomMembershipRepository
+                    .existsByClassroomIdAndUserId(classroomId, currentUser.getUserId());
+        }
+
+        return false;
+    }
+
     public boolean canMarkViewedLesson(Authentication authentication, UUID lessonId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 

@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.classroom.dto.request.ModifyClassroomMembersRequest;
+import org.elearning.backend.classroom.dto.response.ClassroomCourseDetailsResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomMemberResponse;
 import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
@@ -174,6 +175,28 @@ public class ClassroomsController {
                 classroomCourseService.assignCourses(classroomId, request, currentUser.getUserId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(
+            summary = "List courses in classroom",
+            description = "Returns all courses assigned to the specified classroom."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Courses retrieved successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ClassroomCourseDetailsResponse.class)
+            )
+    )
+    @ApiResponse(responseCode = "403", description = "User is not allowed to view classroom courses", content = @Content)
+    @ApiResponse(responseCode = "404", description = "Classroom not found", content = @Content)
+    @GetMapping("/{classroomId}/courses")
+    @PreAuthorize("@accessService.canViewClassroomCourses(authentication, #classroomId)")
+    public ResponseEntity<List<ClassroomCourseDetailsResponse>> getClassroomCourses(
+            @P("classroomId") @PathVariable UUID classroomId) {
+
+        return ResponseEntity.ok(classroomCourseService.getClassroomCourses(classroomId));
     }
 
     @Operation(

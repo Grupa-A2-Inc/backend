@@ -2,6 +2,7 @@ package org.elearning.backend.classroom.service;
 
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
+import org.elearning.backend.classroom.dto.response.ClassroomCourseDetailsResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
 import org.elearning.backend.classroom.entity.Classroom;
 import org.elearning.backend.classroom.entity.ClassroomCourse;
@@ -69,6 +70,22 @@ public class ClassroomCourseService {
                 .toList();
     }
 
+    public List<ClassroomCourseDetailsResponse> getClassroomCourses(UUID classroomId) {
+        if (!classroomRepository.existsById(classroomId)) {
+            throw new ClassroomNotFoundException("Classroom not found: " + classroomId);
+        }
+
+        return classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId)
+                .stream()
+                .map(cc -> {
+                    Course course = courseRepository.findById(cc.getCourseId())
+                            .orElseThrow(() -> new ClassroomBadRequestException(
+                                    "Course not found: " + cc.getCourseId()));
+                    return toCourseDetailsResponse(cc, course);
+                })
+                .toList();
+    }
+
     private void validateCourseEligibility(Course course, UUID organizationId) {
         if (course.getCreatedBy() == null) {
             throw new CourseNotEligibleException(
@@ -94,6 +111,19 @@ public class ClassroomCourseService {
         response.setId(cc.getId());
         response.setClassroomId(cc.getClassroomId());
         response.setCourseId(cc.getCourseId());
+        response.setAssignedAt(cc.getAssignedAt());
+        return response;
+    }
+
+    private ClassroomCourseDetailsResponse toCourseDetailsResponse(ClassroomCourse cc, Course course) {
+        ClassroomCourseDetailsResponse response = new ClassroomCourseDetailsResponse();
+        response.setCourseId(course.getId());
+        response.setTitle(course.getTitle());
+        response.setDescription(course.getDescription());
+        response.setCategory(course.getCategory());
+        response.setStatus(course.getStatus());
+        response.setVisibility(course.getVisibility());
+        response.setCreatedBy(course.getCreatedBy());
         response.setAssignedAt(cc.getAssignedAt());
         return response;
     }
