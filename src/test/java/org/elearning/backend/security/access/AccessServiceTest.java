@@ -1,9 +1,12 @@
 package org.elearning.backend.security.access;
 
+import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.classroom.entity.Classroom;
 import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.repository.CourseRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -43,6 +46,9 @@ class AccessServiceTest {
 
     @Mock
     private ClassroomMembershipRepository classroomMembershipRepository;
+
+    @Mock
+    private CourseRepository courseRepository;
 
     @Mock
     private Authentication authentication;
@@ -414,6 +420,180 @@ class AccessServiceTest {
     }
 
     @Test
+    void canAssignCoursesToClassroom_returnsFalseWhenAuthenticationIsMissing() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of(UUID.randomUUID()));
+
+        assertFalse(accessService.canAssignCoursesToClassroom(null, UUID.randomUUID(), request));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsFalseForNonTeacher() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of(UUID.randomUUID()));
+
+        assertFalse(accessService.canAssignCoursesToClassroom(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, UUID.randomUUID())),
+                UUID.randomUUID(),
+                request
+        ));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsFalseForTeacherWithoutOrganization() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of(UUID.randomUUID()));
+
+        assertFalse(accessService.canAssignCoursesToClassroom(
+                authenticationFor(makeUser(RoleName.TEACHER, null)),
+                UUID.randomUUID(),
+                request
+        ));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsFalseWhenRequestIsNull() {
+        assertFalse(accessService.canAssignCoursesToClassroom(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
+                UUID.randomUUID(),
+                null
+        ));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsFalseWhenRequestCourseIdsAreNull() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+
+        assertFalse(accessService.canAssignCoursesToClassroom(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
+                UUID.randomUUID(),
+                request
+        ));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsFalseWhenRequestHasNoCourseIds() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of());
+
+        assertFalse(accessService.canAssignCoursesToClassroom(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
+                UUID.randomUUID(),
+                request
+        ));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsFalseWhenClassroomIsMissing() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of(UUID.randomUUID()));
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.empty());
+
+        assertFalse(accessService.canAssignCoursesToClassroom(
+                authenticationFor(makeUser(RoleName.TEACHER, orgId)),
+                classroomId,
+                request
+        ));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsFalseWhenClassroomBelongsToDifferentOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID teacherOrgId = UUID.randomUUID();
+        UUID classroomOrgId = UUID.randomUUID();
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of(UUID.randomUUID()));
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(buildClassroom(classroomId, classroomOrgId)));
+
+        assertFalse(accessService.canAssignCoursesToClassroom(
+                authenticationFor(makeUser(RoleName.TEACHER, teacherOrgId)),
+                classroomId,
+                request
+        ));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsFalseWhenClassroomHasNoOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of(UUID.randomUUID()));
+
+        Classroom classroom = new Classroom();
+        classroom.setId(classroomId);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertFalse(accessService.canAssignCoursesToClassroom(
+                authenticationFor(makeUser(RoleName.TEACHER, orgId)),
+                classroomId,
+                request
+        ));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsFalseWhenAnyCourseWasNotCreatedByTeacher() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        User teacher = makeUser(RoleName.TEACHER, orgId);
+        UUID otherTeacherId = UUID.randomUUID();
+        UUID firstCourseId = UUID.randomUUID();
+        UUID secondCourseId = UUID.randomUUID();
+
+        Course ownCourse = new Course();
+        ownCourse.setId(firstCourseId);
+        ownCourse.setCreatedBy(teacher.getId());
+
+        Course otherCourse = new Course();
+        otherCourse.setId(secondCourseId);
+        otherCourse.setCreatedBy(otherTeacherId);
+
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of(firstCourseId, secondCourseId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(buildClassroom(classroomId, orgId)));
+        when(courseRepository.findById(firstCourseId)).thenReturn(Optional.of(ownCourse));
+        when(courseRepository.findById(secondCourseId)).thenReturn(Optional.of(otherCourse));
+
+        assertFalse(accessService.canAssignCoursesToClassroom(
+                authenticationFor(teacher),
+                classroomId,
+                request
+        ));
+    }
+
+    @Test
+    void canAssignCoursesToClassroom_returnsTrueWhenTeacherCreatedAllCourses() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        User teacher = makeUser(RoleName.TEACHER, orgId);
+        UUID firstCourseId = UUID.randomUUID();
+        UUID secondCourseId = UUID.randomUUID();
+
+        Course firstCourse = new Course();
+        firstCourse.setId(firstCourseId);
+        firstCourse.setCreatedBy(teacher.getId());
+
+        Course secondCourse = new Course();
+        secondCourse.setId(secondCourseId);
+        secondCourse.setCreatedBy(teacher.getId());
+
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of(firstCourseId, secondCourseId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(buildClassroom(classroomId, orgId)));
+        when(courseRepository.findById(firstCourseId)).thenReturn(Optional.of(firstCourse));
+        when(courseRepository.findById(secondCourseId)).thenReturn(Optional.of(secondCourse));
+
+        assertTrue(accessService.canAssignCoursesToClassroom(
+                authenticationFor(teacher),
+                classroomId,
+                request
+        ));
+    }
+
+    @Test
     void canManageClassroom_returnsFalseWhenAuthenticationIsMissing() {
         assertThat(accessService.canManageClassroom(null, UUID.randomUUID())).isFalse();
     }
@@ -624,6 +804,27 @@ class AccessServiceTest {
     }
 
     @Test
+    void canInjectAiQuestions_returnsFalse_whenAuthenticationIsMissing() {
+        assertFalse(accessService.canInjectAiQuestions(null, UUID.randomUUID()));
+    }
+
+    @Test
+    void canInjectAiQuestions_returnsFalse_forNonTeacher() {
+        assertFalse(accessService.canInjectAiQuestions(
+                authenticationFor(makeUser(RoleName.STUDENT, UUID.randomUUID())),
+                UUID.randomUUID()
+        ));
+    }
+
+    @Test
+    void canInjectAiQuestions_returnsTrue_forTeacher() {
+        assertTrue(accessService.canInjectAiQuestions(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
+                UUID.randomUUID()
+        ));
+    }
+
+    @Test
     void canListClassroomMembers_shouldReturnTrue_forOrganizationAdminInSameOrganization() {
         UUID classroomId = UUID.randomUUID();
         UUID orgId = UUID.randomUUID();
@@ -638,6 +839,48 @@ class AccessServiceTest {
         boolean result = accessService.canListClassroomMembers(authentication, classroomId);
 
         assertTrue(result);
+    }
+
+    @Test
+    void canListClassroomMembers_shouldReturnFalse_whenNotAuthenticated() {
+        assertFalse(accessService.canListClassroomMembers(null, UUID.randomUUID()));
+    }
+
+    @Test
+    void canListClassroomMembers_shouldReturnFalse_whenClassroomHasNoOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        Classroom classroom = new Classroom();
+        classroom.setId(classroomId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertFalse(accessService.canListClassroomMembers(authentication, classroomId));
+    }
+
+    @Test
+    void canListClassroomMembers_shouldReturnFalse_whenClassroomIsMissing() {
+        UUID classroomId = UUID.randomUUID();
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.empty());
+
+        assertFalse(accessService.canListClassroomMembers(authentication, classroomId));
+    }
+
+    @Test
+    void canListClassroomMembers_shouldReturnFalse_forOrganizationAdminWithoutOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(null);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertFalse(accessService.canListClassroomMembers(authentication, classroomId));
     }
 
     @Test
@@ -701,6 +944,20 @@ class AccessServiceTest {
     }
 
     @Test
+    void canListClassroomMembers_shouldReturnFalse_forOtherRole() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.PARENT);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertFalse(accessService.canListClassroomMembers(authentication, classroomId));
+    }
+
+    @Test
     void canManageClassroom_shouldReturnTrue_forAdmin() {
         UUID classroomId = UUID.randomUUID();
         UUID orgId = UUID.randomUUID();
@@ -731,6 +988,21 @@ class AccessServiceTest {
         boolean result = accessService.canManageClassroom(authentication, classroomId);
 
         assertTrue(result);
+    }
+
+    @Test
+    void canManageClassroom_shouldReturnFalse_whenOrganizationAdminHasNoOrganization() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        when(authentication.getPrincipal()).thenReturn(currentUser);
+        when(currentUser.getRoleName()).thenReturn(RoleName.ORGANIZATION_ADMIN);
+        when(currentUser.getOrganizationId()).thenReturn(null);
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+
+        assertFalse(accessService.canManageClassroom(authentication, classroomId));
     }
 
     @Test

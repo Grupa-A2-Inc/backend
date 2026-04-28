@@ -11,6 +11,7 @@ import org.elearning.backend.classroom.exception.CourseNotEligibleException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.model.CourseVisibility;
 import org.elearning.backend.content.repository.CourseRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.user.entity.User;
@@ -79,6 +80,7 @@ class ClassroomCourseServiceTest {
         course = new Course();
         course.setId(courseId);
         course.setCreatedBy(courseCreator.getId());
+        course.setVisibility(CourseVisibility.PUBLIC);
     }
 
     @Test
@@ -276,6 +278,26 @@ class ClassroomCourseServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getCourseId()).isEqualTo(courseId);
         assertThat(result.get(0).getAssignedAt()).isEqualTo(cc.getAssignedAt());
+    }
+
+    @Test
+    void getClassroomCourses_excludesPrivateCourses() {
+        ClassroomCourse cc = new ClassroomCourse();
+        cc.setClassroomId(classroomId);
+        cc.setCourseId(courseId);
+        cc.setAssignedAt(LocalDateTime.of(2026, 4, 28, 10, 0));
+
+        course.setVisibility(CourseVisibility.PRIVATE);
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(cc));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+
+        List<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId);
+
+        assertThat(result).isEmpty();
     }
 
     @Test
