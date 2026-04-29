@@ -3,6 +3,8 @@ package org.elearning.backend.enrollment.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+// SWAGGER ADDED
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.enrollment.service.CertificateGeneratorService;
 import org.elearning.backend.security.auth.CustomUserDetails;
@@ -15,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+// SWAGGER ADDED
+@Tag(name = "Certificates", description = "Course completion certificate generation")
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor

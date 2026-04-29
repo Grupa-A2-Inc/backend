@@ -279,7 +279,6 @@ class FailureRateControllerTest {
     // --- TESTS FOR GET /course/{courseId}/analytics/chart-data ---
 
     @Test
-    @Disabled("nu merge")
     void shouldGetCourseFailureRateChartDataSuccessfully() {
         UUID courseId = insertCourse(authenticatedUserId);
         UUID chapterId = insertChapter(courseId);
@@ -296,7 +295,6 @@ class FailureRateControllerTest {
     }
 
     @Test
-    @Disabled("nu merge")
     void shouldReturnForbiddenWhenGettingChartDataForOtherTeachersCourse() {
         UUID otherTeacherId = insertAuthenticatedUser();
         UUID courseId = insertCourse(otherTeacherId);

@@ -11,7 +11,9 @@ import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.repository.TestRepository;
 import org.elearning.backend.assessment.repository.TestResultRepository;
+import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.CourseRepository;
+import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -31,6 +34,7 @@ public class StudentsStatsService {
     private static final String TEST_DOES_NOT_EXIST = "Test does not exist";
     private static final String COURSE_DOES_NOT_EXIST = "Course does not exist";
     private static final String STUDENT_NOT_ENROLLED = "Student is not enrolled to course";
+    private static final String LESSON_DOES_NOT_EXIST = "Lesson does not exist";
 
     //Determines how many of the last attempts should be listed
     private static final Pageable LAST_ATTEMPT_COUNT = PageRequest.of(0,5);
@@ -44,6 +48,7 @@ public class StudentsStatsService {
 
     private final TestRepository testRepository;
     private final TestResultRepository testResultRepository;
+    private final LessonRepository lessonRepository;
     private final CourseRepository courseRepository;
     private final LessonDifficultyByStudentRepository lessonDifficultyByStudentRepository;
     private final CourseEnrollmentRepository courseEnrollmentRepository;
@@ -55,12 +60,13 @@ public class StudentsStatsService {
      * course existence, per-student lesson difficulties, and course enrollments used
      * by the service's methods.
      */
-    public StudentsStatsService(TestRepository testRepository, TestResultRepository testResultRepository, CourseRepository courseRepository, LessonDifficultyByStudentRepository lessonDifficultyByStudentRepository, CourseEnrollmentRepository courseEnrollmentRepository) {
+    public StudentsStatsService(TestRepository testRepository, TestResultRepository testResultRepository, CourseRepository courseRepository, LessonDifficultyByStudentRepository lessonDifficultyByStudentRepository, CourseEnrollmentRepository courseEnrollmentRepository, LessonRepository lessonRepository) {
         this.testRepository = testRepository;
         this.testResultRepository = testResultRepository;
         this.courseRepository = courseRepository;
         this.lessonDifficultyByStudentRepository = lessonDifficultyByStudentRepository;
         this.courseEnrollmentRepository = courseEnrollmentRepository;
+        this.lessonRepository = lessonRepository;
     }
 
     /**
@@ -140,7 +146,12 @@ public class StudentsStatsService {
         Test test = testRepository.findById(testId)
                 .orElseThrow( () -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
 
-        //TO DO: verify if student is enrolled to the course the test comes from.
+        Lesson lesson = lessonRepository.findById(test.getLessonId())
+                .orElseThrow(() -> new DoesNotExistException(LESSON_DOES_NOT_EXIST));
+
+        if(!courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, lesson.getChapter().getCourse().getId())){
+            throw new StudentNotEnrolledInCourseException(STUDENT_NOT_ENROLLED);
+        }
 
         MyPersonalTestStatsDto myPersonalTestStats = testResultRepository.getMyPersonalTestStats(studentId, test);
 
@@ -148,8 +159,6 @@ public class StudentsStatsService {
                 .findTopByStudentIdAndTestOrderByCompletedAtDesc(studentId, test).getScorePercent();
 
         MyClassTestAverageDto myClassAverageStats = testResultRepository.getMyClassAverageStats(test);
-
-
 
         List<MyClassTestBestResultsDto> myClassBestResults = new ArrayList<>(testResultRepository
                 .getAllTestsOrderByBestScoreDesc(test));

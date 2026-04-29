@@ -136,7 +136,8 @@ class AiGenerationControllerTest {
         return post(urlTemplate, uriVars)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + teacherToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}")
+                //.content("{}")
+                .content("{\"subjectId\": 5, \"topicId\": 12}")
                 .with(csrf());
     }
 
@@ -144,7 +145,8 @@ class AiGenerationControllerTest {
         return post(urlTemplate, uriVars)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}")
+                //.content("{}")
+                .content("{\"subjectId\": 5, \"topicId\": 12}")
                 .with(csrf());
     }
 
