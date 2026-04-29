@@ -2,6 +2,8 @@ package org.elearning.backend.ai.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.ai.dto.AiGenerateRequestDto;
+import org.elearning.backend.ai.dto.AiGenerateResponseDto;
 import org.elearning.backend.ai.dto.AiRequestStatusDto;
 import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.ai.model.AiQuestionRequest;
@@ -95,5 +97,19 @@ public class AiGenerationService {
         statusDto.setStatus(request.getStatus());
 
         return statusDto;
+    }
+
+    public AiGenerateResponseDto generateTestForLesson(AiGenerateRequestDto requestDto, UUID lessonId, UUID userId, RoleName role) {
+        Integer subjectId=requestDto.getSubjectId();
+        Integer topicId=requestDto.getTopicId();
+
+        UUID requestId = generateForLesson(lessonId, userId, role, subjectId, topicId);
+
+        AiGenerateResponseDto responseDto = new AiGenerateResponseDto();
+        responseDto.setRequestId(requestId);
+        responseDto.setStatus(AiRequestStatus.PENDING);
+        responseDto.setLessonId(lessonId);
+
+        return responseDto;
     }
 }

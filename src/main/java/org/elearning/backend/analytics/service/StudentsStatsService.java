@@ -139,9 +139,7 @@ public class StudentsStatsService {
     public MyTestStatsDto getMyTestStats(UUID studentId, UUID testId){
         Test test = testRepository.findById(testId)
                 .orElseThrow( () -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
-
-        //TO DO: verify if student is enrolled to the course the test comes from.
-
+        
         MyPersonalTestStatsDto myPersonalTestStats = testResultRepository.getMyPersonalTestStats(studentId, test);
 
         BigDecimal latestScore = testResultRepository

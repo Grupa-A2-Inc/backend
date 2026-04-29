@@ -76,7 +76,7 @@ public class AdaptiveSessionService {
                 ));
             } catch(JsonProcessingException exception) {
                 log.error("Error serializing JSON for exercise {}", aiExercise.getExerciseId(), exception);
-                throw new RuntimeException("Failed to process exercise data.");
+                throw new ValidationException("Failed to process exercise data.");
             }
         }
 
