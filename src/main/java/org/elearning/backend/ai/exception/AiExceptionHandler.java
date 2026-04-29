@@ -1,6 +1,5 @@
 package org.elearning.backend.ai.exception;
 
-import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.common.GlobalExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -37,10 +36,11 @@ public class AiExceptionHandler extends GlobalExceptionHandler {
         return buildErrorResponse(exception, HttpStatus.NOT_FOUND);
     }
 
-    /*@ExceptionHandler(WithoutAccessException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(WithoutAccessException exception) {
-        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
-    }*/
+    @ExceptionHandler(JsonSerializingException.class)
+    public ResponseEntity<Map<String, Object>> handleJsonSerializing(JsonSerializingException exception){
+        return buildErrorResponse(exception, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
 
     @ExceptionHandler(AdaptiveServiceUnavailableException.class)
     public ResponseEntity<Map<String, Object>> handleAdaptiveServiceUnavailable(AdaptiveServiceUnavailableException exception) {
