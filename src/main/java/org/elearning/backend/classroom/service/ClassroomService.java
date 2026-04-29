@@ -8,13 +8,17 @@ import org.elearning.backend.classroom.dto.request.UpdateClassroomRequest;
 import org.elearning.backend.classroom.dto.response.ClassroomMemberResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomResponse;
 import org.elearning.backend.classroom.entity.Classroom;
+import org.elearning.backend.classroom.entity.ClassroomCourse;
 import org.elearning.backend.classroom.entity.ClassroomMembership;
 import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.exception.ClassroomBadRequestException;
 import org.elearning.backend.classroom.exception.ClassroomConflictException;
 import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
+import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.RoleName;
@@ -37,6 +41,8 @@ public class ClassroomService {
     private final OrganizationRepository organizationRepository;
     private final ClassroomMembershipRepository classroomMembershipRepository;
     private static final String CLASS_NOT_FOUND = "Classroom not found: ";
+    private final ClassroomCourseRepository classroomCourseRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
 
     @Transactional
     public ClassroomResponse createClassroom(CreateClassroomRequest request, UUID requesterUserId) {
@@ -163,6 +169,10 @@ public class ClassroomService {
                 membership.setUser(member);
                 membership.setMembershipType(membershipType);
                 classroomMembershipRepository.save(membership);
+
+                if (membershipType == MembershipType.STUDENT) {
+                    handleStudentAddedToClassroom(classroom, member);
+                }
             }
         }
 
@@ -174,14 +184,10 @@ public class ClassroomService {
                                                      ModifyClassroomMembersRequest request,
                                                      UUID currentUserId) {
         Classroom classroom = getClassroomOrThrow(classroomId);
-
-        //si aici tot e metoda aia cu get valid care trebuie modificata,
-        //automat si ce metode mai erau prin ea care au la nume ceva cu student cred
         List<User> members = getValidMembersForClassroom(request.getMemberIds(), classroom);
 
         for (User member : members) {
 
-            //poate fi ori student, ori teacher
             MembershipType membershipType = resolveMembershipType(member);
 
             classroomMembershipRepository.deleteByClassroomIdAndUserIdAndMembershipType(
@@ -256,14 +262,21 @@ public class ClassroomService {
         }
     }
 
-    // TODO: aici pregatesc partea pentru auto enrollment
     private void handleStudentAddedToClassroom(Classroom classroom, User student) {
-        throw new UnsupportedOperationException(
-                "Auto enrollment is not implemented yet for classroom "
-                        + classroom.getId()
-                        + " and student "
-                        + student.getId()
-        );
+        List<ClassroomCourse> classroomCourses = classroomCourseRepository
+                .findAllByClassroomId(classroom.getId());
+
+        for (ClassroomCourse classroomCourse : classroomCourses) {
+            UUID courseId = classroomCourse.getCourseId();
+            UUID studentId = student.getId();
+
+            if (!courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)) {
+                CourseEnrollment enrollment = new CourseEnrollment();
+                enrollment.setCourseId(courseId);
+                enrollment.setStudentId(studentId);
+                courseEnrollmentRepository.save(enrollment);
+            }
+        }
     }
 
     private MembershipType resolveMembershipType(User member) {
