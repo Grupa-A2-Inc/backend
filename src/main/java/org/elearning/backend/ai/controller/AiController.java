@@ -6,9 +6,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 // SWAGGER ADDED
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.ai.dto.InjectRequestDto;
-import org.elearning.backend.ai.dto.InjectionResultDto;
+import org.elearning.backend.ai.dto.*;
+import org.elearning.backend.ai.service.AiGenerationService;
 import org.elearning.backend.ai.service.AiQuestionInjectorService;
+import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,14 +20,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 // SWAGGER ADDED
-@Tag(name = "AI Questions", description = "AI-generated question injection into tests")
+@Tag(name = "AI Questions", description = "AI-generated questions")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
 public class AiController {
     private final AiQuestionInjectorService aiQuestionInjectorService;
+    private final AiGenerationService aiService;
 
     private static final String OK = "200";
+    private static final String ACCEPTED = "202";
+    private static final String BAD_REQUEST = "400";
     private static final String FORBIDDEN = "403";
     private static final String NOT_FOUND = "404";
     private static final String CONFLICT = "409";
@@ -57,5 +61,50 @@ public class AiController {
         UUID testIdOpt = (requestBody != null) ? requestBody.getTestIdOpt() : null;
 
         return ResponseEntity.ok(aiQuestionInjectorService.injectQuestions(requestId, professorId, testIdOpt));
+    }
+
+    /**
+     * Initiates an AI generation request for the specified lesson and returns the created request metadata.
+     *
+     * @param requestDto request body carrying generation parameters; its `subjectId` and `topicId` are used to scope the generation
+     * @return an AiGenerateResponseDto containing the generated `requestId`, `status` set to `AiRequestStatus.PENDING`, and the associated `lessonId`
+     */
+    // SWAGGER ADDED
+    @Operation(summary = "Generate AI test for a lesson", description = "Initiates an AI generation request for the specified lesson and returns the created request metadata.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = ACCEPTED, description = "AI generation request accepted"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request parameters"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Lesson not found"),
+    })
+    @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT')")
+    @PostMapping("/lessons/{lessonId}/ai/generate-test")
+    public ResponseEntity<AiGenerateResponseDto> generateForLesson(@PathVariable UUID lessonId, @RequestBody AiGenerateRequestDto requestDto, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID userId = userDetails.getUserId();
+        RoleName role=userDetails.getRoleName();
+
+        return ResponseEntity.accepted().body(aiService.generateTestForLesson(requestDto, lessonId, userId, role));
+    }
+
+    /**
+     * Retrieve the current status of an AI generation request by its ID for the authenticated user.
+     *
+     * @param requestId the UUID of the AI generation request to query
+     * @param userDetails the authenticated principal used to identify the requesting user
+     * @return the AiRequestStatusDto containing the request's current status and related metadata
+     */
+    // SWAGGER ADDED
+    @Operation(summary = "Get AI generation request status", description = "Retrieves the current status of an AI generation request by its ID for the authenticated user.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = OK, description = "Status retrieved successfully"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "AI generation request not found"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied")
+    })
+    @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT')")
+    @GetMapping("/ai/requests/{requestId}/status")
+    public ResponseEntity<AiRequestStatusDto> getRequestStatus(@PathVariable UUID requestId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID userId = userDetails.getUserId();
+        RoleName role = userDetails.getRoleName();
+        return ResponseEntity.ok(aiService.getRequestStatus(requestId, userId, role));
     }
 }
