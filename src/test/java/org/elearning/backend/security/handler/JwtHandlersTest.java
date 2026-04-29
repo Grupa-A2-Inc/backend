@@ -9,6 +9,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@org.springframework.test.context.ActiveProfiles("test")
 class JwtHandlersTest {
 
     private JwtAuthenticationEntryPoint authenticationEntryPoint;

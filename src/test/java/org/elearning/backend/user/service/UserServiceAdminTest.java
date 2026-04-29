@@ -30,6 +30,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
         import static org.mockito.Mockito.*;
 
+@org.springframework.test.context.ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class UserServiceAdminTest {
 

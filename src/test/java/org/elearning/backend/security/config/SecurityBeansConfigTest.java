@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@org.springframework.test.context.ActiveProfiles("test")
 class SecurityBeansConfigTest {
 
     private final SecurityBeansConfig securityBeansConfig = new SecurityBeansConfig();
