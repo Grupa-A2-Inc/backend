@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@org.springframework.test.context.ActiveProfiles("test")
 class UserImportResultTest {
 
     private UserResponse buildUserResponse(String email) {

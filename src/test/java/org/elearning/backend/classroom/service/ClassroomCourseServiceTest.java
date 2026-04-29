@@ -12,8 +12,10 @@ import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.model.CourseVisibility;
 import org.elearning.backend.content.repository.CourseRepository;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.user.entity.User;
@@ -22,6 +24,7 @@ import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@org.springframework.test.context.ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class ClassroomCourseServiceTest {
 
@@ -84,6 +88,7 @@ class ClassroomCourseServiceTest {
         course = new Course();
         course.setId(courseId);
         course.setCreatedBy(courseCreator.getId());
+        course.setStatus(CourseStatus.PUBLISHED);
         course.setVisibility(CourseVisibility.PUBLIC);
     }
 
@@ -285,13 +290,13 @@ class ClassroomCourseServiceTest {
     }
 
     @Test
-    void getClassroomCourses_excludesPrivateCourses() {
+    void getClassroomCourses_excludesDraftCourses() {
         ClassroomCourse cc = new ClassroomCourse();
         cc.setClassroomId(classroomId);
         cc.setCourseId(courseId);
         cc.setAssignedAt(LocalDateTime.of(2026, 4, 28, 10, 0));
 
-        course.setVisibility(CourseVisibility.PRIVATE);
+        course.setStatus(CourseStatus.DRAFT);
 
         when(classroomRepository.existsById(classroomId)).thenReturn(true);
         when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
@@ -411,5 +416,110 @@ class ClassroomCourseServiceTest {
         classroomCourseService.assignCourses(classroomId, request, userId);
 
         verify(courseEnrollmentRepository, never()).save(any());
+    }
+
+    @Test
+    void assignCourses_shouldSaveEnrollmentWithExactStudentAndCourseIds() {
+        UUID studentId = UUID.randomUUID();
+
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        org.elearning.backend.classroom.entity.ClassroomMembership membership =
+                new org.elearning.backend.classroom.entity.ClassroomMembership();
+        User student = new User();
+        student.setId(studentId);
+        membership.setUser(student);
+
+        ClassroomCourse saved = new ClassroomCourse();
+        saved.setClassroomId(classroomId);
+        saved.setCourseId(courseId);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.of(courseCreator));
+        when(classroomCourseRepository.existsByClassroomIdAndCourseId(classroomId, courseId)).thenReturn(false);
+        when(classroomCourseRepository.saveAll(any())).thenReturn(List.of(saved));
+        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(
+                classroomId, org.elearning.backend.classroom.entity.MembershipType.STUDENT))
+                .thenReturn(List.of(membership));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)).thenReturn(false);
+
+        classroomCourseService.assignCourses(classroomId, request, userId);
+
+        ArgumentCaptor<CourseEnrollment> captor = ArgumentCaptor.forClass(CourseEnrollment.class);
+        verify(courseEnrollmentRepository).save(captor.capture());
+
+        CourseEnrollment enrollment = captor.getValue();
+        assertThat(enrollment.getStudentId()).isEqualTo(studentId);
+        assertThat(enrollment.getCourseId()).isEqualTo(courseId);
+    }
+
+    @Test
+    void assignCourses_shouldSaveOneEnrollmentPerStudentCoursePair() {
+        UUID firstStudentId = UUID.randomUUID();
+        UUID secondStudentId = UUID.randomUUID();
+        UUID firstCourseId = UUID.randomUUID();
+        UUID secondCourseId = UUID.randomUUID();
+
+        Course secondCourse = new Course();
+        secondCourse.setId(secondCourseId);
+        secondCourse.setCreatedBy(courseCreator.getId());
+        secondCourse.setStatus(CourseStatus.PUBLISHED);
+        secondCourse.setVisibility(CourseVisibility.PUBLIC);
+
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(firstCourseId, secondCourseId));
+
+        org.elearning.backend.classroom.entity.ClassroomMembership firstMembership =
+                new org.elearning.backend.classroom.entity.ClassroomMembership();
+        User firstStudent = new User();
+        firstStudent.setId(firstStudentId);
+        firstMembership.setUser(firstStudent);
+
+        org.elearning.backend.classroom.entity.ClassroomMembership secondMembership =
+                new org.elearning.backend.classroom.entity.ClassroomMembership();
+        User secondStudent = new User();
+        secondStudent.setId(secondStudentId);
+        secondMembership.setUser(secondStudent);
+
+        ClassroomCourse firstSaved = new ClassroomCourse();
+        firstSaved.setClassroomId(classroomId);
+        firstSaved.setCourseId(firstCourseId);
+
+        ClassroomCourse secondSaved = new ClassroomCourse();
+        secondSaved.setClassroomId(classroomId);
+        secondSaved.setCourseId(secondCourseId);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(firstCourseId)).thenReturn(Optional.of(course));
+        when(courseRepository.findById(secondCourseId)).thenReturn(Optional.of(secondCourse));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.of(courseCreator));
+        when(classroomCourseRepository.existsByClassroomIdAndCourseId(classroomId, firstCourseId)).thenReturn(false);
+        when(classroomCourseRepository.existsByClassroomIdAndCourseId(classroomId, secondCourseId)).thenReturn(false);
+        when(classroomCourseRepository.saveAll(any())).thenReturn(List.of(firstSaved, secondSaved));
+        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(
+                classroomId, org.elearning.backend.classroom.entity.MembershipType.STUDENT))
+                .thenReturn(List.of(firstMembership, secondMembership));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(firstStudentId, firstCourseId)).thenReturn(false);
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(firstStudentId, secondCourseId)).thenReturn(false);
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(secondStudentId, firstCourseId)).thenReturn(false);
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(secondStudentId, secondCourseId)).thenReturn(false);
+
+        classroomCourseService.assignCourses(classroomId, request, userId);
+
+        ArgumentCaptor<CourseEnrollment> captor = ArgumentCaptor.forClass(CourseEnrollment.class);
+        verify(courseEnrollmentRepository, times(4)).save(captor.capture());
+
+        assertThat(captor.getAllValues())
+                .extracting(CourseEnrollment::getStudentId, CourseEnrollment::getCourseId)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(firstStudentId, firstCourseId),
+                        org.assertj.core.groups.Tuple.tuple(firstStudentId, secondCourseId),
+                        org.assertj.core.groups.Tuple.tuple(secondStudentId, firstCourseId),
+                        org.assertj.core.groups.Tuple.tuple(secondStudentId, secondCourseId)
+                );
     }
 }

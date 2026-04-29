@@ -15,7 +15,7 @@ import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.content.model.Course;
-import org.elearning.backend.content.model.CourseVisibility;
+import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.repository.CourseRepository;
 import org.elearning.backend.enrollment.model.CourseEnrollment;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
@@ -110,7 +110,7 @@ public class ClassroomCourseService {
                                     "Course not found: " + cc.getCourseId()));
                     return new AbstractMap.SimpleEntry<>(cc, course);
                 })
-                .filter(entry -> entry.getValue().getVisibility() == CourseVisibility.PUBLIC)
+                .filter(entry -> entry.getValue().getStatus() == CourseStatus.PUBLISHED)
                 .map(entry -> toCourseDetailsResponse(entry.getKey(), entry.getValue()))
                 .toList();
     }

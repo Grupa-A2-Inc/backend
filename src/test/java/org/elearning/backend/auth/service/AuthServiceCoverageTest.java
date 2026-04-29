@@ -38,6 +38,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+@org.springframework.test.context.ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class AuthServiceCoverageTest {
 

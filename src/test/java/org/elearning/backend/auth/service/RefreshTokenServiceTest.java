@@ -20,6 +20,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@org.springframework.test.context.ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class RefreshTokenServiceTest {
 
