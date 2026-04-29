@@ -6,14 +6,19 @@ import org.elearning.backend.classroom.dto.response.ClassroomCourseDetailsRespon
 import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
 import org.elearning.backend.classroom.entity.Classroom;
 import org.elearning.backend.classroom.entity.ClassroomCourse;
+import org.elearning.backend.classroom.entity.ClassroomMembership;
+import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.exception.ClassroomBadRequestException;
 import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
 import org.elearning.backend.classroom.exception.CourseNotEligibleException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
+import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseVisibility;
 import org.elearning.backend.content.repository.CourseRepository;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.exception.UserNotFoundException;
 import org.elearning.backend.user.repository.UserRepository;
@@ -33,6 +38,8 @@ public class ClassroomCourseService {
     private final ClassroomCourseRepository classroomCourseRepository;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final ClassroomMembershipRepository classroomMembershipRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
 
     @Transactional
     public List<ClassroomCourseResponse> assignCourses(UUID classroomId, AssignCoursesToClassroomRequest request, UUID requesterUserId) {
@@ -67,6 +74,23 @@ public class ClassroomCourseService {
         }
 
         List<ClassroomCourse> saved = classroomCourseRepository.saveAll(toSave);
+
+        List<ClassroomMembership> studentMemberships = classroomMembershipRepository
+                .findAllByClassroomIdAndMembershipType(classroomId, MembershipType.STUDENT);
+
+        for (ClassroomCourse classroomCourse : saved) {
+            for (ClassroomMembership membership : studentMemberships) {
+                UUID studentId = membership.getUser().getId();
+                UUID courseId = classroomCourse.getCourseId();
+
+                if (!courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)) {
+                    CourseEnrollment enrollment = new CourseEnrollment();
+                    enrollment.setCourseId(courseId);
+                    enrollment.setStudentId(studentId);
+                    courseEnrollmentRepository.save(enrollment);
+                }
+            }
+        }
 
         return saved.stream()
                 .map(this::toResponse)

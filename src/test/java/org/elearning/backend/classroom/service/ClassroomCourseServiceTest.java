@@ -9,10 +9,12 @@ import org.elearning.backend.classroom.exception.ClassroomBadRequestException;
 import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
 import org.elearning.backend.classroom.exception.CourseNotEligibleException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
+import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseVisibility;
 import org.elearning.backend.content.repository.CourseRepository;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.exception.UserNotFoundException;
@@ -41,6 +43,8 @@ class ClassroomCourseServiceTest {
     @Mock private ClassroomCourseRepository classroomCourseRepository;
     @Mock private CourseRepository courseRepository;
     @Mock private UserRepository userRepository;
+    @Mock private ClassroomMembershipRepository classroomMembershipRepository;
+    @Mock private CourseEnrollmentRepository courseEnrollmentRepository;
 
     @InjectMocks
     private ClassroomCourseService classroomCourseService;
@@ -315,5 +319,97 @@ class ClassroomCourseServiceTest {
         assertThatThrownBy(() -> classroomCourseService.getClassroomCourses(classroomId))
                 .isInstanceOf(ClassroomBadRequestException.class)
                 .hasMessageContaining(courseId.toString());
+    }
+
+    @Test
+    void assignCourses_shouldAutoEnrollExistingStudents_whenCourseAssigned() {
+        UUID studentId = UUID.randomUUID();
+
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        org.elearning.backend.classroom.entity.ClassroomMembership membership =
+                new org.elearning.backend.classroom.entity.ClassroomMembership();
+        User student = new User();
+        student.setId(studentId);
+        membership.setUser(student);
+
+        ClassroomCourse saved = new ClassroomCourse();
+        saved.setClassroomId(classroomId);
+        saved.setCourseId(courseId);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.of(courseCreator));
+        when(classroomCourseRepository.existsByClassroomIdAndCourseId(classroomId, courseId)).thenReturn(false);
+        when(classroomCourseRepository.saveAll(any())).thenReturn(List.of(saved));
+        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(
+                classroomId, org.elearning.backend.classroom.entity.MembershipType.STUDENT))
+                .thenReturn(List.of(membership));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId))
+                .thenReturn(false);
+
+        classroomCourseService.assignCourses(classroomId, request, userId);
+
+        verify(courseEnrollmentRepository).save(any(org.elearning.backend.enrollment.model.CourseEnrollment.class));
+    }
+
+    @Test
+    void assignCourses_shouldNotEnrollStudent_whenAlreadyEnrolled() {
+        UUID studentId = UUID.randomUUID();
+
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        org.elearning.backend.classroom.entity.ClassroomMembership membership =
+                new org.elearning.backend.classroom.entity.ClassroomMembership();
+        User student = new User();
+        student.setId(studentId);
+        membership.setUser(student);
+
+        ClassroomCourse saved = new ClassroomCourse();
+        saved.setClassroomId(classroomId);
+        saved.setCourseId(courseId);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.of(courseCreator));
+        when(classroomCourseRepository.existsByClassroomIdAndCourseId(classroomId, courseId)).thenReturn(false);
+        when(classroomCourseRepository.saveAll(any())).thenReturn(List.of(saved));
+        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(
+                classroomId, org.elearning.backend.classroom.entity.MembershipType.STUDENT))
+                .thenReturn(List.of(membership));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId))
+                .thenReturn(true);
+
+        classroomCourseService.assignCourses(classroomId, request, userId);
+
+        verify(courseEnrollmentRepository, never()).save(any());
+    }
+
+    @Test
+    void assignCourses_shouldNotEnrollAnyone_whenNoStudentsInClassroom() {
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(List.of(courseId));
+
+        ClassroomCourse saved = new ClassroomCourse();
+        saved.setClassroomId(classroomId);
+        saved.setCourseId(courseId);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(classroomRepository.findByIdAndOrganizationId(classroomId, orgId)).thenReturn(Optional.of(classroom));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(courseCreator.getId())).thenReturn(Optional.of(courseCreator));
+        when(classroomCourseRepository.existsByClassroomIdAndCourseId(classroomId, courseId)).thenReturn(false);
+        when(classroomCourseRepository.saveAll(any())).thenReturn(List.of(saved));
+        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(
+                classroomId, org.elearning.backend.classroom.entity.MembershipType.STUDENT))
+                .thenReturn(List.of());
+
+        classroomCourseService.assignCourses(classroomId, request, userId);
+
+        verify(courseEnrollmentRepository, never()).save(any());
     }
 }

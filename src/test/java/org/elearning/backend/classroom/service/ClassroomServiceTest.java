@@ -11,8 +11,11 @@ import org.elearning.backend.classroom.exception.ClassroomBadRequestException;
 import org.elearning.backend.classroom.dto.request.ModifyClassroomMembersRequest;
 import org.elearning.backend.classroom.exception.ClassroomConflictException;
 import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
+import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -42,6 +45,10 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.elearning.backend.classroom.entity.ClassroomCourse;
+import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 
 @ExtendWith(MockitoExtension.class)
 class ClassroomServiceTest {
@@ -60,6 +67,12 @@ class ClassroomServiceTest {
 
     @InjectMocks
     private ClassroomService classroomService;
+
+    @Mock
+    private ClassroomCourseRepository classroomCourseRepository;
+
+    @Mock
+    private CourseEnrollmentRepository courseEnrollmentRepository;
 
     @Test
     void createClassroom_savesClassroomForRequesterOrganization() {
@@ -825,27 +838,6 @@ class ClassroomServiceTest {
     }
 
     @Test
-    void handleStudentAddedToClassroom_shouldThrowUnsupportedOperationException() throws Exception {
-        Method method = ClassroomService.class.getDeclaredMethod(
-                "handleStudentAddedToClassroom",
-                Classroom.class,
-                User.class
-        );
-        method.setAccessible(true);
-
-        Classroom classroom = buildClassroom(UUID.randomUUID(), UUID.randomUUID());
-        User student = buildUser(UUID.randomUUID(), classroom.getOrganization().getId(), RoleName.STUDENT);
-
-        InvocationTargetException exception = assertThrows(
-                InvocationTargetException.class,
-                () -> method.invoke(classroomService, classroom, student)
-        );
-
-        assertThat(exception.getCause()).isInstanceOf(UnsupportedOperationException.class);
-        assertThat(exception.getCause().getMessage()).contains(classroom.getId().toString(), student.getId().toString());
-    }
-
-    @Test
     void resolveMembershipType_shouldThrowForUnsupportedRole() throws Exception {
         Method method = ClassroomService.class.getDeclaredMethod("resolveMembershipType", User.class);
         method.setAccessible(true);
@@ -893,5 +885,114 @@ class ClassroomServiceTest {
         membership.setUser(user);
         membership.setMembershipType(membershipType);
         return membership;
+    }
+
+    @Test
+    void addClassroomMembers_shouldAutoEnrollStudent_whenClassroomHasCourses() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student = buildUser(studentId, orgId, RoleName.STUDENT);
+
+        ClassroomCourse classroomCourse = new ClassroomCourse();
+        classroomCourse.setClassroomId(classroomId);
+        classroomCourse.setCourseId(courseId);
+
+        ModifyClassroomMembersRequest request =
+                new ModifyClassroomMembersRequest(Set.of(studentId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getMemberIds())).thenReturn(List.of(student));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, studentId, MembershipType.STUDENT)).thenReturn(false);
+        when(classroomCourseRepository.findAllByClassroomId(classroomId))
+                .thenReturn(List.of(classroomCourse));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId))
+                .thenReturn(false);
+
+        classroomService.addClassroomMembers(classroomId, request, UUID.randomUUID());
+
+        verify(courseEnrollmentRepository).save(any(CourseEnrollment.class));
+    }
+
+    @Test
+    void addClassroomMembers_shouldNotEnrollStudent_whenAlreadyEnrolled() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student = buildUser(studentId, orgId, RoleName.STUDENT);
+
+        ClassroomCourse classroomCourse = new ClassroomCourse();
+        classroomCourse.setClassroomId(classroomId);
+        classroomCourse.setCourseId(courseId);
+
+        ModifyClassroomMembersRequest request =
+                new ModifyClassroomMembersRequest(Set.of(studentId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getMemberIds())).thenReturn(List.of(student));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, studentId, MembershipType.STUDENT)).thenReturn(false);
+        when(classroomCourseRepository.findAllByClassroomId(classroomId))
+                .thenReturn(List.of(classroomCourse));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId))
+                .thenReturn(true); // deja enrolled
+
+        classroomService.addClassroomMembers(classroomId, request, UUID.randomUUID());
+
+        verify(courseEnrollmentRepository, never()).save(any(CourseEnrollment.class));
+    }
+
+    @Test
+    void addClassroomMembers_shouldNotEnrollStudent_whenClassroomHasNoCourses() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student = buildUser(studentId, orgId, RoleName.STUDENT);
+
+        ModifyClassroomMembersRequest request =
+                new ModifyClassroomMembersRequest(Set.of(studentId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getMemberIds())).thenReturn(List.of(student));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, studentId, MembershipType.STUDENT)).thenReturn(false);
+        when(classroomCourseRepository.findAllByClassroomId(classroomId))
+                .thenReturn(List.of()); // clasa fara cursuri
+
+        classroomService.addClassroomMembers(classroomId, request, UUID.randomUUID());
+
+        verify(courseEnrollmentRepository, never()).save(any(CourseEnrollment.class));
+    }
+
+    @Test
+    void addClassroomMembers_shouldNotAutoEnrollTeacher() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID teacherId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User teacher = buildUser(teacherId, orgId, RoleName.TEACHER);
+
+        ModifyClassroomMembersRequest request =
+                new ModifyClassroomMembersRequest(Set.of(teacherId));
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getMemberIds())).thenReturn(List.of(teacher));
+        when(classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
+                classroomId, teacherId, MembershipType.TEACHER)).thenReturn(false);
+
+        classroomService.addClassroomMembers(classroomId, request, UUID.randomUUID());
+
+        verify(courseEnrollmentRepository, never()).save(any(CourseEnrollment.class));
+        verify(classroomCourseRepository, never()).findAllByClassroomId(any());
     }
 }
