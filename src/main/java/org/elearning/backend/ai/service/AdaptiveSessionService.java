@@ -6,11 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.elearning.backend.ai.dto.*;
-import org.elearning.backend.ai.exception.AiApiException;
-import org.elearning.backend.ai.exception.AiTimeoutException;
-import org.elearning.backend.ai.exception.AdaptiveServiceUnavailableException;
-import org.elearning.backend.ai.exception.ResourceConflictException;
-import org.elearning.backend.ai.exception.ValidationException;
+import org.elearning.backend.ai.exception.*;
 import org.elearning.backend.ai.model.AdaptiveSession;
 import org.elearning.backend.ai.model.AdaptiveSessionAnswer;
 import org.elearning.backend.ai.model.AdaptiveSessionExercise;
@@ -76,7 +72,7 @@ public class AdaptiveSessionService {
                 ));
             } catch(JsonProcessingException exception) {
                 log.error("Error serializing JSON for exercise {}", aiExercise.getExerciseId(), exception);
-                throw new RuntimeException("Failed to process exercise data.");
+                throw new JsonSerializingException("Failed to process exercise data.");
             }
         }
 
