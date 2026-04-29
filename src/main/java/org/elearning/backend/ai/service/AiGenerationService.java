@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.ai.dto.AiGenerateRequestDto;
 import org.elearning.backend.ai.dto.AiGenerateResponseDto;
 import org.elearning.backend.ai.dto.AiRequestStatusDto;
+import org.elearning.backend.ai.exception.ValidationException;
 import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.ai.model.AiQuestionRequest;
 import org.elearning.backend.ai.model.AiRequestStatus;
 import org.elearning.backend.ai.repository.AiQuestionRequestRepository;
+import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.role.entity.RoleName;
 import org.springframework.stereotype.Service;
@@ -83,12 +85,12 @@ public class AiGenerationService {
      * @param userId    the identifier of the user requesting the status
      * @param role      the role of the user used for access validation
      * @return          an AiRequestStatusDto containing the requestId and the request's current status
-     * @throws RuntimeException        if no request exists for the provided requestId
+     * @throws DoesNotExistException        if no request exists for the provided requestId
      * @throws WithoutAccessException if the user is not authorized to access the lesson associated with the request
      */
     public AiRequestStatusDto getRequestStatus(UUID requestId, UUID userId, RoleName role) {
         AiQuestionRequest request = questionRequestRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new DoesNotExistException("Request not found"));
         UUID lessonId = request.getLessonId();
         validateUserAccess(lessonId, userId, role);
 
@@ -100,8 +102,11 @@ public class AiGenerationService {
     }
 
     public AiGenerateResponseDto generateTestForLesson(AiGenerateRequestDto requestDto, UUID lessonId, UUID userId, RoleName role) {
-        Integer subjectId=requestDto.getSubjectId();
-        Integer topicId=requestDto.getTopicId();
+        Integer subjectId = requestDto.getSubjectId();
+        Integer topicId = requestDto.getTopicId();
+        if (subjectId == null || topicId == null) {
+            throw new ValidationException("subjectId and topicId are required.");
+        }
 
         UUID requestId = generateForLesson(lessonId, userId, role, subjectId, topicId);
 

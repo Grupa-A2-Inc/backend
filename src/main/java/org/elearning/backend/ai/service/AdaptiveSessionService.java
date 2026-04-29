@@ -36,6 +36,7 @@ public class AdaptiveSessionService {
     private final AdaptiveSessionAnswerRepository adaptiveSessionAnswerRepository;
     private static final int SESSION_MINUTES = 30;
 
+    @Transactional
     public AdaptiveStartDto startSession(UUID studentId, Integer subjectId, Integer topicId, int count) {
         AiAdaptiveResponse response;
         try {
