@@ -2,9 +2,13 @@ package org.elearning.backend.classroom.controller;
 
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
+import org.elearning.backend.classroom.dto.request.ModifyClassroomMembersRequest;
 import org.elearning.backend.classroom.dto.request.UpdateClassroomRequest;
+import org.elearning.backend.classroom.dto.response.ClassroomCourseDetailsResponse;
+import org.elearning.backend.classroom.dto.response.ClassroomMemberResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomResponse;
+import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.service.ClassroomCourseService;
 import org.elearning.backend.classroom.service.ClassroomService;
 import org.elearning.backend.security.auth.CustomUserDetails;
@@ -18,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -123,6 +128,125 @@ class ClassroomsControllerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(201);
         assertThat(response.getBody()).isEqualTo(responseBody);
+    }
+
+    @Test
+    void getClassroomCourses_returns200Ok() {
+        UUID classroomId = UUID.randomUUID();
+
+        ClassroomCourseDetailsResponse details = new ClassroomCourseDetailsResponse();
+        details.setCourseId(UUID.randomUUID());
+        details.setTitle("Math 101");
+        details.setAssignedAt(LocalDateTime.of(2026, 4, 28, 10, 0));
+
+        List<ClassroomCourseDetailsResponse> responseBody = List.of(details);
+        when(classroomCourseService.getClassroomCourses(classroomId)).thenReturn(responseBody);
+
+        ResponseEntity<List<ClassroomCourseDetailsResponse>> response =
+                classroomsController.getClassroomCourses(classroomId);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isEqualTo(responseBody);
+    }
+
+    @Test
+    void addClassroomMembers_returns200Ok() {
+        UUID userId = UUID.randomUUID();
+        UUID classroomId = UUID.randomUUID();
+        ModifyClassroomMembersRequest request = new ModifyClassroomMembersRequest(Set.of(UUID.randomUUID()));
+        ClassroomResponse responseBody = makeResponse();
+        when(classroomService.addClassroomMembers(classroomId, request, userId)).thenReturn(responseBody);
+
+        ResponseEntity<ClassroomResponse> response =
+                classroomsController.addClassroomMembers(classroomId, request, userDetails(userId));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isSameAs(responseBody);
+    }
+
+    @Test
+    void deleteClassroomMembers_returns200Ok() {
+        UUID userId = UUID.randomUUID();
+        UUID classroomId = UUID.randomUUID();
+        ModifyClassroomMembersRequest request = new ModifyClassroomMembersRequest(Set.of(UUID.randomUUID()));
+        ClassroomResponse responseBody = makeResponse();
+        when(classroomService.deleteClassroomMembers(classroomId, request, userId)).thenReturn(responseBody);
+
+        ResponseEntity<ClassroomResponse> response =
+                classroomsController.deleteClassroomMembers(classroomId, request, userDetails(userId));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isSameAs(responseBody);
+    }
+
+    @Test
+    void listClassroomMembers_returns200Ok() {
+        UUID classroomId = UUID.randomUUID();
+        ClassroomMemberResponse member = new ClassroomMemberResponse(
+                UUID.randomUUID(),
+                "teacher@example.com",
+                MembershipType.TEACHER
+        );
+        List<ClassroomMemberResponse> responseBody = List.of(member);
+        when(classroomService.listClassroomMembers(classroomId, MembershipType.TEACHER)).thenReturn(responseBody);
+
+        ResponseEntity<List<ClassroomMemberResponse>> response =
+                classroomsController.listClassroomMembers(classroomId, MembershipType.TEACHER);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isEqualTo(responseBody);
+    }
+
+    @Test
+    void getClassroomCourses_returnsEmptyList_whenServiceReturnsEmpty() {
+        UUID classroomId = UUID.randomUUID();
+        when(classroomCourseService.getClassroomCourses(classroomId)).thenReturn(List.of());
+
+        ResponseEntity<List<ClassroomCourseDetailsResponse>> response =
+                classroomsController.getClassroomCourses(classroomId);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isNotNull().isEmpty();
+    }
+
+    @Test
+    void addClassroomMembers_delegatesCorrectArgumentsToService() {
+        UUID userId = UUID.randomUUID();
+        UUID classroomId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        ModifyClassroomMembersRequest request = new ModifyClassroomMembersRequest(Set.of(memberId));
+        ClassroomResponse responseBody = makeResponse();
+        when(classroomService.addClassroomMembers(classroomId, request, userId)).thenReturn(responseBody);
+
+        classroomsController.addClassroomMembers(classroomId, request, userDetails(userId));
+
+        verify(classroomService).addClassroomMembers(classroomId, request, userId);
+    }
+
+    @Test
+    void deleteClassroomMembers_delegatesCorrectArgumentsToService() {
+        UUID userId = UUID.randomUUID();
+        UUID classroomId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        ModifyClassroomMembersRequest request = new ModifyClassroomMembersRequest(Set.of(memberId));
+        ClassroomResponse responseBody = makeResponse();
+        when(classroomService.deleteClassroomMembers(classroomId, request, userId)).thenReturn(responseBody);
+
+        classroomsController.deleteClassroomMembers(classroomId, request, userDetails(userId));
+
+        verify(classroomService).deleteClassroomMembers(classroomId, request, userId);
+    }
+
+    @Test
+    void listClassroomMembers_returnsEmptyList_whenNoMembers() {
+        UUID classroomId = UUID.randomUUID();
+        when(classroomService.listClassroomMembers(classroomId, null)).thenReturn(List.of());
+
+        ResponseEntity<List<ClassroomMemberResponse>> response =
+                classroomsController.listClassroomMembers(classroomId, null);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isNotNull().isEmpty();
     }
 
     private ClassroomResponse makeResponse() {
