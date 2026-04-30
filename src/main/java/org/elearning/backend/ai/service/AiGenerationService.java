@@ -32,26 +32,21 @@ public class AiGenerationService {
      * @param lessonId  identifier of the lesson for which questions should be generated
      * @param userId    identifier of the user initiating the request (used for access checks)
      * @param role      role of the user used to enforce access control
-     * @param subjectId identifier of the subject to target for question generation
-     * @param topicId   identifier of the topic to target for question generation
      * @return          the UUID of the created AI question request
      * @throws WithoutAccessException if the user does not have access to the lesson
      */
-    public UUID generateForLesson(UUID lessonId, UUID userId, RoleName role, Integer subjectId, Integer topicId) {
+    public UUID generateForLesson(UUID lessonId, UUID userId, RoleName role, int count) {
         validateUserAccess(lessonId, userId, role);
 
         AiQuestionRequest request = new AiQuestionRequest();
         request.setStatus(AiRequestStatus.PENDING);
         request.setLessonId(lessonId);
-        request.setSubjectId(subjectId);
-        request.setTopicId(topicId);
 
         request = questionRequestRepository.save(request);
-        UUID requestId = request.getId();
 
-        aiAsyncWorker.processAiGenerationInBackground(requestId, lessonId, request);
+        aiAsyncWorker.processAiGenerationInBackground(count, lessonId, request);
 
-        return requestId;
+        return request.getId();
     }
 
     /**
@@ -102,13 +97,12 @@ public class AiGenerationService {
     }
 
     public AiGenerateResponseDto generateTestForLesson(AiGenerateRequestDto requestDto, UUID lessonId, UUID userId, RoleName role) {
-        Integer subjectId = requestDto.getSubjectId();
-        Integer topicId = requestDto.getTopicId();
-        if (subjectId == null || topicId == null) {
-            throw new ValidationException("subjectId and topicId are required.");
+        Integer count = requestDto.getCount(); // asigura-te ca exista in DTO
+        if (count == null) {
+            throw new ValidationException(" count is required.");
         }
 
-        UUID requestId = generateForLesson(lessonId, userId, role, subjectId, topicId);
+        UUID requestId = generateForLesson(lessonId, userId, role, count);
 
         AiGenerateResponseDto responseDto = new AiGenerateResponseDto();
         responseDto.setRequestId(requestId);
