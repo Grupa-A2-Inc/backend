@@ -20,8 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 @Service
 @RequiredArgsConstructor
 public class CourseEnrollmentService {
@@ -105,5 +107,32 @@ public class CourseEnrollmentService {
         }
 
         return enrolledCourseDtos;
+    }
+
+    public Page<EnrolledCourseDto> getEnrolledCoursesForStudent(UUID studentId, Pageable pageable) {
+        Page<CourseEnrollment> enrollments = courseEnrollmentRepository.findAllByStudentId(studentId, pageable);
+
+        List<UUID> courseIds = enrollments.getContent().stream()
+                .map(CourseEnrollment::getCourseId)
+                .toList();
+
+        Map<UUID, Course> courseMap = courseRepository.findAllById(courseIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Course::getId, c -> c));
+
+        return enrollments.map(enrollment -> {
+            EnrolledCourseDto dto = enrollmentMapper.toEnrolledCourseDto(enrollment);
+
+            Course course = courseMap.get(dto.getCourseId());
+            if (course != null) {
+                dto.setCourseTitle(course.getTitle());
+                dto.setCourseCategory(course.getCategory());
+            }
+
+            dto.setProgressPercent(BigDecimal.valueOf(
+                    progressCalculatorService.calculateProgressPercent(dto.getUnrollmentId())
+            ));
+
+            return dto;
+        });
     }
 }

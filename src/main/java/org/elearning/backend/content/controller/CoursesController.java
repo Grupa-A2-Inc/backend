@@ -1,6 +1,7 @@
 package org.elearning.backend.content.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,11 +18,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import java.util.UUID;
 
-@Tag(name = "Courses", description = "Course administration")
+@Tag(name = "Courses", description = "Course administration — create, read, update and delete courses. Some endpoints require specific roles (TEACHER, ADMIN).")
 @RestController
 @RequestMapping("/api/v1/courses")
 @RequiredArgsConstructor
@@ -29,10 +31,21 @@ public class CoursesController {
 
     private final CourseService courseService;
 
-    @Operation(summary = "Create a new course", description = "Creates a new course with its chapters, lessons and resources")
+    @Operation(
+            summary = "Create a new course",
+            description = """
+                    Creates a new course with its chapters, lessons and resources.
+                    Only users with the TEACHER role can create courses.
+                    If `status` is omitted it defaults to DRAFT.
+                    If `visibility` defaults to PRIVATE .  Public is only for officeal courses
+                    The course is automatically assigned to the authenticated user as creator.
+                    """
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Course successfully created"),
-            @ApiResponse(responseCode = "400", description = "Invalid input data")
+            @ApiResponse(responseCode = "400", description = "Invalid input data — missing required fields or malformed JSON"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Authenticated user does not have permission to create courses")
     })
     @PostMapping
     @PreAuthorize("@accessService.canCreateCourse(authentication)")
@@ -41,75 +54,159 @@ public class CoursesController {
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
         UUID userId = currentUser.getUserId();
-
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(courseService.createCourse(courseDto, userId));
     }
 
-
-    @Operation(summary = "Get public courses", description = "Returns all published and public courses")
+    @Operation(
+            summary = "Get public courses (paginated)",
+            description = """
+                    Returns all courses that are both PUBLISHED and PUBLIC.
+                    Results are paginated. Use the query parameters to control pagination and sorting.
+                    
+                    Query parameters:
+                    - `page` — zero-based page index (default: 0)
+                    - `size` — number of items per page (default: 10)
+                    - `sort` — field to sort by, optionally followed by `,asc` or `,desc` (default: title,asc)
+                    
+                    Example: `GET /api/v1/courses/public?page=0&size=10&sort=title,asc`
+                    """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Courses successfully returned")
+            @ApiResponse(responseCode = "200", description = "Page of public courses successfully returned"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
     })
     @GetMapping("/public")
     @PreAuthorize("@accessService.canViewPublicCourses(authentication)")
-    public ResponseEntity<List<ResponseCourseDto>> getPublicCourses() {
-        return ResponseEntity.ok(courseService.getPublicCourses());
+    public ResponseEntity<Page<ResponseCourseDto>> getPublicCourses(
+            @Parameter(hidden = true)
+            @PageableDefault(size = 10, sort = "title") Pageable pageable) {
+        return ResponseEntity.ok(courseService.getPublicCourses(pageable));
     }
 
-    @Operation(summary = "Get my courses", description = "Returns all courses created by the current user")
+    @Operation(
+            summary = "Get my courses (paginated)",
+            description = """
+                    Returns all courses OFICIAL CREATED BY US
+                    Results are paginated. Use the query parameters to control pagination and sorting.
+                    
+                    Query parameters:
+                    - `page` — zero-based page index (default: 0)
+                    - `size` — number of items per page (default: 10)
+                    - `sort` — field to sort by, optionally followed by `,asc` or `,desc` (default: title,asc)
+                    
+                    Example: `GET /api/v1/courses/my-courses?page=0&size=5&sort=createdAt,desc`
+                    """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Courses successfully returned")
+            @ApiResponse(responseCode = "200", description = "Page of user's courses successfully returned"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Authenticated user does not have permission to view their courses")
     })
     @GetMapping("/my-courses")
     @PreAuthorize("@accessService.canViewMyCourses(authentication)")
-    public ResponseEntity<List<ResponseCourseDto>> getMyCourses(@AuthenticationPrincipal CustomUserDetails currentUser) {
+    public ResponseEntity<Page<ResponseCourseDto>> getMyCourses(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @Parameter(hidden = true)
+            @PageableDefault(size = 10, sort = "title") Pageable pageable) {
         UUID userId = currentUser.getUserId();
-        return ResponseEntity.ok(courseService.getMyCourses(userId));
+        return ResponseEntity.ok(courseService.getMyCourses(userId, pageable));
     }
 
-    @Operation(summary = "Update a course", description = "Fully updates a course given by its ID")
+    @Operation(
+            summary = "Fully update a course",
+            description = """
+                    Fully replaces an existing course with the provided data.
+                    All fields are overwritten — omitted fields will be set to null or their defaults.
+                    Only the course creator (TEACHER) can perform this operation.
+                    Returns 404 if the course does not exist.
+                    """
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Course successfully updated"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Authenticated user does not own this course"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @PutMapping("/{id}")
     @PreAuthorize("@accessService.canReplaceCourse(authentication,#id)")
-    public ResponseEntity<ResponseCourseDto> updateCourse(@P("id") @PathVariable UUID id, @RequestBody UpdateCourseDto updateCourseDto) {
+    public ResponseEntity<ResponseCourseDto> updateCourse(
+            @Parameter(description = "UUID of the course to update", required = true)
+            @P("id") @PathVariable UUID id,
+            @RequestBody UpdateCourseDto updateCourseDto) {
         return ResponseEntity.ok(courseService.updateCourse(id, updateCourseDto));
     }
 
-    @Operation(summary = "Partially update a course", description = "Partially updates a course given by its ID, modifying only non-null fields")
+    @Operation(
+            summary = "Partially update a course",
+            description = """
+                    Partially updates a course — only non-null fields in the request body are applied.
+                    Fields not included in the request body remain unchanged.
+                    Only the course creator  can perform this operation.
+                    Returns 404 if the course does not exist.
+                    """
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Course successfully patched"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Authenticated user does not own this course"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @PatchMapping("/{id}")
     @PreAuthorize("@accessService.canEditCourse(authentication,#id)")
-    public ResponseEntity<ResponseCourseDto> patchCourse(@P("id") @PathVariable UUID id, @RequestBody UpdateCourseDto updateCourseDto) {
+    public ResponseEntity<ResponseCourseDto> patchCourse(
+            @Parameter(description = "UUID of the course to patch", required = true)
+            @P("id") @PathVariable UUID id,
+            @RequestBody UpdateCourseDto updateCourseDto) {
         return ResponseEntity.ok(courseService.patchCourse(id, updateCourseDto));
     }
 
-    @Operation(summary = "Delete a course", description = "Deletes a course given by its ID")
+    @Operation(
+            summary = "Delete a course",
+            description = """
+                    Permanently deletes a course by its ID, including all its chapters, lessons and resources.
+                    This action is irreversible.
+                    Only the course creator can perform this operation.
+                    Returns 404 if the course does not exist.
+                    """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Course successfully deleted"),
+            @ApiResponse(responseCode = "204", description = "Course successfully deleted — no content returned"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Authenticated user does not own this course"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @DeleteMapping("/{id}")
     @PreAuthorize("@accessService.canDeleteCourse(authentication,#id)")
-    public ResponseEntity<Void> deleteCourse(@P("id") @PathVariable UUID id) {
+    public ResponseEntity<Void> deleteCourse(
+            @Parameter(description = "UUID of the course to delete", required = true)
+            @P("id") @PathVariable UUID id) {
         courseService.deleteCourse(id);
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Get full course view", description = "Returns a course with all its chapters, lessons and resources given by its ID")
+    @Operation(
+            summary = "Get full course view",
+            description = """
+                    Returns a course with its complete structure: all chapters, lessons and resources.
+                    Also includes the associated test ID for each lesson (if one exists).
+                    Only users with access to the course (enrolled students, the creator, or admins) can view this.
+                    Returns 404 if the course does not exist.
+                    """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Course successfully returned"),
+            @ApiResponse(responseCode = "200", description = "Full course view successfully returned"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Authenticated user does not have access to this course"),
             @ApiResponse(responseCode = "404", description = "Course not found")
     })
     @GetMapping("/{courseId}/full-view")
     @PreAuthorize("@accessService.canViewCourseFullView(authentication,#id)")
-    public ResponseEntity<ResponseCourseFullViewDto> getCourseFullView(@P("id") @PathVariable UUID courseId) {
+    public ResponseEntity<ResponseCourseFullViewDto> getCourseFullView(
+            @Parameter(description = "UUID of the course to retrieve", required = true)
+            @P("id") @PathVariable UUID courseId) {
         return ResponseEntity.ok(courseService.getCourseFullView(courseId));
     }
 }
