@@ -32,7 +32,6 @@ import java.util.UUID;
 public class AnalyticsAndStatsController {
 
     private static final String OK = "200";
-
     private static final String FORBIDDEN = "403";
     private static final String NOT_FOUND = "404";
 

@@ -2,6 +2,7 @@ package org.elearning.backend.feedback.exception;
 
 import jakarta.validation.ConstraintViolationException;
 import org.elearning.backend.ai.exception.AiApiException;
+import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.common.GlobalExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,5 +17,20 @@ public class FeedbackExceptionHandler extends GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<Map<String, Object>> handleConstraintViolation(AiApiException exception) {
         return buildErrorResponse(exception, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DoesNotExistException.class)
+    public ResponseEntity<Map<String, Object>> handleDoesNotExist(DoesNotExistException exception) {
+        return buildErrorResponse(exception, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(EnrolledInCourseException.class)
+    public ResponseEntity<Map<String, Object>> handleDoesNotExist(EnrolledInCourseException exception) {
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(DoesNotOwnTheCourseException.class)
+    public ResponseEntity<Map<String, Object>> handleDoesNotOwnTheCourse(DoesNotOwnTheCourseException exception) {
+        return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
     }
 }
