@@ -17,7 +17,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 @Service
 @RequiredArgsConstructor
 public class CourseService {
@@ -220,5 +221,18 @@ public class CourseService {
         }
 
         return courseFullViewMapper.toCourseFullViewDTO(course, lessonToTestMap);
+    }
+
+    public Page<ResponseCourseDto> getPublicCourses(Pageable pageable) {
+        return courseRepository.findByStatusAndVisibility(
+                CourseStatus.PUBLISHED,
+                CourseVisibility.PUBLIC,
+                pageable
+        ).map(courseMapper::toCourseDtoGet);
+    }
+
+    public Page<ResponseCourseDto> getMyCourses(UUID userId, Pageable pageable) {
+        return courseRepository.findByCreatedBy(userId, pageable)
+                .map(courseMapper::toCourseDtoGet);
     }
 }
