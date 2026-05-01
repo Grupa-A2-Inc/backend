@@ -61,7 +61,8 @@ public class CoursesController {
     @Operation(
             summary = "Get public courses (paginated)",
             description = """
-                    Returns all courses that are both PUBLISHED and PUBLIC.
+                    Returns all courses that are both  PUBLIC.
+                    OFICIAL CREATED BY US
                     Results are paginated. Use the query parameters to control pagination and sorting.
                     
                     Query parameters:
@@ -87,7 +88,7 @@ public class CoursesController {
     @Operation(
             summary = "Get my courses (paginated)",
             description = """
-                    Returns all courses OFICIAL CREATED BY US
+                    Returns all courses creaed by TEACHER(current user)
                     Results are paginated. Use the query parameters to control pagination and sorting.
                     
                     Query parameters:
