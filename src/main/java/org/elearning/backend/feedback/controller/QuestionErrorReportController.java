@@ -4,12 +4,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import org.elearning.backend.feedback.dto.DescriptionRequestDto;
 import org.elearning.backend.feedback.dto.ErrorReportDto;
 import org.elearning.backend.feedback.service.QuestionErrorReportService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -38,12 +41,12 @@ public class QuestionErrorReportController {
             @ApiResponse(responseCode = FORBIDDEN, description = "User doesn't have access to the question"),
             @ApiResponse(responseCode = NOT_FOUND, description = "Question not found")
     })
-
     @PostMapping("/questions/{questionId}/error-reports")
+    @PreAuthorize("@questionAccessValidatorService.hasStudentAccessToQuestion(authentication,#id)")
     public ResponseEntity<ErrorReportDto> createNewReport(
-            @RequestBody @Valid String description,
+            @RequestBody @Valid DescriptionRequestDto description,
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @PathVariable Integer questionId) {
+            @P("id") @PathVariable Integer questionId) {
 
 
         return ResponseEntity

@@ -15,7 +15,7 @@ import java.util.Map;
 public class FeedbackExceptionHandler extends GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<Map<String, Object>> handleConstraintViolation(AiApiException exception) {
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException exception) {
         return buildErrorResponse(exception, HttpStatus.BAD_REQUEST);
     }
 
