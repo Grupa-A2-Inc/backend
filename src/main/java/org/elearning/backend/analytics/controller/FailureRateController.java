@@ -23,6 +23,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import static org.springframework.security.authorization.AuthorityReactiveAuthorizationManager.hasRole;
+
 // SWAGGER ADDED
 @Tag(name = "Failure Rate", description = "Test and lesson failure rate analytics and alerts")
 @RestController
@@ -112,7 +114,7 @@ public class FailureRateController {
     @ApiResponse(responseCode = OK, description = "Analytics alerts returned successfully")
     @ApiResponse(responseCode = FORBIDDEN, description = "User does not have permission to view the analytics alerts")
     @GetMapping("/professors/me/alerts")
-    //Nu stiu ce sa pun aici la PreAuthorize
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<List<AlertDTO>> getAlertsForProfessor(@AuthenticationPrincipal CustomUserDetails currentUser) {
         UUID professorId = currentUser.getUserId();
         RoleName roleName = currentUser.getRoleName();

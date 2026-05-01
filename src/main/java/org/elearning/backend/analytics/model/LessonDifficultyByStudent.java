@@ -22,7 +22,6 @@ public class LessonDifficultyByStudent {
     @Column(name = "course_id")
     private UUID courseId;
 
-
     @Column(name = "lesson_title")
     private String lessonTitle;
 
@@ -34,7 +33,5 @@ public class LessonDifficultyByStudent {
 
     @Column(name = "gap")
     private BigDecimal gap;
-
-
 }
 

@@ -45,6 +45,7 @@ public class AdaptiveSessionService {
             log.error("Failed to start adaptive session: {}", exception.getMessage());
             throw new AdaptiveServiceUnavailableException("Adaptive service is currently unavailable. Please try again later.");
         }
+
         AdaptiveSession session = AdaptiveSession.builder()
                 .studentId(studentId)
                 .subjectId(subjectId)
@@ -54,6 +55,7 @@ public class AdaptiveSessionService {
         session = adaptiveSessionRepository.save(session);
         UUID sessionId = session.getId();
         List<ClientExerciseDto> safeExercises = new ArrayList<>();
+
         for (AiAdaptiveExerciseDto aiExercise : response.getExercises()) {
             try {
                 String answersJson = objectMapper.writeValueAsString(aiExercise.getAnswers());

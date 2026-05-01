@@ -34,10 +34,6 @@ public class AnalyticsQueryService {
         this.testResultRepository = testResultRepository;
     }
 
-    /* ProfessorId can be removed once the proper pre-authorization for teachers to view the stats of a class are
-     * implemented
-     */
-
     /**
      * Fetch aggregated class statistics for the specified test.
      *
