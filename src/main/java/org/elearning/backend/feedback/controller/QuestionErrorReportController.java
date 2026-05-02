@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import org.elearning.backend.feedback.dto.DescriptionRequestDto;
 import org.elearning.backend.feedback.dto.ErrorReportDto;
+import org.elearning.backend.feedback.dto.GetErrorReportDto;
 import org.elearning.backend.feedback.exception.DifferentIdException;
 import org.elearning.backend.feedback.model.ReportStatus;
 import org.elearning.backend.feedback.service.QuestionErrorReportService;
@@ -72,7 +73,7 @@ public class QuestionErrorReportController {
     })
     @GetMapping("/professors/{professorId}/error-reports")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<Page<ErrorReportDto>> getReportsForProfessor(
+    public ResponseEntity<Page<GetErrorReportDto>> getReportsForProfessor(
             @Parameter(description = "The ID of the professor") @PathVariable UUID professorId,
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) UUID courseId,

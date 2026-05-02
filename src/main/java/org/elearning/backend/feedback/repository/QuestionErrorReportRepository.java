@@ -1,8 +1,7 @@
 package org.elearning.backend.feedback.repository;
 
-import org.elearning.backend.feedback.dto.ErrorReportDto;
+import org.elearning.backend.feedback.dto.projections.GetErrorReportProjection;
 import org.elearning.backend.feedback.model.QuestionErrorReport;
-import org.elearning.backend.feedback.model.ReportStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,7 +25,7 @@ public interface QuestionErrorReportRepository extends JpaRepository<QuestionErr
      * @return
      */
     @Query(
-            value = "SELECT qer.*, q.question_text, q.source as question_source, l.title as lesson_title, co.title as course_title " +
+            value = "SELECT qer.*, q.content, q.source as question_source, l.title as lesson_title, co.title as course_title " +
                     "FROM question_error_reports qer " +
                     "JOIN questions q ON qer.question_id = q.id " +
                     "JOIN tests t ON q.test_id = t.id " +
@@ -34,8 +33,8 @@ public interface QuestionErrorReportRepository extends JpaRepository<QuestionErr
                     "JOIN chapters ch ON l.chapter_id = ch.id " +
                     "JOIN courses co ON ch.course_id = co.id " +
                     "WHERE co.created_by = :professorId " +
-                    "AND (:status IS NULL OR qer.status = :status) " +
-                    "AND (:courseId IS NULL OR co.id = :courseId) " +
+                    "AND (CAST(:status AS text) IS NULL OR qer.status = CAST(:status AS text)) " +
+                    "AND (CAST(:courseId AS uuid) IS NULL OR co.id = CAST(:courseId AS uuid)) " +
                     "ORDER BY qer.created_at DESC",
             countQuery = "SELECT count(*) FROM question_error_reports qer " +
                     "JOIN questions q ON qer.question_id = q.id " +
@@ -44,13 +43,13 @@ public interface QuestionErrorReportRepository extends JpaRepository<QuestionErr
                     "JOIN chapters ch ON l.chapter_id = ch.id " +
                     "JOIN courses co ON ch.course_id = co.id " +
                     "WHERE co.created_by = :professorId " +
-                    "AND (:status IS NULL OR qer.status = :status) " +
-                    "AND (:courseId IS NULL OR co.id = :courseId)",
+                    "AND (CAST(:status AS text) IS NULL OR qer.status = CAST(:status AS text)) " +
+                    "AND (CAST(:courseId AS uuid) IS NULL OR co.id = CAST(:courseId AS uuid))",
             nativeQuery = true
     )
-    Page<ErrorReportDto> findErrorReportsForProfessor(
+    Page<GetErrorReportProjection> findErrorReportsForProfessor(
             @Param("professorId") UUID professorId,
-            @Param("status") ReportStatus status,
+            @Param("status") String status,
             @Param("courseId") UUID courseId,
             Pageable pageable
     );
