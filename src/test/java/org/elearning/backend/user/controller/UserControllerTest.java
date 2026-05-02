@@ -1,6 +1,7 @@
 package org.elearning.backend.user.controller;
 
 import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
@@ -18,13 +19,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @org.springframework.test.context.ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
@@ -94,26 +96,33 @@ class UserControllerTest {
 
     @Test
     void getAllUsers_returns200Ok() {
-        List<UserResponse> responseBody = List.of(
-                new UserResponse(
-                        UUID.randomUUID(),
-                        "ana@example.com",
-                        "Ana",
-                        "Pop",
-                        RoleName.STUDENT,
-                        null,
-                        UserStatus.ACTIVE
-                )
+        PaginatedResponse<UserResponse> responseBody = new PaginatedResponse<>(
+                List.of(
+                        new UserResponse(
+                                UUID.randomUUID(),
+                                "ana@example.com",
+                                "Ana",
+                                "Pop",
+                                RoleName.STUDENT,
+                                null,
+                                UserStatus.ACTIVE
+                        )
+                ),
+                0,
+                10,
+                1L
         );
 
-        when(userService.getAllUsers()).thenReturn(responseBody);
+        when(userService.getAllUsersPaginated(0, 10, null, null, null, null, null))
+                .thenReturn(responseBody);
 
-        ResponseEntity<List<UserResponse>> response = userController.getAllUsers();
+        ResponseEntity<PaginatedResponse<UserResponse>> response =
+                userController.getAllUsers(0, 10, null, null, null, null, null);
 
-        verify(userService).getAllUsers();
+        verify(userService).getAllUsersPaginated(0, 10, null, null, null, null, null);
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, response.getBody().getContent().size());
     }
 
     @Test
@@ -207,5 +216,43 @@ class UserControllerTest {
         assertEquals(1, response.getBody().getTotal());
         assertEquals(1, response.getBody().getSucceeded());
         assertEquals(0, response.getBody().getFailed());
+    }
+
+
+    @Test
+    void getOrganizationUsers_returns200Ok() {
+        UUID currentUserId = UUID.randomUUID();
+
+        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+        when(currentUser.getUserId()).thenReturn(currentUserId);
+
+        PaginatedResponse<UserResponse> paginatedResponse = new PaginatedResponse<>(
+                List.of(makeResponse("student@org.com"), makeResponse("teacher@org.com")),
+                0,
+                10,
+                2L
+        );
+
+        when(userService.getCurrentOrganizationUsersPaginated(
+                currentUserId, 0, 10, "org", "TEACHER", UserStatus.ACTIVE, "email", "desc"
+        )).thenReturn(paginatedResponse);
+
+        ResponseEntity<PaginatedResponse<UserResponse>> response =
+                userController.getOrganizationUsers(0, 10, "org", "TEACHER", UserStatus.ACTIVE, "email", "desc", currentUser);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isEqualTo(paginatedResponse);
+    }
+
+    private UserResponse makeResponse(String email) {
+        return new UserResponse(
+                UUID.randomUUID(),
+                email,
+                "Ana",
+                "Ionescu",
+                RoleName.STUDENT,
+                UUID.randomUUID(),
+                UserStatus.ACTIVE
+        );
     }
 }
