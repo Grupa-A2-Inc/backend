@@ -38,4 +38,9 @@ public class FeedbackExceptionHandler extends GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleDifferentId(DifferentIdException exception) {
         return buildErrorResponse(exception, HttpStatus.FORBIDDEN);
     }
+
+    @ExceptionHandler(AlreadyResolved.class)
+    public ResponseEntity<Map<String, Object>> handleAlreadyResolved(AlreadyResolved exception) {
+        return buildErrorResponse(exception, HttpStatus.CONFLICT);
+    }
 }
