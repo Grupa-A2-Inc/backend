@@ -15,12 +15,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
-
-
 @RestController
 @RequestMapping("/api/v1")
 public class QuestionErrorReportController {
-
     private static final String CREATED = "201";
 
     private static final String BAD_REQUEST = "400";
