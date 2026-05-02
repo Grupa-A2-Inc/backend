@@ -16,6 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class ErrorReportDto {
     private UUID id;
+    private Integer questionId;
     private String description;
     private ReportStatus status;
     private LocalDateTime createdAt;
