@@ -6,8 +6,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import org.elearning.backend.feedback.dto.DescriptionRequestDto;
 import org.elearning.backend.feedback.dto.ErrorReportDto;
+import org.elearning.backend.feedback.model.ReportStatus;
 import org.elearning.backend.feedback.service.QuestionErrorReportService;
 import org.elearning.backend.security.auth.CustomUserDetails;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,6 +18,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
 
 
 @RestController
@@ -52,5 +56,14 @@ public class QuestionErrorReportController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(questionErrorReportService.createReport(questionId, customUserDetails.getUserId(), description));
+    }
+
+    //-------- Dev4 --------
+    public ResponseEntity<Page<ErrorReportDto>> getReportsForProfessor(
+            @RequestParam(required = false) ReportStatus status,
+            @RequestParam(required = false) UUID courseId,
+            Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        return ResponseEntity.ok(questionErrorReportService.getReports(customUserDetails.getUserId(), status, courseId, pageable));
     }
 }
