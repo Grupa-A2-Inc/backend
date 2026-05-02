@@ -1,6 +1,7 @@
 package org.elearning.backend.organization.service;
 
 import lombok.AllArgsConstructor;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
@@ -10,10 +11,16 @@ import org.elearning.backend.organization.exception.OrganizationOwnerNotFoundExc
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -88,5 +95,50 @@ public class OrganizationService {
                 organization.getOwner().getId(),
                 organization.getOwner().getEmail()
         );
+    }
+
+    public PaginatedResponse<OrganizationResponse> getAllOrganizationsPaginated(Integer page, Integer size, String search, String sortBy, String sortDir){
+
+        int pageValue = (page == null || page < 0) ? 0 : page;
+        int sizeValue = (size == null || size <= 0) ? 10 : size;
+
+        String sortField = (sortBy == null || sortBy.isBlank()) ? "name" : sortBy;
+        String direction = (sortDir == null || sortDir.isBlank()) ? "asc" : sortDir.toLowerCase();
+
+        Set<String> allowedSortFields = Set.of("name", "createdAt");
+        if (!allowedSortFields.contains(sortField)) {
+            throw new IllegalArgumentException("Invalid sortBy field: " + sortField);
+        }
+
+        Sort sort = direction.equals("desc")
+                ? Sort.by(sortField).descending()
+                : Sort.by(sortField).ascending();
+
+        Pageable pageable = PageRequest.of(pageValue, sizeValue, sort);
+
+        Specification<Organization> spec = Specification.where(null);
+
+        if (search != null && !search.isBlank()) {
+            String likeValue = "%" + search.toLowerCase().trim() + "%";
+
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("name")), likeValue)
+            );
+        }
+
+        Page<Organization> organizationPage = organizationRepository.findAll(spec, pageable);
+
+        List<OrganizationResponse> content = organizationPage.getContent()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+
+        return new PaginatedResponse<>(
+                content,
+                organizationPage.getNumber(),
+                organizationPage.getSize(),
+                organizationPage.getTotalElements()
+        );
+
     }
 }
