@@ -9,6 +9,7 @@ import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.exception.OrganizationNotFoundException;
 import org.elearning.backend.organization.exception.OrganizationOwnerNotFoundException;
 import org.elearning.backend.organization.repository.OrganizationRepository;
+import org.elearning.backend.subscription.service.OrganizationSubscriptionProvisioningService;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
+    private final OrganizationSubscriptionProvisioningService organizationSubscriptionProvisioningService;
 
     public OrganizationResponse createOrganization(CreateOrganizationRequest request) {
         User owner = userRepository.findById(request.getOwnerId())
@@ -44,6 +46,7 @@ public class OrganizationService {
         organization.setOwner(owner);
 
         Organization saved = organizationRepository.save(organization);
+        organizationSubscriptionProvisioningService.provisionFreeSubscription(saved);
         return toResponse(saved);
     }
 

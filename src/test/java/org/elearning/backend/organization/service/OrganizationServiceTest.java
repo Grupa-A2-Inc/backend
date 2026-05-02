@@ -1,5 +1,11 @@
 package org.elearning.backend.organization.service;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Path;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
@@ -10,6 +16,7 @@ import org.elearning.backend.organization.exception.OrganizationOwnerNotFoundExc
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.subscription.service.OrganizationSubscriptionProvisioningService;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
@@ -40,6 +47,9 @@ class OrganizationServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private OrganizationSubscriptionProvisioningService organizationSubscriptionProvisioningService;
 
     @InjectMocks
     private OrganizationService organizationService;
@@ -99,6 +109,7 @@ class OrganizationServiceTest {
         assertEquals("0740000000", response.getPhoneNumber());
         assertEquals(owner.getId(), response.getOwnerId());
         assertEquals("owner@scoala.ro", response.getOwnerEmail());
+        verify(organizationSubscriptionProvisioningService).provisionFreeSubscription(saved);
     }
 
     @Test
@@ -131,6 +142,7 @@ class OrganizationServiceTest {
         assertEquals("Scoala Nr. 1", response.getName());
         assertNull(response.getAddress());
         assertNull(response.getPhoneNumber());
+        verify(organizationSubscriptionProvisioningService).provisionFreeSubscription(saved);
     }
 
     @Test
@@ -142,6 +154,8 @@ class OrganizationServiceTest {
 
         assertThrows(OrganizationOwnerNotFoundException.class,
                 () -> organizationService.createOrganization(request));
+
+        verifyNoInteractions(organizationSubscriptionProvisioningService);
     }
 
     @Test
@@ -287,7 +301,7 @@ class OrganizationServiceTest {
                 organizationService.getAllOrganizationsPaginated(0, 2, null, "name", "asc");
 
         assertThat(response.getContent()).hasSize(2);
-        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getPage()).isZero();
         assertThat(response.getSize()).isEqualTo(2);
         assertThat(response.getTotalElements()).isEqualTo(5L);
         assertThat(response.getContent().get(0).getName()).isEqualTo("Alpha School");
@@ -306,7 +320,7 @@ class OrganizationServiceTest {
 
         Pageable pageable = pageableCaptor.getValue();
 
-        assertThat(pageable.getPageNumber()).isEqualTo(0);
+        assertThat(pageable.getPageNumber()).isZero();
         assertThat(pageable.getPageSize()).isEqualTo(10);
         assertThat(pageable.getSort().getOrderFor("name")).isNotNull();
         assertThat(pageable.getSort().getOrderFor("name").getDirection()).isEqualTo(Sort.Direction.ASC);
@@ -328,6 +342,33 @@ class OrganizationServiceTest {
         assertThat(pageable.getPageSize()).isEqualTo(5);
         assertThat(pageable.getSort().getOrderFor("createdAt")).isNotNull();
         assertThat(pageable.getSort().getOrderFor("createdAt").getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getAllOrganizations_shouldUseDefaultsForNegativeZeroAndBlankParams() {
+        when(organizationRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        organizationService.getAllOrganizationsPaginated(-1, 0, "   ", "   ", "   ");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Specification<Organization>> specificationCaptor =
+                ArgumentCaptor.forClass((Class) Specification.class);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(organizationRepository).findAll(specificationCaptor.capture(), pageableCaptor.capture());
+
+        Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isZero();
+        assertThat(pageable.getPageSize()).isEqualTo(10);
+        assertThat(pageable.getSort().getOrderFor("name")).isNotNull();
+        assertThat(pageable.getSort().getOrderFor("name").getDirection()).isEqualTo(Sort.Direction.ASC);
+
+        Root<Organization> root = mock(Root.class);
+        CriteriaQuery<?> query = mock(CriteriaQuery.class);
+        CriteriaBuilder criteriaBuilder = mock(CriteriaBuilder.class);
+
+        assertThat(specificationCaptor.getValue().toPredicate(root, query, criteriaBuilder)).isNull();
+        verifyNoInteractions(criteriaBuilder);
     }
 
     @Test
@@ -356,6 +397,28 @@ class OrganizationServiceTest {
 
         assertThat(response.getContent()).hasSize(1);
         assertThat(response.getContent().get(0).getName()).isEqualTo("Open Learning Academy");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Specification<Organization>> specificationCaptor =
+                ArgumentCaptor.forClass((Class) Specification.class);
+        verify(organizationRepository).findAll(specificationCaptor.capture(), any(Pageable.class));
+
+        Specification<Organization> specification = specificationCaptor.getValue();
+        Root<Organization> root = mock(Root.class);
+        CriteriaQuery<?> query = mock(CriteriaQuery.class);
+        CriteriaBuilder criteriaBuilder = mock(CriteriaBuilder.class);
+        @SuppressWarnings("rawtypes")
+        Path namePath = mock(Path.class);
+        Expression<String> loweredName = mock(Expression.class);
+        Predicate predicate = mock(Predicate.class);
+
+        when(root.get("name")).thenReturn(namePath);
+        when(criteriaBuilder.lower(namePath)).thenReturn(loweredName);
+        when(criteriaBuilder.like(loweredName, "%learning%")).thenReturn(predicate);
+
+        assertThat(specification.toPredicate(root, query, criteriaBuilder)).isEqualTo(predicate);
+        verify(criteriaBuilder).lower(namePath);
+        verify(criteriaBuilder).like(loweredName, "%learning%");
     }
 
     private Organization buildOrganization(String name) {
