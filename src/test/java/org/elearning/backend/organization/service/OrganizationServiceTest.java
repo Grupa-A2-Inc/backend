@@ -1,5 +1,6 @@
 package org.elearning.backend.organization.service;
 
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
@@ -14,10 +15,14 @@ import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.context.ActiveProfiles;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Optional;
@@ -262,5 +267,112 @@ class OrganizationServiceTest {
 
         assertThrows(OrganizationNotFoundException.class,
                 () -> organizationService.deleteOrganization(id));
+    }
+
+    @Test
+    void getAllOrganizations_shouldReturnPaginatedResponseWithMetadata() {
+        Organization first = buildOrganization("Alpha School");
+        Organization second = buildOrganization("Beta School");
+
+        Page<Organization> page = new PageImpl<>(
+                List.of(first, second),
+                PageRequest.of(0, 2, Sort.by("name").ascending()),
+                5
+        );
+
+        when(organizationRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        PaginatedResponse<OrganizationResponse> response =
+                organizationService.getAllOrganizationsPaginated(0, 2, null, "name", "asc");
+
+        assertThat(response.getContent()).hasSize(2);
+        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getSize()).isEqualTo(2);
+        assertThat(response.getTotalElements()).isEqualTo(5L);
+        assertThat(response.getContent().get(0).getName()).isEqualTo("Alpha School");
+        assertThat(response.getContent().get(1).getName()).isEqualTo("Beta School");
+    }
+
+    @Test
+    void getAllOrganizations_shouldUseDefaultPaginationAndSorting_whenParamsAreNull() {
+        when(organizationRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        organizationService.getAllOrganizationsPaginated(null, null, null, null, null);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(organizationRepository).findAll(any(Specification.class), pageableCaptor.capture());
+
+        Pageable pageable = pageableCaptor.getValue();
+
+        assertThat(pageable.getPageNumber()).isEqualTo(0);
+        assertThat(pageable.getPageSize()).isEqualTo(10);
+        assertThat(pageable.getSort().getOrderFor("name")).isNotNull();
+        assertThat(pageable.getSort().getOrderFor("name").getDirection()).isEqualTo(Sort.Direction.ASC);
+    }
+
+    @Test
+    void getAllOrganizations_shouldUseRequestedPaginationAndSorting() {
+        when(organizationRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        organizationService.getAllOrganizationsPaginated(1, 5, "alpha", "createdAt", "desc");
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(organizationRepository).findAll(any(Specification.class), pageableCaptor.capture());
+
+        Pageable pageable = pageableCaptor.getValue();
+
+        assertThat(pageable.getPageNumber()).isEqualTo(1);
+        assertThat(pageable.getPageSize()).isEqualTo(5);
+        assertThat(pageable.getSort().getOrderFor("createdAt")).isNotNull();
+        assertThat(pageable.getSort().getOrderFor("createdAt").getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getAllOrganizations_shouldThrowWhenSortFieldIsInvalid() {
+        assertThrows(IllegalArgumentException.class,
+                () -> organizationService.getAllOrganizationsPaginated(0, 10, null, "email", "asc"));
+
+        verify(organizationRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void getAllOrganizations_shouldHandleSearchParameter() {
+        Organization organization = buildOrganization("Open Learning Academy");
+
+        Page<Organization> page = new PageImpl<>(
+                List.of(organization),
+                PageRequest.of(0, 10),
+                1
+        );
+
+        when(organizationRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        PaginatedResponse<OrganizationResponse> response =
+                organizationService.getAllOrganizationsPaginated(0, 10, "learning", "name", "asc");
+
+        assertThat(response.getContent()).hasSize(1);
+        assertThat(response.getContent().get(0).getName()).isEqualTo("Open Learning Academy");
+    }
+
+    private Organization buildOrganization(String name) {
+        User owner = new User();
+        owner.setId(UUID.randomUUID());
+        owner.setEmail("owner@" + name.replace(" ", "").toLowerCase() + ".com");
+
+        Organization organization = new Organization();
+        organization.setId(UUID.randomUUID());
+        organization.setName(name);
+        organization.setCountry("Romania");
+        organization.setCity("Bucharest");
+        organization.setOrganizationType(null);
+        organization.setAddress("Address");
+        organization.setPhoneNumber("0712345678");
+        organization.setOwner(owner);
+
+        return organization;
     }
 }

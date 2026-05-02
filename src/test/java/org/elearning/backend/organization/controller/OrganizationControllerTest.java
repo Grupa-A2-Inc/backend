@@ -10,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -42,10 +43,14 @@ class OrganizationControllerTest {
 
     @Test
     void getAllOrganizations_returns200Ok() {
-        List<OrganizationResponse> responses = List.of(makeResponse(), makeResponse());
-        when(organizationService.getAllOrganizations()).thenReturn(responses);
+        PaginatedResponse<OrganizationResponse> responses =
+                new PaginatedResponse<>(List.of(makeResponse(), makeResponse()), 0, 10, 2L);
 
-        ResponseEntity<List<OrganizationResponse>> response = organizationController.getAllOrganizations();
+        when(organizationService.getAllOrganizationsPaginated(null, null, null, null, null))
+                .thenReturn(responses);
+
+        ResponseEntity<PaginatedResponse<OrganizationResponse>> response =
+                organizationController.getAllOrganizations(null, null, null, null, null);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).isEqualTo(responses);
