@@ -54,7 +54,7 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
             SELECT count(q)>0
             FROM Question q
             JOIN q.test t
-            JOIN Lesson l ON l.id = t.id
+            JOIN Lesson l ON l.id = t.lessonId
             JOIN l.chapter ch
             JOIN ch.course c
             JOIN CourseEnrollment ce on ce.courseId = c.id
