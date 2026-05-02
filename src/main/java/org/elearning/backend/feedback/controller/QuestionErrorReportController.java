@@ -1,11 +1,13 @@
 package org.elearning.backend.feedback.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import org.elearning.backend.feedback.dto.DescriptionRequestDto;
 import org.elearning.backend.feedback.dto.ErrorReportDto;
+import org.elearning.backend.feedback.exception.DifferentIdException;
 import org.elearning.backend.feedback.model.ReportStatus;
 import org.elearning.backend.feedback.service.QuestionErrorReportService;
 import org.elearning.backend.security.auth.CustomUserDetails;
@@ -25,6 +27,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 public class QuestionErrorReportController {
 
+    private static final String OK = "200";
     private static final String CREATED = "201";
 
     private static final String BAD_REQUEST = "400";
@@ -59,11 +62,26 @@ public class QuestionErrorReportController {
     }
 
     //-------- Dev4 --------
+    @Operation(
+            summary = "Get paginated error reports",
+            description = "Retrieves a paginated list of error reports for courses owned by the authenticated teacher. " +
+                    "Can be filtered by status and course ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = OK, description = "Paginated list of error reports retrieved successfully"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "User does not have permission to view the reports")
+    })
+    @GetMapping("/professors/{professorId}/error-reports")
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<Page<ErrorReportDto>> getReportsForProfessor(
+            @Parameter(description = "The ID of the professor") @PathVariable UUID professorId,
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(required = false) UUID courseId,
             Pageable pageable,
             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-        return ResponseEntity.ok(questionErrorReportService.getReports(customUserDetails.getUserId(), status, courseId, pageable));
+        UUID userId = customUserDetails.getUserId();
+        if (!userId.equals(professorId)) {
+            throw new DifferentIdException("Authenticated user ID does not match the professor ID in the path");
+        }
+        return ResponseEntity.ok(questionErrorReportService.getReports(userId, status, courseId, pageable));
     }
 }
