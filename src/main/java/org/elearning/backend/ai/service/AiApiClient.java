@@ -4,7 +4,6 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.elearning.backend.ai.dto.AiAdaptiveResponse;
 import org.elearning.backend.ai.dto.AiGenerateResponse;
-import org.elearning.backend.ai.dto.AiStudentRegistrationRequest;
 import org.elearning.backend.ai.dto.AiStudentRegistrationResponse;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
@@ -14,11 +13,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -176,24 +179,40 @@ public class AiApiClient {
     // ==========================================
 
     public AiStudentRegistrationResponse registerStudent(UUID requestId, UUID studentId) {
-        AiStudentRegistrationRequest payload = new AiStudentRegistrationRequest(
-                requestId.toString(),
-                studentId.toString()
-        );
+        String requestBody = """
+                {"requestId":"%s","studentId":"%s"}
+                """.formatted(requestId, studentId).trim();
 
         try {
+            log.info(
+                    "AI student registration request: requestId={} studentId={} body={}",
+                    requestId,
+                    studentId,
+                    requestBody
+            );
+
             AiStudentRegistrationResponse response = studentRegistrationRestClient.post()
                     .uri(STUDENT_REGISTRATION_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(API_KEY_HEADER, apiKey)
                     .header("X-Request-Id", requestId.toString())
-                    .body(payload)
+                    .body(requestBody)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, clientResponse) -> {
-                        log.error("AI student registration failed: Status {}", clientResponse.getStatusCode());
+                        String responseBody = readErrorResponseBody(clientResponse);
+                        log.error(
+                                "AI student registration failed: status={} requestId={} studentId={} responseBody={}",
+                                clientResponse.getStatusCode(),
+                                requestId,
+                                studentId,
+                                responseBody
+                        );
                         throw new AiApiException(
-                                "AI student registration failed with status: " + clientResponse.getStatusCode()
+                                "AI student registration failed with status: "
+                                        + clientResponse.getStatusCode()
+                                        + ", response body: "
+                                        + responseBody
                         );
                     })
                     .body(AiStudentRegistrationResponse.class);
@@ -213,6 +232,15 @@ public class AiApiClient {
         } catch (ResourceAccessException e) {
             log.error("Timeout la student registration AI pentru studentId: {}", studentId);
             throw new AiTimeoutException("Timeout student registration AI: " + e.getMessage());
+        }
+    }
+
+    static String readErrorResponseBody(ClientHttpResponse response) {
+        try {
+            String responseBody = StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8);
+            return responseBody == null || responseBody.isBlank() ? "<empty>" : responseBody;
+        } catch (IOException e) {
+            return "<unreadable>";
         }
     }
 }
