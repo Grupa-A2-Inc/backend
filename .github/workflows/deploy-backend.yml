@@ -12,11 +12,19 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, elearnserver]
+    runs-on: [self-hosted, Linux, X64]
+
+    env:
+      KUBECONFIG: /home/lyo/.kube/config
+      DOCKER_CONFIG: /tmp/docker-config-${{ github.run_id }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Prepare Docker config
+        run: |
+          mkdir -p "$DOCKER_CONFIG"
 
       - name: Log in to Docker Hub
         run: |
@@ -49,3 +57,8 @@ jobs:
         run: |
           kubectl rollout undo deployment/elearning-backend -n elearning
           kubectl rollout status deployment/elearning-backend -n elearning --timeout=180s
+
+      - name: Clean Docker config
+        if: always()
+        run: |
+          rm -rf "$DOCKER_CONFIG"
