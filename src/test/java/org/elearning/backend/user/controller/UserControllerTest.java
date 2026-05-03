@@ -5,6 +5,7 @@ import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
+import org.elearning.backend.user.dto.request.UserPaginationRequest;
 import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
 import org.elearning.backend.user.dto.response.BulkImportResponse;
@@ -234,7 +235,7 @@ class UserControllerTest {
         );
 
         when(userService.getCurrentOrganizationUsersPaginated(
-                currentUserId, 0, 10, "org", "TEACHER", UserStatus.ACTIVE, "email", "desc"
+                currentUserId, new UserPaginationRequest(0, 10, "org", "TEACHER", UserStatus.ACTIVE, "email", "desc")
         )).thenReturn(paginatedResponse);
 
         ResponseEntity<PaginatedResponse<UserResponse>> response =

@@ -12,6 +12,7 @@ import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
+import org.elearning.backend.user.dto.request.UserPaginationRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.response.BulkImportResponse;
@@ -25,7 +26,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
-import java.nio.file.Files;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -176,9 +176,8 @@ public class UserController {
                                                                                 @RequestParam(required = false) String sortBy,
                                                                                 @RequestParam(required = false) String sortDir,
                                                                                 @AuthenticationPrincipal CustomUserDetails currentUser) {
-        return ResponseEntity.ok(userService.getCurrentOrganizationUsersPaginated(currentUser.getUserId(), page, size, search, role, status, sortBy, sortDir));//si aici am schimbat metoda in service fata de ce era inainte
-        //dar nu stiu daca sa le pastrez si pe alea vechi?
-        //pentru ca erau doar in teste folosite
+        UserPaginationRequest request = new UserPaginationRequest(page, size, search, role, status, sortBy, sortDir);
+        return ResponseEntity.ok(userService.getCurrentOrganizationUsersPaginated(currentUser.getUserId(), request));
     }
 
     @Operation(

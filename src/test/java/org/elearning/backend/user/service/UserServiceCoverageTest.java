@@ -1,5 +1,7 @@
 package org.elearning.backend.user.service;
 
+import org.elearning.backend.ai.exception.AiApiException;
+import org.elearning.backend.ai.service.AiStudentRegistrationService;
 import org.elearning.backend.auth.service.ActivationTokenService;
 import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.organization.entity.Organization;
@@ -38,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,6 +66,9 @@ class UserServiceCoverageTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private AiStudentRegistrationService aiStudentRegistrationService;
 
     @InjectMocks
     private UserService userService;
@@ -131,6 +137,31 @@ class UserServiceCoverageTest {
         assertThat(response.getOrganizationId()).isNull();
         assertThat(response.getStatus()).isEqualTo(UserStatus.PENDING);
         verify(emailService).sendActivationEmail("ana@example.com", "Ana", "activation-token");
+    }
+
+    @Test
+    void createUser_studentRegistrationFailure_stopsBeforeActivationEmail() {
+        UUID organizationId = UUID.randomUUID();
+        CreateUserRequest request = createUserRequest(RoleName.STUDENT, organizationId);
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
+        when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(new Role(RoleName.STUDENT)));
+        when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization(organizationId)));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
+        doThrow(new AiApiException("AI sync failed"))
+                .when(aiStudentRegistrationService)
+                .registerStudent(any(UUID.class));
+
+        assertThatThrownBy(() -> userService.createUser(request))
+                .isInstanceOf(AiApiException.class)
+                .hasMessage("AI sync failed");
+
+        verify(aiStudentRegistrationService).registerStudent(any(UUID.class));
+        verify(activationTokenService, never()).generateActivationToken(any(User.class));
+        verify(emailService, never()).sendActivationEmail(any(), any(), any());
     }
 
     @Test
@@ -322,8 +353,13 @@ class UserServiceCoverageTest {
         assertThat(savedUser.getPasswordHash()).isNull();
         assertThat(savedUser.getStatus()).isEqualTo(UserStatus.PENDING);
         assertThat(response.getRoleName()).isEqualTo(roleName);
+        if (roleName == RoleName.STUDENT) {
+            verify(aiStudentRegistrationService).registerStudent(savedUser.getId());
+        } else {
+            verify(aiStudentRegistrationService, never()).registerStudent(any(UUID.class));
+        }
         verify(emailService).sendActivationEmail(request.getEmail(), request.getFirstName(), "activation-token");
-        clearInvocations(userRepository, emailService);
+        clearInvocations(userRepository, emailService, aiStudentRegistrationService);
     }
 
     private CreateUserRequest createUserRequest(RoleName roleName, UUID organizationId) {

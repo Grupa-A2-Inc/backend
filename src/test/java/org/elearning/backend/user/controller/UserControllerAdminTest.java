@@ -2,6 +2,7 @@ package org.elearning.backend.user.controller;
 
 import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.security.auth.CustomUserDetails;
+import org.elearning.backend.user.dto.request.UserPaginationRequest;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.service.UserImportService;
@@ -90,7 +91,7 @@ class UserControllerAdminTest {
                 new PaginatedResponse<>(List.of(orgUser), 0, 10, 1L);
 
         when(userService.getCurrentOrganizationUsersPaginated(
-                currentUserId, 0, 10, null, null, null, null, null
+                currentUserId, new UserPaginationRequest(0, 10, null, null, null, null, null)
         )).thenReturn(paginatedResponse);
 
         ResponseEntity<PaginatedResponse<UserResponse>> response =
@@ -102,7 +103,7 @@ class UserControllerAdminTest {
         assertEquals("orgadmin@test.com", response.getBody().getContent().get(0).getEmail());
 
         verify(userService).getCurrentOrganizationUsersPaginated(
-                currentUserId, 0, 10, null, null, null, null, null
+                currentUserId, new UserPaginationRequest(0, 10, null, null, null, null, null)
         );
     }
 }

@@ -3,6 +3,8 @@ package org.elearning.backend.ai.service;
 import lombok.extern.slf4j.Slf4j;
 import org.elearning.backend.ai.dto.AiAdaptiveResponse;
 import org.elearning.backend.ai.dto.AiGenerateResponse;
+import org.elearning.backend.ai.dto.AiStudentRegistrationRequest;
+import org.elearning.backend.ai.dto.AiStudentRegistrationResponse;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,11 +25,18 @@ import java.util.UUID;
 @Service
 public class AiApiClient {
 
-    private final String apiKey;
     private static final String API_KEY = "X-Api-Key";
+    private static final String AI_SUCCESS_STATUS = "ok";
+    private static final String GENERATE_TEST_URI = "/api/generate";
+    private static final String ADAPTIVE_EXERCISES_URI = "/api/adaptive/exercises";
+    private static final String ADAPTIVE_FEEDBACK_URI = "/api/adaptive/feedback";
+    private static final String STUDENT_REGISTRATION_URI = "/ai/api/students";
+
+    private final String apiKey;
     private final RestClient generateRestClient;
     private final RestClient feedbackRestClient;
     private final RestClient adaptiveRestClient;
+    private final RestClient studentRegistrationRestClient;
 
     /**
      * Creates an AiApiClient and configures three RestClient instances for generate, feedback,
@@ -47,7 +56,8 @@ public class AiApiClient {
             @Value("${ai.api.key}") String apiKey,
             @Value("${ai.api.timeout-generate-ms:10000}") int generateTimeout,
             @Value("${ai.api.timeout-feedback-ms:5000}") int feedbackTimeout,
-            @Value("${ai.api.timeout-adaptive-ms:10000}") int adaptiveTimeout) {
+            @Value("${ai.api.timeout-adaptive-ms:10000}") int adaptiveTimeout,
+            @Value("${ai.api.timeout-student-registration-ms:5000}") int studentRegistrationTimeout) {
 
         this.apiKey = apiKey;
 
@@ -64,6 +74,11 @@ public class AiApiClient {
         this.adaptiveRestClient = restClientBuilder.clone()
                 .baseUrl(baseUrl)
                 .requestFactory(createRequestFactory(adaptiveTimeout))
+                .build();
+
+        this.studentRegistrationRestClient = restClientBuilder.clone()
+                .baseUrl(baseUrl)
+                .requestFactory(createRequestFactory(studentRegistrationTimeout))
                 .build();
     }
 
@@ -100,7 +115,7 @@ public class AiApiClient {
 
         try {
             return generateRestClient.post()
-                    .uri("/api/generate")
+                    .uri(GENERATE_TEST_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .header(API_KEY, apiKey)
                     .header("X-Request-Id", requestId.toString())
@@ -142,7 +157,7 @@ public class AiApiClient {
 
         try {
             return adaptiveRestClient.post()
-                    .uri("/api/adaptive/exercises")
+                    .uri(ADAPTIVE_EXERCISES_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .header(API_KEY, apiKey)
                     .body(payload)
@@ -171,7 +186,7 @@ public class AiApiClient {
     public void sendAdaptiveFeedback(Object payload) {
         try {
             feedbackRestClient.post()
-                    .uri("/api/adaptive/feedback")
+                    .uri(ADAPTIVE_FEEDBACK_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .header(API_KEY, apiKey)
                     .body(payload)
@@ -179,6 +194,43 @@ public class AiApiClient {
                     .toBodilessEntity();
         } catch (Exception e) {
             log.warn("A eșuat feedback-ul adaptiv la ML. Eroare: {}", e.getMessage());
+        }
+    }
+
+    public AiStudentRegistrationResponse registerStudent(UUID requestId, UUID studentId) {
+        AiStudentRegistrationRequest payload = new AiStudentRegistrationRequest(
+                requestId.toString(),
+                studentId.toString()
+        );
+
+        try {
+            AiStudentRegistrationResponse response = studentRegistrationRestClient.post()
+                    .uri(STUDENT_REGISTRATION_URI)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header(API_KEY, apiKey)
+                    .header("X-Request-Id", requestId.toString())
+                    .body(payload)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, clientResponse) -> {
+                        throw new AiApiException(
+                                "AI student registration failed with status: " + clientResponse.getStatusCode()
+                        );
+                    })
+                    .body(AiStudentRegistrationResponse.class);
+
+            if (response == null) {
+                throw new AiApiException("AI student registration returned an empty response");
+            }
+
+            if (!AI_SUCCESS_STATUS.equalsIgnoreCase(response.status())) {
+                throw new AiApiException(
+                        "AI student registration failed with status payload: " + response.status()
+                );
+            }
+
+            return response;
+        } catch (ResourceAccessException e) {
+            throw new AiTimeoutException("Timeout student registration AI: " + e.getMessage());
         }
     }
 }

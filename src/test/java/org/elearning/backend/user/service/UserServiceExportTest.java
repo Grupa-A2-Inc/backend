@@ -94,13 +94,14 @@ class UserServiceExportTest {
                 .thenReturn(List.of(first, second));
         String csv = userService.exportOrganizationUsersCsv(null, null, null, currentUserId);
 
-        assertThat(csv).contains("id,email,firstName,lastName,role,status,organizationId");
-        assertThat(csv).contains("ana@test.com");
-        assertThat(csv).contains("dan@test.com");
-        assertThat(csv).contains("STUDENT");
-        assertThat(csv).contains("TEACHER");
-        assertThat(csv).contains("ACTIVE");
-        assertThat(csv).contains("BLOCKED");
+        assertThat(csv)
+                .contains("id,email,firstName,lastName,role,status,organizationId")
+                .contains("ana@test.com")
+                .contains("dan@test.com")
+                .contains("STUDENT")
+                .contains("TEACHER")
+                .contains("ACTIVE")
+                .contains("BLOCKED");
 
         verify(userRepository).findById(currentUserId);
         verify(userRepository).findAll(org.mockito.ArgumentMatchers.<Specification<User>>any(), eq(Sort.by("firstName").ascending()));
@@ -128,6 +129,75 @@ class UserServiceExportTest {
         userService.exportOrganizationUsersCsv("ana", "STUDENT", UserStatus.ACTIVE, currentUserId);
 
         verify(userRepository).findAll(org.mockito.ArgumentMatchers.<Specification<User>>any(), eq(Sort.by("firstName").ascending()));
+    }
+
+    @Test
+    void exportOrganizationUsersCsv_shouldHandleNullAndQuotedFields() {
+        UUID organizationId = UUID.randomUUID();
+        UUID currentUserId = UUID.randomUUID();
+
+        User currentUser = buildUser(
+                currentUserId,
+                "orgadmin@test.com",
+                "Org",
+                "Admin",
+                RoleName.ORGANIZATION_ADMIN,
+                UserStatus.ACTIVE,
+                organizationId
+        );
+
+        User exportedUser = new User();
+        exportedUser.setId(null);
+        exportedUser.setEmail(null);
+        exportedUser.setFirstName("An\"a");
+        exportedUser.setLastName(null);
+        exportedUser.setRole(null);
+        exportedUser.setStatus(null);
+        exportedUser.setOrganization(null);
+
+        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
+        when(userRepository.findAll(org.mockito.ArgumentMatchers.<Specification<User>>any(), any(Sort.class)))
+                .thenReturn(List.of(exportedUser));
+
+        String csv = userService.exportOrganizationUsersCsv(null, null, null, currentUserId);
+
+        assertThat(csv).contains("\"\",\"\",\"An\"\"a\",\"\",\"\",\"\",\"\"");
+    }
+
+    @Test
+    void exportOrganizationUsersCsv_shouldHandleMissingRoleNameAndOrganizationId() {
+        UUID organizationId = UUID.randomUUID();
+        UUID currentUserId = UUID.randomUUID();
+
+        User currentUser = buildUser(
+                currentUserId,
+                "orgadmin@test.com",
+                "Org",
+                "Admin",
+                RoleName.ORGANIZATION_ADMIN,
+                UserStatus.ACTIVE,
+                organizationId
+        );
+
+        User exportedUser = new User();
+        exportedUser.setId(UUID.randomUUID());
+        exportedUser.setEmail("partial@test.com");
+        exportedUser.setFirstName("Partial");
+        exportedUser.setLastName("User");
+
+        Role role = new Role();
+        exportedUser.setRole(role);
+
+        Organization organization = new Organization();
+        exportedUser.setOrganization(organization);
+
+        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
+        when(userRepository.findAll(org.mockito.ArgumentMatchers.<Specification<User>>any(), any(Sort.class)))
+                .thenReturn(List.of(exportedUser));
+
+        String csv = userService.exportOrganizationUsersCsv(null, null, null, currentUserId);
+
+        assertThat(csv).contains("\"partial@test.com\",\"Partial\",\"User\",\"\",\"ACTIVE\",\"\"");
     }
 
     @Test
