@@ -1,6 +1,7 @@
 package org.elearning.backend.user.service;
 
 import lombok.AllArgsConstructor;
+import org.elearning.backend.ai.service.AiStudentRegistrationService;
 import org.elearning.backend.auth.service.ActivationTokenService;
 import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.common.dto.response.PaginatedResponse;
@@ -52,6 +53,7 @@ public class UserService {
     private final ActivationTokenService activationTokenService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final AiStudentRegistrationService aiStudentRegistrationService;
 
     private static final String USER_NO_EXIST = "User does not exist: ";
     private static final String DELIMITER = ",";
@@ -100,6 +102,10 @@ public class UserService {
         }
 
         User saved = userRepository.save(user);
+
+        if (request.getRoleName() == RoleName.STUDENT) {
+            aiStudentRegistrationService.registerStudent(saved.getId());
+        }
 
         String rawToken = activationTokenService.generateActivationToken(saved);
         emailService.sendActivationEmail(saved.getEmail(), saved.getFirstName(), rawToken);
