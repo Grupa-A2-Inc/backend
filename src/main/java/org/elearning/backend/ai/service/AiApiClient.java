@@ -29,10 +29,8 @@ import java.util.UUID;
 public class AiApiClient {
 
     private static final String API_KEY_HEADER = "X-API-Key";
-
-    private final String apiKey;
-    private static final String API_KEY = "X-Api-Key";
     private static final String AI_SUCCESS_STATUS = "ok";
+
     private static final String GENERATE_TEST_URI = "/api/generate";
     private static final String ADAPTIVE_EXERCISES_URI = "/api/adaptive/exercises";
     private static final String ADAPTIVE_FEEDBACK_URI = "/api/adaptive/feedback";
@@ -42,21 +40,9 @@ public class AiApiClient {
     private final RestClient generateRestClient;
     private final RestClient feedbackRestClient;
     private final RestClient adaptiveRestClient;
-    private final LessonRepository lessonRepository;
     private final RestClient studentRegistrationRestClient;
+    private final LessonRepository lessonRepository;
 
-    /**
-     * Creates an AiApiClient and configures three RestClient instances for generate, feedback,
-     * and adaptive endpoints using the provided base URL and per-endpoint timeouts. The API key
-     * is stored for use in outbound requests.
-     *
-     * @param restClientBuilder a RestClient.Builder used to construct per-endpoint RestClient instances
-     * @param baseUrl the base URL for the AI API endpoints
-     * @param apiKey the API key value sent in the `X-Api-Key` header for requests
-     * @param generateTimeout connect/read timeout in milliseconds for the generate endpoint
-     * @param feedbackTimeout connect/read timeout in milliseconds for the feedback endpoint
-     * @param adaptiveTimeout connect/read timeout in milliseconds for the adaptive endpoint
-     */
     public AiApiClient(
             RestClient.Builder restClientBuilder,
             LessonRepository lessonRepository,
@@ -98,6 +84,10 @@ public class AiApiClient {
         return factory;
     }
 
+    // ==========================================
+    // FLUX 1: Generare Test
+    // ==========================================
+
     public AiGenerateResponse generateTest(UUID lessonId, int count) {
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new EntityNotFoundException("Lectia nu exista: " + lessonId));
@@ -113,17 +103,16 @@ public class AiApiClient {
 
         try {
             return generateRestClient.post()
-                    .uri("/ai/api/generate")
+                    .uri(GENERATE_TEST_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(API_KEY_HEADER, apiKey)
                     .body(payload)
                     .retrieve()
-                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-                            (request, response) -> {
-                                log.error("Eroare de la API-ul AI: Status {}", response.getStatusCode());
-                                throw new AiApiException("Eroare API AI: " + response.getStatusCode());
-                            })
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        log.error("Eroare de la API-ul AI (generate): Status {}", response.getStatusCode());
+                        throw new AiApiException("Eroare API AI: " + response.getStatusCode());
+                    })
                     .body(AiGenerateResponse.class);
 
         } catch (ResourceAccessException e) {
@@ -134,17 +123,8 @@ public class AiApiClient {
 
     // ==========================================
     // FLUX 2: Exerciții Adaptive (Start Sesiune)
-    /**
-     * Requests a set of adaptive exercises for a student from the AI service.
-     *
-     * @param sessionId an optional session identifier (accepted by the method but not included in the outbound payload)
-     * @param studentId the UUID of the student for whom exercises are requested
-     * @param subjectId the subject identifier to scope the exercises
-     * @param topicId   the topic identifier to scope the exercises
-     * @param count     the number of exercises to request
-     * @return          the AI service's response containing the adaptive exercises
-     * @throws AiApiException if the AI service returns a non-success HTTP status or if a timeout occurs
-     */
+    // ==========================================
+
     public AiAdaptiveResponse requestAdaptiveExercises(UUID sessionId, UUID studentId, int subjectId, int topicId, int count) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("studentId", studentId.toString());
@@ -154,38 +134,32 @@ public class AiApiClient {
 
         try {
             return adaptiveRestClient.post()
-                    .uri("/ai/api/adaptive/exercises")
+                    .uri(ADAPTIVE_EXERCISES_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(API_KEY_HEADER, apiKey)
                     .body(payload)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, response) -> {
-                        log.error("AI returned error status: {}", response.getStatusCode());
+                        log.error("AI returned error status (adaptive exercises): {}", response.getStatusCode());
                         throw new AiApiException("Serviciul AI indisponibil: Status " + response.getStatusCode());
                     })
                     .body(AiAdaptiveResponse.class);
 
         } catch (ResourceAccessException e) {
             log.error("Timeout la AI Adaptive pentru studentId: {}", studentId);
-            throw new AiApiException("Timeout AI Adaptive: " + e.getMessage());
+            throw new AiTimeoutException("Timeout AI Adaptive: " + e.getMessage());
         }
     }
 
     // ==========================================
     // FLUX 2: Feedback Adaptive
-    /**
-     * Sends the given object as a JSON payload to the AI adaptive feedback endpoint.
-     *
-     * The method posts the payload to "/api/adaptive/feedback" and logs any error that occurs;
-     * exceptions are swallowed and not propagated.
-     *
-     * @param payload the object to serialize as JSON and send as the request body
-     */
+    // ==========================================
+
     public void sendAdaptiveFeedback(Object payload) {
         try {
             feedbackRestClient.post()
-                    .uri("/ai/api/adaptive/feedback")
+                    .uri(ADAPTIVE_FEEDBACK_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(API_KEY_HEADER, apiKey)
@@ -197,6 +171,10 @@ public class AiApiClient {
         }
     }
 
+    // ==========================================
+    // FLUX 3: Înregistrare Student
+    // ==========================================
+
     public AiStudentRegistrationResponse registerStudent(UUID requestId, UUID studentId) {
         AiStudentRegistrationRequest payload = new AiStudentRegistrationRequest(
                 requestId.toString(),
@@ -207,11 +185,13 @@ public class AiApiClient {
             AiStudentRegistrationResponse response = studentRegistrationRestClient.post()
                     .uri(STUDENT_REGISTRATION_URI)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .header(API_KEY, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(API_KEY_HEADER, apiKey)
                     .header("X-Request-Id", requestId.toString())
                     .body(payload)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, clientResponse) -> {
+                        log.error("AI student registration failed: Status {}", clientResponse.getStatusCode());
                         throw new AiApiException(
                                 "AI student registration failed with status: " + clientResponse.getStatusCode()
                         );
@@ -229,7 +209,9 @@ public class AiApiClient {
             }
 
             return response;
+
         } catch (ResourceAccessException e) {
+            log.error("Timeout la student registration AI pentru studentId: {}", studentId);
             throw new AiTimeoutException("Timeout student registration AI: " + e.getMessage());
         }
     }
