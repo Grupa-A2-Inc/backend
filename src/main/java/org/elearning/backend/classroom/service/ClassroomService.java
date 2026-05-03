@@ -3,18 +3,22 @@ package org.elearning.backend.classroom.service;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.classroom.dto.request.CreateClassroomRequest;
-import org.elearning.backend.classroom.dto.request.ModifyClassroomStudentsRequest;
+import org.elearning.backend.classroom.dto.request.ModifyClassroomMembersRequest;
 import org.elearning.backend.classroom.dto.request.UpdateClassroomRequest;
 import org.elearning.backend.classroom.dto.response.ClassroomMemberResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomResponse;
 import org.elearning.backend.classroom.entity.Classroom;
+import org.elearning.backend.classroom.entity.ClassroomCourse;
 import org.elearning.backend.classroom.entity.ClassroomMembership;
 import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.exception.ClassroomBadRequestException;
 import org.elearning.backend.classroom.exception.ClassroomConflictException;
 import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
+import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.enrollment.model.CourseEnrollment;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.RoleName;
@@ -37,6 +41,8 @@ public class ClassroomService {
     private final OrganizationRepository organizationRepository;
     private final ClassroomMembershipRepository classroomMembershipRepository;
     private static final String CLASS_NOT_FOUND = "Classroom not found: ";
+    private final ClassroomCourseRepository classroomCourseRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
 
     @Transactional
     public ClassroomResponse createClassroom(CreateClassroomRequest request, UUID requesterUserId) {
@@ -139,24 +145,34 @@ public class ClassroomService {
     }
 
     @Transactional
-    public ClassroomResponse addClassroomStudents(UUID classroomId,
-                                                  ModifyClassroomStudentsRequest request,
+    public ClassroomResponse addClassroomMembers(UUID classroomId,
+                                                  ModifyClassroomMembersRequest request,
                                                   UUID currentUserId) {
         Classroom classroom = getClassroomOrThrow(classroomId);
-        List<User> students = getValidStudentsForClassroom(request.getStudentIds(), classroom);
 
-        for (User student : students) {
+        //metoda cu getValid trebuie modificata
+        List<User> members = getValidMembersForClassroom(request.getMemberIds(), classroom);
+
+        for (User member : members) {
+
+            //poate fi ori student, ori teacher
+            MembershipType membershipType = resolveMembershipType(member);
+
             boolean alreadyExists = classroomMembershipRepository
                     .existsByClassroomIdAndUserIdAndMembershipType(
-                            classroomId, student.getId(), MembershipType.STUDENT
+                            classroomId, member.getId(), membershipType
                     );
 
             if (!alreadyExists) {
                 ClassroomMembership membership = new ClassroomMembership();
                 membership.setClassroom(classroom);
-                membership.setUser(student);
-                membership.setMembershipType(MembershipType.STUDENT);
+                membership.setUser(member);
+                membership.setMembershipType(membershipType);
                 classroomMembershipRepository.save(membership);
+
+                if (membershipType == MembershipType.STUDENT) {
+                    handleStudentAddedToClassroom(classroom, member);
+                }
             }
         }
 
@@ -164,17 +180,20 @@ public class ClassroomService {
     }
 
     @Transactional
-    public ClassroomResponse deleteClassroomStudents(UUID classroomId,
-                                                     @Valid ModifyClassroomStudentsRequest request,
+    public ClassroomResponse deleteClassroomMembers(UUID classroomId,
+                                                     ModifyClassroomMembersRequest request,
                                                      UUID currentUserId) {
         Classroom classroom = getClassroomOrThrow(classroomId);
-        List<User> students = getValidStudentsForClassroom(request.getStudentIds(), classroom);
+        List<User> members = getValidMembersForClassroom(request.getMemberIds(), classroom);
 
-        for (User student : students) {
+        for (User member : members) {
+
+            MembershipType membershipType = resolveMembershipType(member);
+
             classroomMembershipRepository.deleteByClassroomIdAndUserIdAndMembershipType(
                     classroomId,
-                    student.getId(),
-                    MembershipType.STUDENT
+                    member.getId(),
+                    membershipType
             );
         }
 
@@ -183,8 +202,8 @@ public class ClassroomService {
 
     public List<ClassroomMemberResponse> listClassroomMembers(UUID classroomId, MembershipType membershipType){
 
-        Classroom classroom = classroomRepository.findById(classroomId)
-                .orElseThrow(()-> new ClassroomNotFoundException("Classroom not found"));
+        classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found"));
 
         List<ClassroomMembership> classroomMemberships;
         if(membershipType == null){
@@ -210,39 +229,65 @@ public class ClassroomService {
                 .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found."));
     }
 
-    private List<User> getValidStudentsForClassroom(Set<UUID> studentIds, Classroom classroom) {
-        List<User> students = userRepository.findAllById(studentIds);
+    private List<User> getValidMembersForClassroom(Set<UUID> memberIds, Classroom classroom) {
+        List<User> members = userRepository.findAllById(memberIds);
 
-        if (students.size() != studentIds.size()) {
-            throw new UserNotFoundException("One or more students do not exist.");
+        if (members.size() != memberIds.size()) {
+            throw new UserNotFoundException("One or more members do not exist.");
         }
 
         UUID classroomOrganizationId = classroom.getOrganization().getId();
 
-        for (User student : students) {
-            validateStudentCanBeModified(student, classroomOrganizationId);
+        for (User member : members) {
+            validateMemberCanBeModified(member, classroomOrganizationId);
         }
 
-        return students;
+        return members;
     }
 
-    private void validateStudentCanBeModified(User student, UUID classroomOrganizationId) {
-        if (student.getRole().getName() != RoleName.STUDENT) {
-            throw new ClassroomBadRequestException("User " + student.getId() + " is not a STUDENT.");
+    private void validateMemberCanBeModified(User member, UUID classroomOrganizationId) {
+
+        if (member.getOrganization() == null
+                || !classroomOrganizationId.equals(member.getOrganization().getId())) {
+            throw new ClassroomBadRequestException(
+                    "User " + member.getId() + " is not in the same organization."
+            );
         }
 
-        if (student.getOrganization() == null || !classroomOrganizationId.equals(student.getOrganization().getId())) {
-            throw new ClassroomBadRequestException("User " + student.getId() + " is not in the same organization.");
+        RoleName roleName = member.getRole().getName();
+        if (roleName != RoleName.STUDENT && roleName != RoleName.TEACHER) {
+            throw new ClassroomBadRequestException(
+                    "User " + member.getId() + " is neither STUDENT nor TEACHER."
+            );
         }
     }
 
-    // TODO: aici pregatesc partea pentru auto enrollment
     private void handleStudentAddedToClassroom(Classroom classroom, User student) {
-        throw new UnsupportedOperationException(
-                "Auto enrollment is not implemented yet for classroom "
-                        + classroom.getId()
-                        + " and student "
-                        + student.getId()
-        );
+        List<ClassroomCourse> classroomCourses = classroomCourseRepository
+                .findAllByClassroomId(classroom.getId());
+
+        for (ClassroomCourse classroomCourse : classroomCourses) {
+            UUID courseId = classroomCourse.getCourseId();
+            UUID studentId = student.getId();
+
+            if (!courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)) {
+                CourseEnrollment enrollment = new CourseEnrollment();
+                enrollment.setCourseId(courseId);
+                enrollment.setStudentId(studentId);
+                courseEnrollmentRepository.save(enrollment);
+            }
+        }
+    }
+
+    private MembershipType resolveMembershipType(User member) {
+        RoleName roleName = member.getRole().getName();
+
+        return switch (roleName) {
+            case STUDENT -> MembershipType.STUDENT;
+            case TEACHER -> MembershipType.TEACHER;
+            default -> throw new ClassroomBadRequestException(
+                    "User " + member.getId() + " cannot be added to classroom."
+            );
+        };
     }
 }

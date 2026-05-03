@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@org.springframework.test.context.ActiveProfiles("test")
 class PasswordResetTypesTest {
 
     @Test

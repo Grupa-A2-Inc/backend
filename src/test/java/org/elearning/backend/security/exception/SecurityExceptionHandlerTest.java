@@ -6,6 +6,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@org.springframework.test.context.ActiveProfiles("test")
 class SecurityExceptionHandlerTest {
 
     private final SecurityExceptionHandler handler = new SecurityExceptionHandler();

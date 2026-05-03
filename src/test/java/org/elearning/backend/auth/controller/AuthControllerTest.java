@@ -17,6 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+@org.springframework.test.context.ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 

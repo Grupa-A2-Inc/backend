@@ -28,6 +28,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PasswordResetService {
 
+    private static final int PASSWORD_RESET_TOKEN_EXPIRATION_IN_MINUTES = 10;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final EmailService emailService;
@@ -38,12 +39,6 @@ public class PasswordResetService {
     @Transactional
     public ResetPasswordResponse forgotPassword(ForgotPasswordRequest request) {
 
-        //daca exista generez token si il hashuiesc si creez passwordResetToken
-        // si l salvez in db si trimit email
-
-        //daca nu arunc user not found
-        //mesaj generic gen check your email
-
         String userEmail = request.getEmail();
 
         Optional<User> optionalUser = userRepository.findByEmail(userEmail);
@@ -53,19 +48,17 @@ public class PasswordResetService {
 
         User user = optionalUser.get();
 
-        //generez token nou
         byte[] randomBytes = new byte[32];
         SECURE_RANDOM.nextBytes(randomBytes);
         String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
 
-        //fac hash
         String tokenHash = hashToken(rawToken);
 
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUser(user);
         resetToken.setTokenHash(tokenHash);
         resetToken.setCreatedAt(LocalDateTime.now());
-        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(PASSWORD_RESET_TOKEN_EXPIRATION_IN_MINUTES));
         resetToken.setUsedAt(null);
 
         passwordResetTokenRepository.save(resetToken);

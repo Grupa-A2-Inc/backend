@@ -30,6 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
+@org.springframework.test.context.ActiveProfiles("test")
 class SecurityConfigTest {
 
     @Test
@@ -88,7 +89,8 @@ class SecurityConfigTest {
         assertThat(configuration.getAllowedOrigins()).containsExactly(
                 "http://localhost:3000",
                 "https://frontend-teal-five-57.vercel.app",
-                "https://frontend-z1g5f.vercel.app"
+                "https://frontend-z1g5f.vercel.app",
+                "https://vibesvibesonlyvibes.vercel.app"
         );
         assertThat(configuration.getAllowedMethods()).containsExactly("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS");
         assertThat(configuration.getAllowedHeaders()).containsExactly(
