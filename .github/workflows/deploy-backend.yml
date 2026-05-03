@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, elearn-deploy]
+    runs-on: [self-hosted, elearnserver]
 
     steps:
       - name: Checkout repository
