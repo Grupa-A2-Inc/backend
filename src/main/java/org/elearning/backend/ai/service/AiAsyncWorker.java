@@ -32,14 +32,13 @@ public class AiAsyncWorker {
      * generated questions on success, and updates the request status based on the outcome before
      * saving the request.
      *
-     * @param requestId the identifier of the AI generation request
      * @param lessonId  the identifier of the lesson for which questions are generated
      * @param request   the AiQuestionRequest entity to update and persist with status and generated data
      */
     @Async
-    public void processAiGenerationInBackground(UUID requestId, UUID lessonId, AiQuestionRequest request) {
+    public void processAiGenerationInBackground(int count, UUID lessonId, AiQuestionRequest request) {
         try {
-            AiGenerateResponse response = aiApiClient.generateTest(requestId, lessonId);
+            AiGenerateResponse response = aiApiClient.generateTest(lessonId,count);
             request.setStatus(AiRequestStatus.SUCCESS);
             List<AiQuestionDto> generatedQuestions = response.getQuestions();
             request.setGeneratedQuestions(objectMapper.writeValueAsString(generatedQuestions));

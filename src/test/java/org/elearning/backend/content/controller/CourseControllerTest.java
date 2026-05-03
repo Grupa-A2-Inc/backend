@@ -57,6 +57,7 @@ class CourseControllerTest {
         );
         return courseId;
     }
+
     @AfterEach
     void tearDown() {
         restTemplate.getRestTemplate().setInterceptors(List.of());
@@ -90,6 +91,7 @@ class CourseControllerTest {
             return execution.execute(request, body);
         }));
     }
+
     /**
      * GET /api/courses/public
      * Tests that only published and public courses are returned.
@@ -101,11 +103,12 @@ class CourseControllerTest {
         insertCourseWithStatusAndVisibility("Published Private Course", UUID.randomUUID(), "PUBLISHED", "PRIVATE");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                 REQUEST_MAPPING + "/public",
+                REQUEST_MAPPING + "/public",
                 String.class
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"content\"");
         assertThat(response.getBody()).contains("Public Course");
         assertThat(response.getBody()).doesNotContain("Draft Private Course");
         assertThat(response.getBody()).doesNotContain("Published Private Course");
@@ -113,7 +116,7 @@ class CourseControllerTest {
 
     /**
      * GET /api/courses/public
-     * Tests that an empty list is returned when there are no public courses.
+     * Tests that an empty page is returned when there are no public courses.
      */
     @Test
     void shouldReturnEmptyListWhenNoPublicCourses() {
@@ -125,12 +128,13 @@ class CourseControllerTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo("[]");
+        assertThat(response.getBody()).contains("\"content\":[]");
+        assertThat(response.getBody()).contains("\"totalElements\":0");
     }
 
     /**
      * GET /api/courses/my-courses
-     * Tests that only courses created by the hardcoded user are returned.
+     * Tests that only courses created by the authenticated user are returned.
      */
     @Test
     void shouldGetOnlyMyCoursesForHardcodedUser() {
@@ -143,13 +147,14 @@ class CourseControllerTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"content\"");
         assertThat(response.getBody()).contains("My Course");
         assertThat(response.getBody()).doesNotContain("Other Course");
     }
 
     /**
      * GET /api/courses/my-courses
-     * Tests that an empty list is returned when the hardcoded user has no courses.
+     * Tests that an empty page is returned when the user has no courses.
      */
     @Test
     void shouldReturnEmptyListWhenUserHasNoCourses() {
@@ -161,7 +166,8 @@ class CourseControllerTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo("[]");
+        assertThat(response.getBody()).contains("\"content\":[]");
+        assertThat(response.getBody()).contains("\"totalElements\":0");
     }
 
     /**
@@ -225,7 +231,7 @@ class CourseControllerTest {
 
     /**
      * PATCH /api/courses/{id}
-     * Tests that patching a non-existent course returns 404.
+     * Tests that patching a non-existent course returns 403.
      */
     @Test
     void shouldReturnNotFoundWhenPatchingInvalidCourse() {
@@ -244,10 +250,10 @@ class CourseControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
+
     /**
      * POST /api/courses
-     * Tests that creating a new course with valid data returns a 201 Created status
-     * and that the response body contains the course title.
+     * Tests that creating a new course with valid data returns a 201 Created status.
      */
     @Test
     void shouldCreateCourse() {
@@ -417,7 +423,7 @@ class CourseControllerTest {
 
     /**
      * POST /api/courses
-     * Tests that createdBy from request body is ignored and the hardcoded user is persisted.
+     * Tests that createdBy from request body is ignored and the authenticated user is persisted.
      */
     @Test
     void shouldUseHardcodedUserForCourseCreation() {
@@ -443,13 +449,12 @@ class CourseControllerTest {
                 String.class
         );
         assertThat(createdByInDb)
-                        .isEqualTo(authenticatedUserId.toString())
-                        .isNotEqualTo(fakeCreatedBy.toString());
+                .isEqualTo(authenticatedUserId.toString())
+                .isNotEqualTo(fakeCreatedBy.toString());
     }
 
     /**
      * GET /api/courses?role=INSTRUCTOR&userId={id}
-     * Tests that an instructor can retrieve only their own courses.
      */
     @Test
     @Disabled("Temporar dezactivat pana cand Echipa 2 implementeaza extragerea userului din token-ul de securitate")
@@ -458,7 +463,7 @@ class CourseControllerTest {
         insertCourse("Other Course", UUID.randomUUID());
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                REQUEST_MAPPING, // am scos paramaterii din URL, ca in noul controller
+                REQUEST_MAPPING,
                 String.class
         );
 
@@ -469,7 +474,6 @@ class CourseControllerTest {
 
     /**
      * GET /api/courses?role=STUDENT&userId={id}
-     * Tests that a student can retrieve all published/public courses.
      */
     @Test
     @Disabled("Temporar dezactivat pana cand Echipa 2 implementeaza extragerea userului din token-ul de securitate")
@@ -478,7 +482,7 @@ class CourseControllerTest {
         insertCourseWithStatusAndVisibility("Private Course", UUID.randomUUID(), "DRAFT", "PRIVATE");
 
         ResponseEntity<String> response = restTemplate.getForEntity(
-                REQUEST_MAPPING, // am scos parametrii din URL
+                REQUEST_MAPPING,
                 String.class
         );
 
@@ -486,10 +490,9 @@ class CourseControllerTest {
         assertThat(response.getBody()).contains("Public Course");
         assertThat(response.getBody()).doesNotContain("Private Course");
     }
+
     /**
      * PUT /api/courses/{id}
-     * Tests that updating a course with valid data returns a 200 OK status
-     * and that the response body reflects the updated title.
      */
     @Test
     void shouldUpdateCourse() {
@@ -521,8 +524,7 @@ class CourseControllerTest {
     }
 
     /**
-     * PUT /api/courses/{id}
-     * Tests that updating a non-existent course returns a 404 Not Found status.
+     * PUT /api/courses/{id} — non-existent course
      */
     @Test
     void shouldReturnNotFoundWhenUpdatingInvalidCourse() {
@@ -545,8 +547,6 @@ class CourseControllerTest {
 
     /**
      * DELETE /api/courses/{id}
-     * Tests that deleting an existing course returns a 204 No Content status
-     * and that the course is removed from the database.
      */
     @Test
     void shouldDeleteCourse() {
@@ -569,8 +569,7 @@ class CourseControllerTest {
     }
 
     /**
-     * DELETE /api/courses/{id}
-     * Tests that deleting a non-existent course returns a 404 Not Found status.
+     * DELETE /api/courses/{id} — non-existent course
      */
     @Test
     void shouldReturnNotFoundWhenDeletingInvalidCourse() {
@@ -585,8 +584,7 @@ class CourseControllerTest {
     }
 
     /**
-     * DELETE /api/courses/{id}
-     * Tests that deleting a course also removes all its associated chapters and lessons (cascade delete).
+     * DELETE /api/courses/{id} — cascade delete
      */
     @Test
     void shouldCascadeDeleteChaptersAndLessonsWhenCourseIsDeleted() {
@@ -611,18 +609,10 @@ class CourseControllerTest {
         assertThat(chapterCount).isZero();
     }
 
-    /**
-     * Helper method to insert a course into the database for testing purposes.
-     * Returns the UUID of the inserted course.
-     */
     private UUID insertCourse(String title, UUID createdBy) {
         return insertCourseWithStatusAndVisibility(title, createdBy, "DRAFT", "PRIVATE");
     }
 
-    /**
-     * Helper method to insert a course with explicit status and visibility into the database.
-     * Returns the UUID of the inserted course.
-     */
     private UUID insertCourseWithStatusAndVisibility(String title, UUID createdBy, String status, String visibility) {
         UUID courseId = UUID.randomUUID();
         jdbcTemplate.execute(
@@ -632,9 +622,6 @@ class CourseControllerTest {
         return courseId;
     }
 
-    /**
-     * Helper method to create HttpHeaders with Content-Type set to application/json for testing purposes.
-     */
     private HttpHeaders jsonHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

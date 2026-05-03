@@ -7,17 +7,19 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
 import org.elearning.backend.organization.service.OrganizationService;
+import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionStatusResponse;
+import org.elearning.backend.subscription.service.OrganizationSubscriptionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
 
-import java.util.List;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -27,6 +29,7 @@ import java.util.UUID;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final OrganizationSubscriptionService organizationSubscriptionService;
 
     @Operation(
             summary = "Create a new organization",
@@ -85,8 +88,14 @@ public class OrganizationController {
     )
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<OrganizationResponse>> getAllOrganizations() {
-        return ResponseEntity.ok(organizationService.getAllOrganizations());
+    public ResponseEntity<PaginatedResponse<OrganizationResponse>> getAllOrganizations(@RequestParam(required = false) Integer page,
+                                                                                       @RequestParam(required = false) Integer size,
+                                                                                       @RequestParam(required = false) String search,
+                                                                                       @RequestParam(required = false) String sortBy,
+                                                                                       @RequestParam(required = false) String sortDir) {
+        return ResponseEntity.ok(
+                organizationService.getAllOrganizationsPaginated(page, size, search, sortBy, sortDir)
+        );
     }
 
     @Operation(
@@ -120,6 +129,41 @@ public class OrganizationController {
     @GetMapping("/{id}")
     public ResponseEntity<OrganizationResponse> getOrganizationById(@P("id") @PathVariable UUID id) {
         return ResponseEntity.ok(organizationService.getOrganizationById(id));
+    }
+
+    @Operation(
+            summary = "Get current organization subscription",
+            description = "Returns the current subscription status and plan limits for the specified organization"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Organization subscription retrieved successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = OrganizationSubscriptionStatusResponse.class)
+            )
+    )
+    @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "403",
+            description = "Access denied",
+            content = @Content
+    )
+    @ApiResponse(
+            responseCode = "404",
+            description = "Organization or subscription not found",
+            content = @Content
+    )
+    @PreAuthorize("@accessService.canViewOrganization(authentication, #organizationId)")
+    @GetMapping("/{organizationId}/subscription")
+    public ResponseEntity<OrganizationSubscriptionStatusResponse> getOrganizationSubscription(
+            @P("organizationId") @PathVariable UUID organizationId
+    ) {
+        return ResponseEntity.ok(organizationSubscriptionService.getCurrentOrganizationSubscription(organizationId));
     }
 
     @Operation(

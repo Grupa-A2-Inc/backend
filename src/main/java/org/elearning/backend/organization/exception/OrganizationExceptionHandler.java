@@ -16,7 +16,8 @@ public class OrganizationExceptionHandler extends GlobalExceptionHandler {
 
     @ExceptionHandler({
             OrganizationNotFoundException.class,
-            OrganizationOwnerNotFoundException.class
+            OrganizationOwnerNotFoundException.class,
+            OrganizationSubscriptionNotFoundException.class
     })
     public ResponseEntity<Map<String, Object>> handleNotFound(RuntimeException ex) {
         return buildErrorResponse(ex, HttpStatus.NOT_FOUND);

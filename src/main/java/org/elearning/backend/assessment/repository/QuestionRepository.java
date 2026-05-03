@@ -47,5 +47,21 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
  * @param testId the UUID of the test whose questions should be counted
  * @return the number of Question records with the specified test ID
  */
-int countByTestId(UUID testId);
+    int countByTestId(UUID testId);
+
+    @Query(value =
+            """
+            SELECT count(q)>0
+            FROM Question q
+            JOIN q.test t
+            JOIN Lesson l ON l.id = t.lessonId
+            JOIN l.chapter ch
+            JOIN ch.course c
+            JOIN CourseEnrollment ce on ce.courseId = c.id
+            WHERE ce.studentId = :studentId
+            AND q.id = :questionId
+        """)
+    boolean hasStudentAccessToQuestion(@Param("questionId") Integer questionId,
+                                       @Param("studentId") UUID studentId);
+
 }

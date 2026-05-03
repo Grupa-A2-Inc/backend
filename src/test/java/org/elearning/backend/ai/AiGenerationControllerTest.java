@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -45,10 +46,8 @@ class AiGenerationControllerTest {
     private EmailService emailService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
     @Autowired
     private JwtUtil jwtUtil;
-
     @MockitoBean
     private AiApiClient aiApiClient;
 
@@ -136,7 +135,7 @@ class AiGenerationControllerTest {
         return post(urlTemplate, uriVars)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + teacherToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}")
+                .content("{\"count\": 5}")
                 .with(csrf());
     }
 
@@ -144,7 +143,7 @@ class AiGenerationControllerTest {
         return post(urlTemplate, uriVars)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}")
+                .content("{\"count\": 5}")
                 .with(csrf());
     }
 
@@ -168,7 +167,7 @@ class AiGenerationControllerTest {
     @Test
     void generateForLesson_shouldReturn202_whenTeacherOwnsLesson() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), any())).thenReturn(mockAiResponseWithQuestions());
+        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockAiResponseWithQuestions());
 
         mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())
@@ -181,7 +180,7 @@ class AiGenerationControllerTest {
     void generateForLesson_shouldReturn202_whenStudentIsEnrolled() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
         enrollStudent(ctx.courseId(), studentId);
-        when(aiApiClient.generateTest(any(), any())).thenReturn(mockEmptyAiResponse());
+        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockEmptyAiResponse());
 
         mockMvc.perform(authorizedPostAs(studentToken, "/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())
@@ -217,7 +216,7 @@ class AiGenerationControllerTest {
 
         mockMvc.perform(post("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")
+                        .content("{\"count\": 5}")
                         .with(csrf()))
                 .andExpect(status().isUnauthorized());
     }
@@ -232,16 +231,46 @@ class AiGenerationControllerTest {
     }
 
     @Test
-    @Disabled("nu merge")
+    void generateForLesson_shouldPersistRequestInDatabase_whenTeacherOwnsLesson() throws Exception {
+        LessonContext ctx = insertLessonOwnedBy(teacherId);
+        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockEmptyAiResponse());
+
+        mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
+                .andExpect(status().isAccepted());
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ai_question_requests WHERE lesson_id = ?",
+                Integer.class,
+                ctx.lessonId()
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(1, count);
+    }
+
+    @Test
+    void generateForLesson_shouldReturn202WithCount_whenProvided() throws Exception {
+        LessonContext ctx = insertLessonOwnedBy(teacherId);
+        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockEmptyAiResponse());
+
+        mockMvc.perform(post("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + teacherToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"count\": 5}")
+                        .with(csrf()))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.requestId").exists())
+                .andExpect(jsonPath("$.lessonId").value(ctx.lessonId().toString()));
+    }
+
+    @Test
+    @Disabled("async - status se seteaza dupa response")
     void generateForLesson_shouldReturn202AndStatusSuccess_whenAiReturnsQuestions() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), any())).thenReturn(mockAiResponseWithQuestions());
+        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockAiResponseWithQuestions());
 
         mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.requestId").exists());
 
-        // Verificam ca request-ul a fost salvat in DB cu status SUCCESS
         String savedStatus = jdbcTemplate.queryForObject(
                 "SELECT status FROM ai_question_requests WHERE lesson_id = ?",
                 String.class,
@@ -251,10 +280,10 @@ class AiGenerationControllerTest {
     }
 
     @Test
-    @Disabled("nu merge")
+    @Disabled("async - status se seteaza dupa response")
     void generateForLesson_shouldReturn202AndStatusFallback_whenAiTimesOut() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), any())).thenThrow(new AiTimeoutException("Timeout"));
+        when(aiApiClient.generateTest(any(), anyInt())).thenThrow(new AiTimeoutException("Timeout"));
 
         mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())
@@ -269,10 +298,10 @@ class AiGenerationControllerTest {
     }
 
     @Test
-    @Disabled("nu merge")
+    @Disabled("async - status se seteaza dupa response")
     void generateForLesson_shouldReturn202AndStatusFailed_whenAiApiThrows() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), any())).thenThrow(new AiApiException("AI error"));
+        when(aiApiClient.generateTest(any(), anyInt())).thenThrow(new AiApiException("AI error"));
 
         mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())
@@ -284,53 +313,5 @@ class AiGenerationControllerTest {
                 ctx.lessonId()
         );
         org.junit.jupiter.api.Assertions.assertEquals("FAILED", savedStatus);
-    }
-
-
-    @Test
-
-    void generateForLesson_shouldPersistRequestInDatabase_whenTeacherOwnsLesson() throws Exception {
-        LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), any())).thenReturn(mockEmptyAiResponse());
-
-        mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
-                .andExpect(status().isAccepted());
-
-        Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM ai_question_requests WHERE lesson_id = ?",
-                Integer.class,
-                ctx.lessonId()
-        );
-        org.junit.jupiter.api.Assertions.assertEquals(1, count);
-    }
-
-    @Test
-    void generateForLesson_shouldReturn202WithSubjectAndTopic_whenProvided() throws Exception {
-        LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), any())).thenReturn(mockEmptyAiResponse());
-
-        String body = "{\"subjectId\": 5, \"topicId\": 12}";
-
-        mockMvc.perform(post("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + teacherToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body)
-                        .with(csrf()))
-                .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.requestId").exists())
-                .andExpect(jsonPath("$.lessonId").value(ctx.lessonId().toString()));
-
-        Integer subjectId = jdbcTemplate.queryForObject(
-                "SELECT subject_id FROM ai_question_requests WHERE lesson_id = ?",
-                Integer.class,
-                ctx.lessonId()
-        );
-        Integer topicId = jdbcTemplate.queryForObject(
-                "SELECT topic_id FROM ai_question_requests WHERE lesson_id = ?",
-                Integer.class,
-                ctx.lessonId()
-        );
-        org.junit.jupiter.api.Assertions.assertEquals(5, subjectId);
-        org.junit.jupiter.api.Assertions.assertEquals(12, topicId);
     }
 }

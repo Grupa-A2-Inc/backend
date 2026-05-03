@@ -3,6 +3,8 @@ package org.elearning.backend.assessment.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+// SWAGGER ADDED
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.dto.assigment_dto.TestResultDto;
 import org.elearning.backend.assessment.dto.test_dto.StartAttemptResponseDto;
@@ -17,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+// SWAGGER ADDED
+@Tag(name = "Attempts", description = "Test attempt lifecycle management")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")

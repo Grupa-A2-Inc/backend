@@ -5,6 +5,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/adaptive_tutor_test
     username: user
     password: password
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 0
   jpa:
     hibernate:
       ddl-auto: none

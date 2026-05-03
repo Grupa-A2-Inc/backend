@@ -71,7 +71,7 @@ Optional<AnalyticsAlert> findByTestIdAndIsActiveTrue(UUID testId);
     @Query(value = """
     SELECT 
         DATE(tr.completed_at) AS date, 
-        (COUNT(CASE WHEN tr.passed = false THEN 1 END) * 100.0 / NULLIF(COUNT(tr.id), 0)) AS dailyFailureRate
+        (COUNT(CASE WHEN tr.passed = false THEN 1 END) * 100.0 / NULLIF(COUNT(tr.attempt_id), 0)) AS dailyFailureRate
     FROM test_results tr
     WHERE tr.test_id = :testId
     GROUP BY DATE(tr.completed_at)

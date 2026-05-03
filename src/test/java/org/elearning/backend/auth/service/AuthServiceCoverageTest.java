@@ -11,6 +11,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.jwt.JwtUtil;
+import org.elearning.backend.subscription.service.OrganizationSubscriptionProvisioningService;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+@org.springframework.test.context.ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class AuthServiceCoverageTest {
 
@@ -61,6 +63,9 @@ class AuthServiceCoverageTest {
 
     @Mock
     private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private OrganizationSubscriptionProvisioningService organizationSubscriptionProvisioningService;
 
     @InjectMocks
     private AuthService authService;

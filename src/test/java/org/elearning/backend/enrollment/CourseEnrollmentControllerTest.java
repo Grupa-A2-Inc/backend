@@ -56,27 +56,22 @@ class CourseEnrollmentControllerTest {
         coursePrivateId = UUID.randomUUID();
         courseDraftId = UUID.randomUUID();
 
-        // Create authenticated student user
         insertStudent(studentId);
         accessToken = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
 
-        // Create PUBLIC + PUBLISHED course (can enroll)
-        insertCourse(courseId, "Public Course", "Public Course Description", 
+        insertCourse(courseId, "Public Course", "Public Course Description",
                 "Computer Science", "PUBLIC", "PUBLISHED", INSTRUCTOR_ID);
 
-        // Create PRIVATE + PUBLISHED course (cannot enroll — forbidden)
         insertCourse(coursePrivateId, "Private Course", "Private Course Description",
                 "Computer Science", "PRIVATE", "PUBLISHED", INSTRUCTOR_ID);
 
-        // Create PUBLIC + DRAFT course (cannot enroll — not published)
         insertCourse(courseDraftId, "Draft Course", "Draft Course Description",
                 "Computer Science", "PUBLIC", "DRAFT", INSTRUCTOR_ID);
     }
 
     @AfterEach
     void cleanup() {
-        // Cleanup data in reverse order of constraints
-        jdbcTemplate.update("DELETE FROM course_enrollments WHERE student_id = ? OR course_id IN (?, ?, ?)", 
+        jdbcTemplate.update("DELETE FROM course_enrollments WHERE student_id = ? OR course_id IN (?, ?, ?)",
                 studentId, courseId, coursePrivateId, courseDraftId);
         jdbcTemplate.update("DELETE FROM courses WHERE id IN (?, ?, ?)", courseId, coursePrivateId, courseDraftId);
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", studentId);
@@ -97,7 +92,7 @@ class CourseEnrollmentControllerTest {
         );
     }
 
-    private void insertCourse(UUID courseId, String title, String description, String category, 
+    private void insertCourse(UUID courseId, String title, String description, String category,
                               String visibility, String status, UUID createdBy) {
         jdbcTemplate.update(
                 "INSERT INTO courses (id, title, description, category, visibility, status, created_by, created_at) " +
@@ -126,7 +121,6 @@ class CourseEnrollmentControllerTest {
                 .andExpect(jsonPath("$.progressPercent", is(0)))
                 .andReturn();
 
-        // Verify enrollment was created in database
         Long enrollmentCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM course_enrollments WHERE course_id = ? AND student_id = ?",
                 Long.class, courseId, studentId
@@ -164,11 +158,9 @@ class CourseEnrollmentControllerTest {
     @Order(5)
     @DisplayName("1.5 — POST /api/v1/courses/{courseId}/enroll — student already enrolled → 409 Conflict")
     void enrollInCourse_StudentAlreadyEnrolled_Returns409Conflict() throws Exception {
-        // First enrollment succeeds
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/{courseId}/enroll", courseId)))
                 .andExpect(status().isCreated());
 
-        // Second enrollment should fail with 409 Conflict
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/{courseId}/enroll", courseId)))
                 .andExpect(status().isConflict());
     }
@@ -189,15 +181,12 @@ class CourseEnrollmentControllerTest {
     @Order(7)
     @DisplayName("2.1 — DELETE /api/v1/courses/{courseId}/unenroll → 204 NoContent")
     void unenrollFromCourse_Success_Returns204NoContent() throws Exception {
-        // First, enroll the student
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/{courseId}/enroll", courseId)))
                 .andExpect(status().isCreated());
 
-        // Then unenroll
         mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/courses/{courseId}/unenroll", courseId)))
                 .andExpect(status().isNoContent());
 
-        // Verify unenrollment was executed in database
         Long enrollmentCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM course_enrollments WHERE course_id = ? AND student_id = ?",
                 Long.class, courseId, studentId
@@ -227,57 +216,54 @@ class CourseEnrollmentControllerTest {
 
     @Test
     @Order(10)
-    @DisplayName("3.1 — GET /api/v1/students/me/courses — student not enrolled in any → 200 EmptyArray")
-    void getEnrolledCourses_NoEnrollments_Returns200EmptyArray() throws Exception {
+    @DisplayName("3.1 — GET /api/v1/students/me/courses — student not enrolled in any → 200 EmptyPage")
+    void getEnrolledCourses_NoEnrollments_Returns200EmptyPage() throws Exception {
         mockMvc.perform(authorized(get(REQUEST_MAPPING + "/students/me/courses")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.content", hasSize(0)))
+                .andExpect(jsonPath("$.totalElements", is(0)));
     }
 
     @Test
     @Order(11)
-    @DisplayName("3.2 — GET /api/v1/students/me/courses — student enrolled in 1 course → 200 WithList")
-    void getEnrolledCourses_SingleCourse_Returns200WithList() throws Exception {
-        // Enroll student in course
+    @DisplayName("3.2 — GET /api/v1/students/me/courses — student enrolled in 1 course → 200 WithPage")
+    void getEnrolledCourses_SingleCourse_Returns200WithPage() throws Exception {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/{courseId}/enroll", courseId)))
                 .andExpect(status().isCreated());
 
-        // Get enrolled courses
         mockMvc.perform(authorized(get(REQUEST_MAPPING + "/students/me/courses")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].courseId", is(courseId.toString())))
-                .andExpect(jsonPath("$[0].courseTitle", is("Public Course")))
-                .andExpect(jsonPath("$[0].courseCategory", is("Computer Science")))
-                .andExpect(jsonPath("$[0].progressPercent", is(0.0)))
-                .andExpect(jsonPath("$[0].enrolledAt").exists());
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements", is(1)))
+                .andExpect(jsonPath("$.content[0].courseId", is(courseId.toString())))
+                .andExpect(jsonPath("$.content[0].courseTitle", is("Public Course")))
+                .andExpect(jsonPath("$.content[0].courseCategory", is("Computer Science")))
+                .andExpect(jsonPath("$.content[0].progressPercent", is(0.0)))
+                .andExpect(jsonPath("$.content[0].enrolledAt").exists());
     }
 
     @Test
     @Order(12)
-    @DisplayName("3.3 — GET /api/v1/students/me/courses — student enrolled in multiple courses → 200 WithList")
-    void getEnrolledCourses_MultipleCourses_Returns200WithList() throws Exception {
-        // Create second public + published course
+    @DisplayName("3.3 — GET /api/v1/students/me/courses — student enrolled in multiple courses → 200 WithPage")
+    void getEnrolledCourses_MultipleCourses_Returns200WithPage() throws Exception {
         UUID courseId2 = UUID.randomUUID();
         insertCourse(courseId2, "Second Course", "Second Course Description",
                 "Mathematics", "PUBLIC", "PUBLISHED", INSTRUCTOR_ID);
 
         try {
-            // Enroll student in both courses
             mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/{courseId}/enroll", courseId)))
                     .andExpect(status().isCreated());
 
             mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/{courseId}/enroll", courseId2)))
                     .andExpect(status().isCreated());
 
-            // Get enrolled courses
             mockMvc.perform(authorized(get(REQUEST_MAPPING + "/students/me/courses")))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(2)))
-                    .andExpect(jsonPath("$[*].courseId", hasItems(courseId.toString(), courseId2.toString())))
-                    .andExpect(jsonPath("$[*].courseTitle", hasItems("Public Course", "Second Course")));
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.totalElements", is(2)))
+                    .andExpect(jsonPath("$.content[*].courseId", hasItems(courseId.toString(), courseId2.toString())))
+                    .andExpect(jsonPath("$.content[*].courseTitle", hasItems("Public Course", "Second Course")));
         } finally {
-            // Cleanup second course
             jdbcTemplate.update("DELETE FROM course_enrollments WHERE course_id = ?", courseId2);
             jdbcTemplate.update("DELETE FROM courses WHERE id = ?", courseId2);
         }
