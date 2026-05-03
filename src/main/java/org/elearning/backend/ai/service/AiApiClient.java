@@ -26,8 +26,9 @@ import java.util.UUID;
 @Service
 public class AiApiClient {
 
+    private static final String API_KEY_HEADER = "X-API-Key";
+
     private final String apiKey;
-    private static final String API_KEY = "X-Api-Key";
     private final RestClient generateRestClient;
     private final RestClient feedbackRestClient;
     private final RestClient adaptiveRestClient;
@@ -78,14 +79,15 @@ public class AiApiClient {
         }
 
         Map<String, Object> payload = new HashMap<>();
-        payload.put("lessonContent", content);
+        payload.put("content", content);
         payload.put("count", count);
 
         try {
             return generateRestClient.post()
-                    .uri("/api/generate")
+                    .uri("/ai/api/generate")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .header(API_KEY, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(API_KEY_HEADER, apiKey)
                     .body(payload)
                     .retrieve()
                     .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
@@ -103,19 +105,21 @@ public class AiApiClient {
 
     public AiAdaptiveResponse requestAdaptiveExercises(UUID sessionId, UUID studentId, int subjectId, int topicId, int count) {
         Map<String, Object> payload = new HashMap<>();
-        payload.put("studentId", studentId);
+        payload.put("studentId", studentId.toString());
         payload.put("subjectId", subjectId);
         payload.put("topicId", topicId);
         payload.put("count", count);
 
         try {
             return adaptiveRestClient.post()
-                    .uri("/api/adaptive/exercises")
+                    .uri("/ai/api/adaptive/exercises")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .header(API_KEY, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(API_KEY_HEADER, apiKey)
                     .body(payload)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        log.error("AI returned error status: {}", response.getStatusCode());
                         throw new AiApiException("Serviciul AI indisponibil: Status " + response.getStatusCode());
                     })
                     .body(AiAdaptiveResponse.class);
@@ -129,9 +133,10 @@ public class AiApiClient {
     public void sendAdaptiveFeedback(Object payload) {
         try {
             feedbackRestClient.post()
-                    .uri("/api/adaptive/feedback")
+                    .uri("/ai/api/adaptive/feedback")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .header(API_KEY, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(API_KEY_HEADER, apiKey)
                     .body(payload)
                     .retrieve()
                     .toBodilessEntity();

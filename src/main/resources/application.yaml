@@ -46,3 +46,7 @@ ai:
     timeout-generate-ms: 10000
     timeout-feedback-ms: 5000
     timeout-adaptive-ms: 10000
+logging:
+  level:
+    org.elearning.backend.ai: DEBUG
+    org.springframework.web.client: DEBUG
