@@ -4,6 +4,10 @@ import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
 import org.elearning.backend.organization.service.OrganizationService;
+import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionStatusResponse;
+import org.elearning.backend.subscription.dto.response.SubscriptionPlanResponse;
+import org.elearning.backend.subscription.entity.OrganizationSubscriptionStatus;
+import org.elearning.backend.subscription.service.OrganizationSubscriptionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -12,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.elearning.backend.common.dto.response.PaginatedResponse;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,6 +30,9 @@ class OrganizationControllerTest {
 
     @Mock
     private OrganizationService organizationService;
+
+    @Mock
+    private OrganizationSubscriptionService organizationSubscriptionService;
 
     @InjectMocks
     private OrganizationController organizationController;
@@ -63,6 +71,37 @@ class OrganizationControllerTest {
         when(organizationService.getOrganizationById(id)).thenReturn(responseBody);
 
         ResponseEntity<OrganizationResponse> response = organizationController.getOrganizationById(id);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isSameAs(responseBody);
+    }
+
+    @Test
+    void getOrganizationSubscription_returns200Ok() {
+        UUID organizationId = UUID.randomUUID();
+        OrganizationSubscriptionStatusResponse responseBody = new OrganizationSubscriptionStatusResponse(
+                organizationId,
+                OrganizationSubscriptionStatus.ACTIVE,
+                LocalDateTime.of(2026, 1, 1, 0, 0),
+                LocalDateTime.of(2026, 2, 1, 0, 0),
+                new SubscriptionPlanResponse(
+                        UUID.randomUUID(),
+                        "FREE",
+                        "Free",
+                        31,
+                        1,
+                        3,
+                        false,
+                        null,
+                        "EUR",
+                        LocalDateTime.of(2026, 1, 1, 0, 0),
+                        LocalDateTime.of(2026, 1, 1, 0, 0)
+                )
+        );
+        when(organizationSubscriptionService.getCurrentOrganizationSubscription(organizationId)).thenReturn(responseBody);
+
+        ResponseEntity<OrganizationSubscriptionStatusResponse> response =
+                organizationController.getOrganizationSubscription(organizationId);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).isSameAs(responseBody);

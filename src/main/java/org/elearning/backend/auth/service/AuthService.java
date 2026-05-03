@@ -14,6 +14,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.jwt.JwtUtil;
+import org.elearning.backend.subscription.service.OrganizationSubscriptionProvisioningService;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
@@ -38,6 +39,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
+    private final OrganizationSubscriptionProvisioningService organizationSubscriptionProvisioningService;
     private static final DateTimeFormatter LOCK_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
     private static final int LOCK_OUT_TIME_IN_MINUTES = 10;
     private static final int NUMBER_OF_MAXIMUM_FAILED_ATTEMPTS = 5;
@@ -78,6 +80,7 @@ public class AuthService {
         organization.setPhoneNumber(request.getPhoneNumber());
         organization.setOwner(savedUser);
         Organization savedOrganization = organizationRepository.save(organization);
+        organizationSubscriptionProvisioningService.provisionFreeSubscription(savedOrganization);
 
         savedUser.setOrganization(savedOrganization);
         userRepository.save(savedUser);
