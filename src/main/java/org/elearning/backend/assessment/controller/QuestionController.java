@@ -3,6 +3,8 @@ package org.elearning.backend.assessment.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+// SWAGGER ADDED
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.dto.question_dto.QuestionRequestDto;
 import org.elearning.backend.assessment.dto.question_dto.QuestionResponseDto;
@@ -21,6 +23,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+// SWAGGER ADDED
+@Tag(name = "Questions", description = "Test question management")
 @RestController
 @RequestMapping("/api/tests/{testId}/questions")
 @RequiredArgsConstructor

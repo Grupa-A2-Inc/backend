@@ -1,6 +1,8 @@
 package org.elearning.backend.content.repository;
 
 import org.elearning.backend.content.model.Lesson;
+import org.elearning.backend.feedback.dto.LessonVisibilityAndOwnerDto;
+import org.elearning.backend.feedback.dto.ProfessorLessonRatingProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -140,4 +142,22 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
             "JOIN CourseEnrollment ce ON ce.courseId = ch.course.id " +
             "WHERE l.id = :lessonId AND ce.studentId = :studentId")
     boolean isStudentEnrolledInLessonCourse(@Param("lessonId") UUID lessonId, @Param("studentId") UUID studentId);
+
+    @Query("SELECT new org.elearning.backend.feedback.dto.LessonVisibilityAndOwnerDto(c.visibility, c.createdBy, l.title) " +
+            "FROM Lesson l " +
+            "LEFT JOIN l.chapter ch " +
+            "LEFT JOIN ch.course c " +
+            "WHERE l.id = :lessonId")
+    LessonVisibilityAndOwnerDto getLessonVisibilityAndOwner(@Param("lessonId") UUID lessonId);
+
+    @Query(nativeQuery = true, value = "" +
+            "SELECT l.id, l.title, AVG(lr.rating) as \"avgRating\", COUNT(lr.id) as \"totalRatings\" " +
+            "FROM lessons l " +
+            "LEFT JOIN lesson_ratings lr on lr.lesson_id = l.id " +
+            "JOIN chapters ch ON l.chapter_id = ch.id " +
+            "JOIN courses co ON ch.course_id = co.id " +
+            "WHERE co.created_by = :professorId " +
+            "GROUP BY l.id, l.title " +
+            "ORDER BY \"avgRating\" ASC NULLS LAST")
+    List<ProfessorLessonRatingProjection> getLessonsRatingForProfessor(@Param("professorId") UUID professorId);
 }

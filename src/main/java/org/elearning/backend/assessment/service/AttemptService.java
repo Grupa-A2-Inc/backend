@@ -1,6 +1,7 @@
 package org.elearning.backend.assessment.service;
 
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.analytics.service.AlertCheckService;
 import org.elearning.backend.assessment.dto.assigment_dto.TestResultDto;
 import org.elearning.backend.assessment.dto.question_dto.QuestionForStudentDto;
 import org.elearning.backend.assessment.dto.test_dto.StartAttemptResponseDto;
@@ -48,7 +49,7 @@ public class AttemptService {
 
     private final AttemptMapper attemptMapper;
     private final QuestionMapper questionMapper;
-
+    private final AlertCheckService alertCheckService;
     private static final String DOES_NOT_EXIST_MSG = "The %s with id %s does not exist";
 
     /**
@@ -231,6 +232,13 @@ public class AttemptService {
         result.setPassed(passed);
         result.setCompletedAt(LocalDateTime.now());
         resultRepository.save(result);
+
+        try {
+            alertCheckService.checkAlerts(test.getId());
+        } catch (Exception e) {
+            log.warn("Alert check failed testId={}: {}", test.getId(), e.getMessage());
+        }
+
 
         attempt.setStatus(AttemptStatus.DONE);
         attempt.setEndedAt(LocalDateTime.now());

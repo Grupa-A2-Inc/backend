@@ -13,6 +13,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.jwt.JwtUtil;
+import org.elearning.backend.subscription.service.OrganizationSubscriptionProvisioningService;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
@@ -60,6 +61,9 @@ class AuthServiceTest {
 
     @Mock
     private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private OrganizationSubscriptionProvisioningService organizationSubscriptionProvisioningService;
 
     @InjectMocks
     private AuthService authService;
@@ -148,6 +152,7 @@ class AuthServiceTest {
 
         assertThat(response.getMessage()).isEqualTo("User registered successfully");
         verify(organizationRepository, times(1)).save(any(Organization.class));
+        verify(organizationSubscriptionProvisioningService).provisionFreeSubscription(any(Organization.class));
     }
 
     @Test

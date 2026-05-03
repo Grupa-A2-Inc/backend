@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@org.springframework.test.context.ActiveProfiles("test")
 class AssignCoursesToClassroomRequestTest {
 
     @Test

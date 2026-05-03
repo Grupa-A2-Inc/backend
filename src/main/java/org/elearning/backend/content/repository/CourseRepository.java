@@ -1,5 +1,6 @@
 package org.elearning.backend.content.repository;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.elearning.backend.content.model.Course;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -16,6 +17,9 @@ public interface CourseRepository extends JpaRepository<Course, UUID> {
     List<Course> findByCreatedBy(UUID createdBy);
     List<Course> findByStatusAndVisibility(CourseStatus status, CourseVisibility visibility);
 
+    Page<Course> findByStatusAndVisibility(CourseStatus status, CourseVisibility visibility, Pageable pageable);
+
+    Page<Course> findByCreatedBy(UUID createdBy, Pageable pageable);
     /**
      * Retrieves a Course entity along with its associated chapters based on the provided course ID.
      * @param courseId The UUID of the course to retrieve.

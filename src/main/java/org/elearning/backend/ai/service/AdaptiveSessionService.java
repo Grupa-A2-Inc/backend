@@ -36,6 +36,7 @@ public class AdaptiveSessionService {
     private final AdaptiveSessionAnswerRepository adaptiveSessionAnswerRepository;
     private static final int SESSION_MINUTES = 30;
 
+    @Transactional
     public AdaptiveStartDto startSession(UUID studentId, Integer subjectId, Integer topicId, int count) {
         AiAdaptiveResponse response;
         try {
@@ -44,6 +45,13 @@ public class AdaptiveSessionService {
             log.error("Failed to start adaptive session: {}", exception.getMessage());
             throw new AdaptiveServiceUnavailableException("Adaptive service is currently unavailable. Please try again later.");
         }
+
+        // Modulul AI nu are exercitii pentru acest subject/topic inca
+        if (response.getExercises() == null || response.getExercises().isEmpty()) {
+            log.warn("No exercises returned from AI for subjectId={}, topicId={}", subjectId, topicId);
+            throw new AdaptiveServiceUnavailableException("No exercises available for the selected subject and topic. Please try again later or choose a different topic.");
+        }
+
         AdaptiveSession session = AdaptiveSession.builder()
                 .studentId(studentId)
                 .subjectId(subjectId)
@@ -53,6 +61,7 @@ public class AdaptiveSessionService {
         session = adaptiveSessionRepository.save(session);
         UUID sessionId = session.getId();
         List<ClientExerciseDto> safeExercises = new ArrayList<>();
+
         for (AiAdaptiveExerciseDto aiExercise : response.getExercises()) {
             try {
                 String answersJson = objectMapper.writeValueAsString(aiExercise.getAnswers());
@@ -74,29 +83,15 @@ public class AdaptiveSessionService {
                         aiExercise.getType(),
                         aiExercise.getAnswers()
                 ));
-            } catch(JsonProcessingException exception) {
+            } catch (JsonProcessingException exception) {
                 log.error("Error serializing JSON for exercise {}", aiExercise.getExerciseId(), exception);
-                throw new RuntimeException("Failed to process exercise data.");
+                throw new ValidationException("Failed to process exercise data.");
             }
         }
 
         return new AdaptiveStartDto(sessionId, session.getExpiresAt(), safeExercises);
     }
 
-    /**
-     * Process a student's submission for an adaptive learning session.
-     *
-     * Validates the session belongs to the student, is active, and not expired; grades each exercise, persists answers and scores,
-     * marks the session as completed, and attempts to send AI feedback (best-effort).
-     *
-     * @param sessionId the adaptive session ID being submitted
-     * @param studentId the student submitting the session
-     * @param studentAnswers the student's answers for the session's exercises
-     * @return an AdaptiveResultDto containing the session ID, total score, per-exercise results, and whether AI feedback was sent
-     * @throws DoesNotExistException if no session exists for the given sessionId and studentId
-     * @throws ResourceConflictException if the session is not active or has expired
-     * @throws ValidationException if stored correct answers cannot be parsed or if serialization of given answers fails
-     */
     @Transactional(noRollbackFor = ResourceConflictException.class)
     public AdaptiveResultDto submitSession(UUID sessionId, UUID studentId, AdaptiveSubmitRequestDto studentAnswers) {
 
@@ -187,18 +182,6 @@ public class AdaptiveSessionService {
         return new AdaptiveResultDto(sessionId, totalScore, clientResults, feedbackSent);
     }
 
-    /**
-     * Compute the score for an exercise based on its type and the provided answers.
-     *
-     * Scoring:
-     * - SINGLE_CHOICE, TRUE_FALSE: 1.0 if the first given answer equals the first correct answer, 0.0 otherwise.
-     * - MULTIPLE_CHOICE: 1.0 if the sets of given and correct answers are equal; 0.5 if given answers are a non-empty subset of correct answers; 0.0 otherwise.
-     *
-     * @param type    the exercise type identifier (e.g., "SINGLE_CHOICE", "TRUE_FALSE", "MULTIPLE_CHOICE")
-     * @param given   the answers provided by the student (may be null or empty)
-     * @param correct the correct answers for the exercise (may be null or empty)
-     * @return        the score for the exercise: `1.0`, `0.5`, or `0.0` depending on correctness
-     */
     private double calculateScore(String type, List<String> given, List<String> correct) {
         if (given == null || given.isEmpty() || correct == null || correct.isEmpty()) {
             return 0.0;
@@ -219,7 +202,6 @@ public class AdaptiveSessionService {
             Set<String> intersection = new HashSet<>(givenSet);
             intersection.retainAll(correctSet);
 
-            // If the user selected only correct options but not all of them (e.g., selected 1 out of 2 correct) -> 0.5
             if (!intersection.isEmpty() && givenSet.size() == intersection.size()) {
                 return 0.5;
             }
@@ -230,15 +212,6 @@ public class AdaptiveSessionService {
         return 0.0;
     }
 
-    /**
-     * Serialize the given object to its JSON string representation.
-     *
-     * If the provided object is null, returns the JSON empty array string "[]".
-     *
-     * @param object the object to serialize; may be null
-     * @return the JSON string representation of the object, or "[]" if the object is null
-     * @throws ValidationException if serialization fails
-     */
     private String convertToJson(Object object) {
         if (object == null) {
             return "[]";

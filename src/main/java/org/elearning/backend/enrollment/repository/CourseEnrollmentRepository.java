@@ -15,7 +15,7 @@ public interface CourseEnrollmentRepository extends JpaRepository<CourseEnrollme
     Optional<CourseEnrollment> findByStudentIdAndCourseId(UUID studentId, UUID courseId);
 
     List<CourseEnrollment> findAllByStudentId(UUID studentId);
-
+    Page<CourseEnrollment> findAllByStudentId(UUID studentId, Pageable pageable);
     Page<CourseEnrollment> findAllByCourseId(UUID courseId, Pageable pageable);
 
     List<CourseEnrollment> findAllByStudentIdAndCompletedAtIsNotNullOrderByCompletedAtDesc(UUID studentId);

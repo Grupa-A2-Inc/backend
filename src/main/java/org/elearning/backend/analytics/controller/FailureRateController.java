@@ -2,6 +2,8 @@ package org.elearning.backend.analytics.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+// SWAGGER ADDED
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.analytics.dto.alerts.AlertDTO;
 import org.elearning.backend.analytics.dto.alerts.ThresholdDTO;
@@ -21,6 +23,10 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import static org.springframework.security.authorization.AuthorityReactiveAuthorizationManager.hasRole;
+
+// SWAGGER ADDED
+@Tag(name = "Failure Rate", description = "Test and lesson failure rate analytics and alerts")
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -108,7 +114,7 @@ public class FailureRateController {
     @ApiResponse(responseCode = OK, description = "Analytics alerts returned successfully")
     @ApiResponse(responseCode = FORBIDDEN, description = "User does not have permission to view the analytics alerts")
     @GetMapping("/professors/me/alerts")
-    //Nu stiu ce sa pun aici la PreAuthorize
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<List<AlertDTO>> getAlertsForProfessor(@AuthenticationPrincipal CustomUserDetails currentUser) {
         UUID professorId = currentUser.getUserId();
         RoleName roleName = currentUser.getRoleName();
