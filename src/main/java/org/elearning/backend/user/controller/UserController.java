@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
@@ -14,15 +16,15 @@ import org.elearning.backend.user.dto.request.UpdateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserResponse;
+import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.service.UserImportService;
 import org.elearning.backend.user.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -66,7 +68,7 @@ public class UserController {
     public ResponseEntity<UserResponse> createUser(@P("request") @Valid @RequestBody CreateUserRequest request) {
         UserResponse response = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    }//aici nu mi dau seama daca sa modific? pentru ca teoretic ramane valabil endpointul pentru care trebuia sa fac taskul
 
     @Operation(
             summary = "Bulk import users",
@@ -130,8 +132,14 @@ public class UserController {
     )
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());
+    public ResponseEntity<PaginatedResponse<UserResponse>> getAllUsers(@RequestParam(required = false) Integer page,
+                                                                       @RequestParam(required = false) Integer size,
+                                                                       @RequestParam(required = false) String search,
+                                                                       @RequestParam(required = false) String role,
+                                                                       @RequestParam(required = false) UserStatus status,
+                                                                       @RequestParam(required = false) String sortBy,
+                                                                       @RequestParam(required = false) String sortDir) {
+        return ResponseEntity.ok(userService.getAllUsersPaginated(page, size, search, role, status, sortBy, sortDir));//aici schimb metoda in service
     }
 
     @Operation(
@@ -159,8 +167,17 @@ public class UserController {
     )
     @PreAuthorize("hasRole('ORGANIZATION_ADMIN')")
     @GetMapping("/organization")
-    public ResponseEntity<List<UserResponse>> getOrganizationUsers() {
-        return ResponseEntity.ok(userService.getCurrentOrganizationUsers());
+    public ResponseEntity<PaginatedResponse<UserResponse>> getOrganizationUsers(@RequestParam(required = false) Integer page,
+                                                                                @RequestParam(required = false) Integer size,
+                                                                                @RequestParam(required = false) String search,
+                                                                                @RequestParam(required = false) String role,
+                                                                                @RequestParam(required = false) UserStatus status,
+                                                                                @RequestParam(required = false) String sortBy,
+                                                                                @RequestParam(required = false) String sortDir,
+                                                                                @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.ok(userService.getCurrentOrganizationUsersPaginated(currentUser.getUserId(), page, size, search, role, status, sortBy, sortDir));//si aici am schimbat metoda in service fata de ce era inainte
+        //dar nu stiu daca sa le pastrez si pe alea vechi?
+        //pentru ca erau doar in teste folosite
     }
 
     @Operation(
