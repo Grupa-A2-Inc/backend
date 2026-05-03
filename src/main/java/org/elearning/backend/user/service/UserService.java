@@ -32,10 +32,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.File;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.apache.commons.lang3.StringEscapeUtils.escapeCsv;
 
 @AllArgsConstructor
 @Service
@@ -48,6 +52,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     private static final String USER_NO_EXIST = "User does not exist: ";
+    private static final String DELIMITER = ",";
+    private static final String LINE_SEPARATOR = "\n";
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
@@ -338,5 +344,90 @@ public class UserService {
                 userPage.getTotalElements()
         );
 
+    }
+
+    public String exportOrganizationUsersCsv(String search, String role, UserStatus status, UUID currentUserId){
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + currentUserId));
+
+        if(currentUser.getOrganization() == null){
+            throw new UserOrganizationNotFoundException("Organization not found.");
+        }
+
+        UUID organizationId = currentUser.getOrganization().getId();
+
+        Specification<User> spec = Specification.where(
+                (root, query, cb) -> cb.equal(root.get("organization").get("id"), organizationId)
+        );
+
+        if (search != null && !search.isBlank()) {
+            String likeValue = "%" + search.toLowerCase().trim() + "%";
+
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("firstName")), likeValue),
+                    cb.like(cb.lower(root.get("lastName")), likeValue),
+                    cb.like(cb.lower(root.get("email")), likeValue)
+            ));
+        }
+
+        if (role != null && !role.isBlank()) {
+            RoleName roleName;
+            try {
+                roleName = RoleName.valueOf(role.trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("Invalid role filter: " + role);
+            }
+
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("role").get("name"), roleName)
+            );
+        }
+
+        if (status != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("status"), status)
+            );
+        }
+
+        List<User> users = userRepository.findAll(spec, Sort.by("firstName").ascending());
+
+        StringBuilder csv = new StringBuilder();
+        csv.append(writeHeader(List.of(
+                "id", "email", "firstName", "lastName", "role", "status", "organizationId"
+        )));
+
+        for (User user : users) {
+            csv.append(writeBody(List.of(
+                    escapeCsv(user.getId() != null ? user.getId().toString() : ""),
+                    escapeCsv(user.getEmail()),
+                    escapeCsv(user.getFirstName()),
+                    escapeCsv(user.getLastName()),
+                    escapeCsv(user.getRole() != null && user.getRole().getName() != null ? user.getRole().getName().name() : ""),
+                    escapeCsv(user.getStatus() != null ? user.getStatus().name() : ""),
+                    escapeCsv(user.getOrganization() != null && user.getOrganization().getId() != null
+                            ? user.getOrganization().getId().toString()
+                            : "")
+            )));
+        }
+
+        return csv.toString();
+    }
+
+    public static String writeHeader(List<String> headers){
+        return String.join(DELIMITER, headers) + LINE_SEPARATOR;
+    }
+
+    public static String writeBody(List<String> body){
+        return String.join(DELIMITER, body) + LINE_SEPARATOR;
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) {
+            return "\"\"";
+        }
+
+        String escaped = value.replace("\"", "\"\"");
+        return "\"" + escaped + "\"";
     }
 }

@@ -25,6 +25,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
+import java.nio.file.Files;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -356,5 +357,20 @@ public class UserController {
                                                @RequestBody ChangePasswordRequest request) {
         userService.changePassword(id, request);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PreAuthorize("hasRole('ORGANIZATION_ADMIN')")
+    @GetMapping("/organization/export")
+    public ResponseEntity<byte[]> exportOrganizationUsers(@RequestParam (required = false) String search,
+                                                        @RequestParam (required = false) String role,
+                                                        @RequestParam (required = false) UserStatus status,
+                                                        @AuthenticationPrincipal CustomUserDetails currentUser){
+
+        String csv = userService.exportOrganizationUsersCsv(search, role, status, currentUser.getUserId());
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=organization-users.csv")
+                .header("Content-Type", "text/csv")
+                .body(csv.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 }
