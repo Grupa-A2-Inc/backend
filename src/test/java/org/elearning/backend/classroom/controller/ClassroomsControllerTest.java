@@ -11,6 +11,7 @@ import org.elearning.backend.classroom.dto.response.ClassroomResponse;
 import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.service.ClassroomCourseService;
 import org.elearning.backend.classroom.service.ClassroomService;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.user.entity.User;
 import org.junit.jupiter.api.Test;
@@ -59,14 +60,35 @@ class ClassroomsControllerTest {
     @Test
     void getMyOrganizationClassrooms_returns200Ok() {
         UUID userId = UUID.randomUUID();
-        List<ClassroomResponse> responseBody = List.of(makeResponse(), makeResponse());
-        when(classroomService.getMyOrganizationClassrooms(userId)).thenReturn(responseBody);
+        PaginatedResponse<ClassroomResponse> responseBody =
+                new PaginatedResponse<>(List.of(makeResponse()), 0, 10, 1L);
 
-        ResponseEntity<List<ClassroomResponse>> response =
-                classroomsController.getMyOrganizationClassrooms(userDetails(userId));
+        when(classroomService.getMyOrganizationClassrooms(userId, null, null, null, null, null))
+                .thenReturn(responseBody);
+
+        ResponseEntity<PaginatedResponse<ClassroomResponse>> response =
+                classroomsController.getMyOrganizationClassrooms(
+                        userDetails(userId), null, null, null, null, null);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).isEqualTo(responseBody);
+        assertThat(response.getBody()).isSameAs(responseBody);
+    }
+
+    @Test
+    void getMyOrganizationClassrooms_withPaginationParams_passesThemToService() {
+        UUID userId = UUID.randomUUID();
+        PaginatedResponse<ClassroomResponse> responseBody =
+                new PaginatedResponse<>(List.of(), 1, 5, 0L);
+
+        when(classroomService.getMyOrganizationClassrooms(userId, 1, 5, "math", "name", "desc"))
+                .thenReturn(responseBody);
+
+        ResponseEntity<PaginatedResponse<ClassroomResponse>> response =
+                classroomsController.getMyOrganizationClassrooms(
+                        userDetails(userId), 1, 5, "math", "name", "desc");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        verify(classroomService).getMyOrganizationClassrooms(userId, 1, 5, "math", "name", "desc");
     }
 
     @Test
@@ -134,20 +156,40 @@ class ClassroomsControllerTest {
     @Test
     void getClassroomCourses_returns200Ok() {
         UUID classroomId = UUID.randomUUID();
-
         ClassroomCourseDetailsResponse details = new ClassroomCourseDetailsResponse();
         details.setCourseId(UUID.randomUUID());
         details.setTitle("Math 101");
         details.setAssignedAt(LocalDateTime.of(2026, 4, 28, 10, 0));
 
-        List<ClassroomCourseDetailsResponse> responseBody = List.of(details);
-        when(classroomCourseService.getClassroomCourses(classroomId)).thenReturn(responseBody);
+        PaginatedResponse<ClassroomCourseDetailsResponse> responseBody =
+                new PaginatedResponse<>(List.of(details), 0, 10, 1L);
 
-        ResponseEntity<List<ClassroomCourseDetailsResponse>> response =
-                classroomsController.getClassroomCourses(classroomId);
+        when(classroomCourseService.getClassroomCourses(classroomId, null, null, null, null, null, null))
+                .thenReturn(responseBody);
+
+        ResponseEntity<PaginatedResponse<ClassroomCourseDetailsResponse>> response =
+                classroomsController.getClassroomCourses(
+                        classroomId, null, null, null, null, null, null);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).isEqualTo(responseBody);
+        assertThat(response.getBody()).isSameAs(responseBody);
+    }
+
+    @Test
+    void getClassroomCourses_withFilters_passesThemToService() {
+        UUID classroomId = UUID.randomUUID();
+        PaginatedResponse<ClassroomCourseDetailsResponse> responseBody =
+                new PaginatedResponse<>(List.of(), 0, 10, 0L);
+
+        when(classroomCourseService.getClassroomCourses(
+                classroomId, 0, 10, "math", "Science", "title", "asc"))
+                .thenReturn(responseBody);
+
+        classroomsController.getClassroomCourses(
+                classroomId, 0, 10, "math", "Science", "title", "asc");
+
+        verify(classroomCourseService).getClassroomCourses(
+                classroomId, 0, 10, "math", "Science", "title", "asc");
     }
 
     @Test
@@ -184,18 +226,38 @@ class ClassroomsControllerTest {
     void listClassroomMembers_returns200Ok() {
         UUID classroomId = UUID.randomUUID();
         ClassroomMemberResponse member = new ClassroomMemberResponse(
-                UUID.randomUUID(),
-                "teacher@example.com",
-                MembershipType.TEACHER
-        );
-        List<ClassroomMemberResponse> responseBody = List.of(member);
-        when(classroomService.listClassroomMembers(classroomId, MembershipType.TEACHER)).thenReturn(responseBody);
+                UUID.randomUUID(), "teacher@example.com", MembershipType.TEACHER);
 
-        ResponseEntity<List<ClassroomMemberResponse>> response =
-                classroomsController.listClassroomMembers(classroomId, MembershipType.TEACHER);
+        PaginatedResponse<ClassroomMemberResponse> responseBody =
+                new PaginatedResponse<>(List.of(member), 0, 10, 1L);
+
+        when(classroomService.listClassroomMembers(
+                classroomId, MembershipType.TEACHER, null, null, null, null, null))
+                .thenReturn(responseBody);
+
+        ResponseEntity<PaginatedResponse<ClassroomMemberResponse>> response =
+                classroomsController.listClassroomMembers(
+                        classroomId, MembershipType.TEACHER, null, null, null, null, null);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).isEqualTo(responseBody);
+        assertThat(response.getBody()).isSameAs(responseBody);
+    }
+
+    @Test
+    void listClassroomMembers_withSearchAndSort_passesThemToService() {
+        UUID classroomId = UUID.randomUUID();
+        PaginatedResponse<ClassroomMemberResponse> responseBody =
+                new PaginatedResponse<>(List.of(), 0, 10, 0L);
+
+        when(classroomService.listClassroomMembers(
+                classroomId, MembershipType.STUDENT, 0, 10, "ion", "lastName", "asc"))
+                .thenReturn(responseBody);
+
+        classroomsController.listClassroomMembers(
+                classroomId, MembershipType.STUDENT, 0, 10, "ion", "lastName", "asc");
+
+        verify(classroomService).listClassroomMembers(
+                classroomId, MembershipType.STUDENT, 0, 10, "ion", "lastName", "asc");
     }
 
     private ClassroomResponse makeResponse() {

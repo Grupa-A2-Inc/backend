@@ -14,6 +14,7 @@ import org.elearning.backend.classroom.exception.CourseNotEligibleException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.repository.CourseRepository;
@@ -26,10 +27,7 @@ import org.springframework.aot.generate.AccessControl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -97,25 +95,61 @@ public class ClassroomCourseService {
                 .toList();
     }
 
-    public List<ClassroomCourseDetailsResponse> getClassroomCourses(UUID classroomId) {
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ClassroomCourseDetailsResponse> getClassroomCourses(
+            UUID classroomId,
+            Integer page, Integer size,
+            String search, String category,
+            String sortBy, String sortDir) {
+
         if (!classroomRepository.existsById(classroomId)) {
             throw new ClassroomNotFoundException("Classroom not found: " + classroomId);
         }
 
-        return classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId)
-                .stream()
+        int pageVal  = (page == null || page < 0)   ? 0  : page;
+        int sizeVal  = (size == null || size <= 0)   ? 10 : size;
+        String field = (sortBy != null && Set.of("title", "assignedAt").contains(sortBy)) ? sortBy : "assignedAt";
+        String dir   = (sortDir == null || sortDir.isBlank()) ? "asc" : sortDir.toLowerCase();
+
+        List<ClassroomCourse> all = classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId);
+
+        List<ClassroomCourseDetailsResponse> filtered = all.stream()
                 .map(cc -> {
-                    Course course = courseRepository.findById(cc.getCourseId())
-                            .orElseThrow(() -> new ClassroomBadRequestException(
-                                    "Course not found: " + cc.getCourseId()));
+                    Course course = courseRepository.findById(cc.getCourseId()).orElse(null);
+                    if (course == null || course.getStatus() != CourseStatus.PUBLISHED) return null;
                     return new AbstractMap.SimpleEntry<>(cc, course);
                 })
-                .filter(entry -> entry.getValue().getStatus() == CourseStatus.PUBLISHED)
+                .filter(entry -> entry != null)
+                .filter(entry -> {
+                    if (search == null || search.isBlank()) return true;
+                    String q = search.toLowerCase().trim();
+                    return entry.getValue().getTitle().toLowerCase().contains(q);
+                })
+                .filter(entry -> {
+                    if (category == null || category.isBlank()) return true;
+                    return category.equalsIgnoreCase(entry.getValue().getCategory());
+                })
+                .sorted(buildCourseComparator(field, dir))
                 .map(entry -> toCourseDetailsResponse(entry.getKey(), entry.getValue()))
                 .toList();
+
+        int total = filtered.size();
+        int fromIndex = Math.min(pageVal * sizeVal, total);
+        int toIndex   = Math.min(fromIndex + sizeVal, total);
+        List<ClassroomCourseDetailsResponse> content = filtered.subList(fromIndex, toIndex);
+
+        return new PaginatedResponse<>(content, pageVal, sizeVal, (long) total);
     }
 
-    private void validateCourseEligibility(Course course, UUID organizationId) {
+    private Comparator<AbstractMap.SimpleEntry<ClassroomCourse, Course>> buildCourseComparator(String field, String dir) {
+        Comparator<AbstractMap.SimpleEntry<ClassroomCourse, Course>> comp = field.equals("title")
+                ? Comparator.comparing(e -> e.getValue().getTitle(), String.CASE_INSENSITIVE_ORDER)
+                : Comparator.comparing(e -> e.getKey().getAssignedAt());
+
+        return dir.equals("desc") ? comp.reversed() : comp;
+    }
+
+        private void validateCourseEligibility(Course course, UUID organizationId) {
         if (course.getCreatedBy() == null) {
             throw new CourseNotEligibleException(
                     "Course " + course.getId() + " has no creator and cannot be assigned to a classroom"
