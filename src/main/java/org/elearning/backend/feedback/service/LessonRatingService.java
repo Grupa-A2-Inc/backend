@@ -31,7 +31,7 @@ public class LessonRatingService {
     private final LessonRatingRepository lessonRatingRepository;
     private final RatingAlertService ratingAlertService;
 
-    private final double THRESHOLD = 3.0;
+    private static final double THRESHOLD = 3.0;
 
     @Transactional
     public RateLessonResponseDto rateLesson(UUID lessonId, UUID studentId, int rating, String comment) {
@@ -94,7 +94,7 @@ public class LessonRatingService {
             }
 
             for (Object[] row : distResults) {
-                distribution.put((Integer) row[0], (Long) row[1]);
+                distribution.put(((Short) row[0]).intValue(), (Long) row[1]);
             }
 
             List<LessonRating> top5Ratings = lessonRatingRepository
@@ -110,6 +110,10 @@ public class LessonRatingService {
         }
         // For student
         else if (RoleName.STUDENT.equals(userRole)) {
+            if (!courseEnrollmentRepository.existsByStudentIdAndCourseId(userId, lesson.getChapter().getCourse().getId())) {
+                throw new EnrolledInCourseException(
+                       "Student with id " + userId + " is not enrolled in the course for lesson with id: " + lessonId);
+            }
             lessonRatingRepository.findByLessonIdAndStudentId(lessonId, userId)
                     .ifPresent(rating -> {
                         lessonRatingSummaryDto.setMyRating(rating.getRating().intValue());

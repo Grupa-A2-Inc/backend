@@ -263,7 +263,7 @@ public class AiApiClient {
     static String readErrorResponseBody(ClientHttpResponse response) {
         try {
             String responseBody = StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8);
-            return responseBody == null || responseBody.isBlank() ? "<empty>" : responseBody;
+            return responseBody.isBlank() ? "<empty>" : responseBody;
         } catch (IOException e) {
             return "<unreadable>";
         }
