@@ -55,7 +55,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "https://frontend-teal-five-57.vercel.app",
                 "https://frontend-z1g5f.vercel.app",
-                "https://vibesvibesonlyvibes.vercel.app"
+                "https://vibesvibesonlyvibes.vercel.app/"
         ));
         configuration.setAllowCredentials(true); //flag ca sa poate primi/seta cookies
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));

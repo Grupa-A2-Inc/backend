@@ -1,12 +1,16 @@
 package org.elearning.backend.ai.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.elearning.backend.ai.dto.AiAdaptiveResponse;
+import org.elearning.backend.ai.dto.AiAdaptiveExercisesRequest;
 import org.elearning.backend.ai.dto.AiGenerateResponse;
 import org.elearning.backend.ai.dto.AiStudentRegistrationResponse;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
+import org.elearning.backend.ai.exception.JsonSerializingException;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,10 +49,12 @@ public class AiApiClient {
     private final RestClient adaptiveRestClient;
     private final RestClient studentRegistrationRestClient;
     private final LessonRepository lessonRepository;
+    private final ObjectMapper objectMapper;
 
     public AiApiClient(
             RestClient.Builder restClientBuilder,
             LessonRepository lessonRepository,
+            ObjectMapper objectMapper,
             @Value("${ai.api.base-url}") String baseUrl,
             @Value("${ai.api.key}") String apiKey,
             @Value("${ai.api.timeout-generate-ms:10000}") int generateTimeout,
@@ -58,6 +64,7 @@ public class AiApiClient {
 
         this.apiKey = apiKey;
         this.lessonRepository = lessonRepository;
+        this.objectMapper = objectMapper;
 
         this.generateRestClient = restClientBuilder.clone()
                 .baseUrl(baseUrl)
@@ -129,11 +136,29 @@ public class AiApiClient {
     // ==========================================
 
     public AiAdaptiveResponse requestAdaptiveExercises(UUID sessionId, UUID studentId, int subjectId, int topicId, int count) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("studentId", studentId.toString());
-        payload.put("subjectId", subjectId);
-        payload.put("topicId", topicId);
-        payload.put("count", count);
+        AiAdaptiveExercisesRequest payload = new AiAdaptiveExercisesRequest(
+                studentId.toString(),
+                subjectId,
+                topicId,
+                count
+        );
+        String requestBody;
+
+        try {
+            requestBody = objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException exception) {
+            throw new JsonSerializingException("Failed to serialize adaptive exercises request payload.");
+        }
+
+        log.info(
+                "AI adaptive exercises request: sessionId={} studentId={} subjectId={} topicId={} count={} body={}",
+                sessionId,
+                studentId,
+                subjectId,
+                topicId,
+                count,
+                requestBody
+        );
 
         try {
             return adaptiveRestClient.post()
@@ -141,7 +166,7 @@ public class AiApiClient {
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(API_KEY_HEADER, apiKey)
-                    .body(payload)
+                    .body(requestBody)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, response) -> {
                         log.error("AI returned error status (adaptive exercises): {}", response.getStatusCode());
