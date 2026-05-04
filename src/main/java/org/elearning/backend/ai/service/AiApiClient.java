@@ -38,10 +38,10 @@ public class AiApiClient {
     private static final String API_KEY_HEADER = "X-API-Key";
     private static final String AI_SUCCESS_STATUS = "ok";
 
-    private static final String GENERATE_TEST_URI = "/api/generate";
-    private static final String ADAPTIVE_EXERCISES_URI = "/api/adaptive/exercises";
-    private static final String ADAPTIVE_FEEDBACK_URI = "/api/adaptive/feedback";
-    private static final String STUDENT_REGISTRATION_URI = "/ai/api/students";
+    private static final String GENERATE_TEST_URI = "/api/v1/generate";
+    private static final String ADAPTIVE_EXERCISES_URI = "/api/v1/adaptive/exercises";
+    private static final String ADAPTIVE_FEEDBACK_URI = "/api/v1/adaptive/feedback";
+    private static final String STUDENT_REGISTRATION_URI = "/ai/api/v1/students";
 
     private final String apiKey;
     private final RestClient generateRestClient;
