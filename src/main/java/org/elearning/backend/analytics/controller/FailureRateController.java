@@ -23,8 +23,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-import static org.springframework.security.authorization.AuthorityReactiveAuthorizationManager.hasRole;
-
 // SWAGGER ADDED
 @Tag(name = "Failure Rate", description = "Test and lesson failure rate analytics and alerts")
 @RestController

@@ -10,7 +10,6 @@ import org.elearning.backend.feedback.dto.GetErrorReportDto;
 import org.elearning.backend.feedback.exception.DifferentIdException;
 import org.elearning.backend.feedback.model.ReportStatus;
 import org.elearning.backend.feedback.service.ErrorReportManagementService;
-import org.elearning.backend.feedback.service.QuestionErrorReportService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
