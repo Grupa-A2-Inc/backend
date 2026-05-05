@@ -6,14 +6,20 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
 import org.elearning.backend.organization.service.OrganizationService;
+import org.elearning.backend.subscription.dto.request.CheckoutRequest;
+import org.elearning.backend.subscription.dto.request.UpdateSubscriptionPlanRequest;
+import org.elearning.backend.subscription.dto.response.CheckoutSessionResponse;
+import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionResponse;
 import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionStatusResponse;
 import org.elearning.backend.subscription.service.OrganizationSubscriptionService;
+import org.elearning.backend.subscription.service.StripeService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +36,7 @@ public class OrganizationController {
 
     private final OrganizationService organizationService;
     private final OrganizationSubscriptionService organizationSubscriptionService;
+    private final StripeService stripeService;
 
     @Operation(
             summary = "Create a new organization",
@@ -232,5 +239,53 @@ public class OrganizationController {
     public ResponseEntity<Void> deleteOrganization(@PathVariable UUID id) {
         organizationService.deleteOrganization(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+            summary = "Create checkout session",
+            description = "Creates a Stripe checkout session for subscription activation"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Checkout session created successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = CheckoutSessionResponse.class)
+            )
+    )
+    @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
+    @ApiResponse(responseCode = "403", description = "Access denied", content = @Content)
+    @ApiResponse(responseCode = "404", description = "Organization or plan not found", content = @Content)
+    @PreAuthorize("@accessService.canEditOrganization(authentication, #organizationId)")
+    @PostMapping("/{organizationId}/subscription/checkout")
+    public ResponseEntity<CheckoutSessionResponse> createCheckoutSession(
+            @P("organizationId") @PathVariable UUID organizationId,
+            @Valid @RequestBody CheckoutRequest request) {
+
+        return ResponseEntity.ok(stripeService.createCheckoutSession(organizationId, request));
+    }
+
+    @Operation(
+            summary = "Change subscription plan",
+            description = "Changes the active subscription plan for the specified organization"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Subscription plan changed successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = OrganizationSubscriptionResponse.class)
+            )
+    )
+    @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
+    @ApiResponse(responseCode = "403", description = "Access denied", content = @Content)
+    @ApiResponse(responseCode = "404", description = "Organization or subscription not found", content = @Content)
+    @PreAuthorize("@accessService.canEditOrganization(authentication, #organizationId)")
+    @PatchMapping("/{organizationId}/subscription")
+    public ResponseEntity<OrganizationSubscriptionResponse> changeSubscriptionPlan(
+            @P("organizationId") @PathVariable UUID organizationId,
+            @Valid @RequestBody UpdateSubscriptionPlanRequest request) {
+
+        return ResponseEntity.ok(organizationSubscriptionService.changePlan(organizationId, request));
     }
 }
