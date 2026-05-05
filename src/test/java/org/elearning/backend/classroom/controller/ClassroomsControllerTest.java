@@ -106,6 +106,38 @@ class ClassroomsControllerTest {
     }
 
     @Test
+    void getMyClassrooms_returns200Ok() {
+        UUID userId = UUID.randomUUID();
+        PaginatedResponse<ClassroomResponse> responseBody =
+                new PaginatedResponse<>(List.of(makeResponse()), 0, 10, 1L);
+
+        when(classroomService.getMyClassrooms(userId, null, null, null, null, null))
+                .thenReturn(responseBody);
+
+        ResponseEntity<PaginatedResponse<ClassroomResponse>> response =
+                classroomsController.getMyClassrooms(
+                        userDetails(userId), null, null, null, null, null);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isSameAs(responseBody);
+    }
+
+    @Test
+    void getMyClassrooms_withParams_passesThemToService() {
+        UUID userId = UUID.randomUUID();
+        PaginatedResponse<ClassroomResponse> responseBody =
+                new PaginatedResponse<>(List.of(), 0, 5, 0L);
+
+        when(classroomService.getMyClassrooms(userId, 0, 5, "math", "name", "asc"))
+                .thenReturn(responseBody);
+
+        classroomsController.getMyClassrooms(
+                userDetails(userId), 0, 5, "math", "name", "asc");
+
+        verify(classroomService).getMyClassrooms(userId, 0, 5, "math", "name", "asc");
+    }
+
+    @Test
     void patchClassroom_returns200Ok() {
         UUID userId = UUID.randomUUID();
         UUID classroomId = UUID.randomUUID();

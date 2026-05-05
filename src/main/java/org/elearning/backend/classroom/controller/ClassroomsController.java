@@ -113,6 +113,34 @@ public class ClassroomsController {
     }
 
     @Operation(
+            summary = "List my classrooms",
+            description = "Returns the classrooms the authenticated user belongs to, either as STUDENT or TEACHER."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Classrooms retrieved successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ClassroomResponse.class)
+            )
+    )
+    @ApiResponse(responseCode = "403", description = "Not authenticated", content = @Content)
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    //@PreAuthorize("@accessService.extractCurrentUser(authentication) != null")
+    public ResponseEntity<PaginatedResponse<ClassroomResponse>> getMyClassrooms(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
+
+        return ResponseEntity.ok(classroomService.getMyClassrooms(
+                currentUser.getUserId(), page, size, search, sortBy, sortDir));
+    }
+
+    @Operation(
             summary = "Get classroom by ID",
             description = "Returns the classroom identified by the given ID when the caller is allowed to manage that classroom. " +
                     "The management rule is stricter than simple authentication: a platform ADMIN may manage any classroom, while an ORGANIZATION_ADMIN " +
