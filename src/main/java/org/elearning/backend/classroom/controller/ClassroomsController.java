@@ -18,6 +18,7 @@ import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomResponse;
 import org.elearning.backend.classroom.service.ClassroomCourseService;
 import org.elearning.backend.classroom.service.ClassroomService;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -88,10 +89,16 @@ public class ClassroomsController {
     @ApiResponse(responseCode = "403", description = "User is not allowed to view classrooms", content = @Content)
     @GetMapping
     @PreAuthorize("@accessService.canCreateClassroom(authentication)")
-    public ResponseEntity<List<ClassroomResponse>> getMyOrganizationClassrooms(
-            @AuthenticationPrincipal CustomUserDetails currentUser) {
+    public ResponseEntity<PaginatedResponse<ClassroomResponse>> getMyOrganizationClassrooms(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
 
-        return ResponseEntity.ok(classroomService.getMyOrganizationClassrooms(currentUser.getUserId()));
+        return ResponseEntity.ok(classroomService.getMyOrganizationClassrooms(
+                currentUser.getUserId(), page, size, search, sortBy, sortDir));
     }
 
     @Operation(
@@ -214,10 +221,17 @@ public class ClassroomsController {
     @ApiResponse(responseCode = "404", description = "Classroom not found", content = @Content)
     @GetMapping("/{classroomId}/courses")
     @PreAuthorize("@accessService.canViewClassroomCourses(authentication, #classroomId)")
-    public ResponseEntity<List<ClassroomCourseDetailsResponse>> getClassroomCourses(
-            @P("classroomId") @PathVariable UUID classroomId) {
+    public ResponseEntity<PaginatedResponse<ClassroomCourseDetailsResponse>> getClassroomCourses(
+            @P("classroomId") @PathVariable UUID classroomId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
 
-        return ResponseEntity.ok(classroomCourseService.getClassroomCourses(classroomId));
+        return ResponseEntity.ok(classroomCourseService.getClassroomCourses(
+                classroomId, page, size, search, category, sortBy, sortDir));
     }
 
     @Operation(
@@ -297,10 +311,16 @@ public class ClassroomsController {
     @ApiResponse(responseCode = "404", description = "Classroom not found", content = @Content)
     @GetMapping("/{classroomId}/members")
     @PreAuthorize("@accessService.canListClassroomMembers(authentication, #classroomId)")
-    public ResponseEntity<List<ClassroomMemberResponse>> listClassroomMembers(
+    public ResponseEntity<PaginatedResponse<ClassroomMemberResponse>> listClassroomMembers(
             @P("classroomId") @PathVariable UUID classroomId,
-            @RequestParam(required = false) MembershipType role) {
+            @RequestParam(required = false) MembershipType role,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
 
-        return ResponseEntity.ok(classroomService.listClassroomMembers(classroomId, role));
+        return ResponseEntity.ok(classroomService.listClassroomMembers(
+                classroomId, role, page, size, search, sortBy, sortDir));
     }
 }

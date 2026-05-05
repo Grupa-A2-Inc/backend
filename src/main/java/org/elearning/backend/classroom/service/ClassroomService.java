@@ -17,6 +17,7 @@ import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.enrollment.model.CourseEnrollment;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
@@ -25,6 +26,11 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.exception.UserNotFoundException;
 import org.elearning.backend.user.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,13 +69,39 @@ public class ClassroomService {
     }
 
     @Transactional(readOnly = true)
-    public List<ClassroomResponse> getMyOrganizationClassrooms(UUID requesterUserId) {
+    public PaginatedResponse<ClassroomResponse> getMyOrganizationClassrooms(
+            UUID requesterUserId,
+            Integer page, Integer size,
+            String search, String sortBy, String sortDir) {
+
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
 
-        return classroomRepository.findAllByOrganizationIdOrderByNameAsc(organizationId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        int pageVal  = (page == null || page < 0)   ? 0    : page;
+        int sizeVal  = (size == null || size <= 0)   ? 10   : size;
+        String field = (sortBy != null && Set.of("name", "createdAt").contains(sortBy)) ? sortBy : "name";
+        String dir   = (sortDir == null || sortDir.isBlank()) ? "asc" : sortDir.toLowerCase();
+
+        Sort sort = dir.equals("desc") ? Sort.by(field).descending() : Sort.by(field).ascending();
+        Pageable pageable = PageRequest.of(pageVal, sizeVal, sort);
+
+        Specification<Classroom> spec = Specification.where(
+                (root, query, cb) -> cb.equal(root.get("organization").get("id"), organizationId)
+        );
+
+        if (search != null && !search.isBlank()) {
+            String like = "%" + search.toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("name")), like));
+        }
+
+        Page<Classroom> resultPage = classroomRepository.findAll(spec, pageable);
+
+        return new PaginatedResponse<>(
+                resultPage.getContent().stream().map(this::toResponse).toList(),
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -200,27 +232,58 @@ public class ClassroomService {
         return toResponse(classroom);
     }
 
-    public List<ClassroomMemberResponse> listClassroomMembers(UUID classroomId, MembershipType membershipType){
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ClassroomMemberResponse> listClassroomMembers(
+            UUID classroomId, MembershipType membershipType,
+            Integer page, Integer size,
+            String search, String sortBy, String sortDir) {
 
         classroomRepository.findById(classroomId)
                 .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found"));
 
-        List<ClassroomMembership> classroomMemberships;
-        if(membershipType == null){
-            classroomMemberships = classroomMembershipRepository.findAllByClassroomId(classroomId);
-        }
-        else{
-           classroomMemberships =  classroomMembershipRepository.findAllByClassroomIdAndMembershipType(classroomId, membershipType);
+        int pageVal  = (page == null || page < 0)   ? 0  : page;
+        int sizeVal  = (size == null || size <= 0)   ? 10 : size;
+        String field = (sortBy != null && Set.of("firstName", "lastName", "email").contains(sortBy)) ? sortBy : "firstName";
+        String dir   = (sortDir == null || sortDir.isBlank()) ? "asc" : sortDir.toLowerCase();
+
+        // sortăm pe câmpul din user — path-ul e "user.firstName" etc.
+        Sort sort = dir.equals("desc")
+                ? Sort.by("user." + field).descending()
+                : Sort.by("user." + field).ascending();
+        Pageable pageable = PageRequest.of(pageVal, sizeVal, sort);
+
+        Specification<ClassroomMembership> spec = Specification.where(
+                (root, query, cb) -> cb.equal(root.get("classroom").get("id"), classroomId)
+        );
+
+        if (membershipType != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("membershipType"), membershipType));
         }
 
-        return classroomMemberships.stream()
-                .map(membership -> new ClassroomMemberResponse(
-                        membership.getUser().getId(),
-                        membership.getUser().getEmail(),
-                        membership.getMembershipType()
-                ))
-                .toList();
+        if (search != null && !search.isBlank()) {
+            String like = "%" + search.toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("user").get("firstName")), like),
+                    cb.like(cb.lower(root.get("user").get("lastName")),  like),
+                    cb.like(cb.lower(root.get("user").get("email")),     like)
+            ));
+        }
 
+        Page<ClassroomMembership> resultPage = classroomMembershipRepository.findAll(spec, pageable);
+
+        return new PaginatedResponse<>(
+                resultPage.getContent().stream()
+                        .map(m -> new ClassroomMemberResponse(
+                                m.getUser().getId(),
+                                m.getUser().getEmail(),
+                                m.getMembershipType()
+                        ))
+                        .toList(),
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements()
+        );
     }
 
 

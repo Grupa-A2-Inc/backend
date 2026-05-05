@@ -11,6 +11,7 @@ import org.elearning.backend.classroom.exception.CourseNotEligibleException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.model.CourseVisibility;
@@ -252,10 +253,12 @@ class ClassroomCourseServiceTest {
     void getClassroomCourses_throwsNotFound_whenClassroomDoesNotExist() {
         when(classroomRepository.existsById(classroomId)).thenReturn(false);
 
-        assertThatThrownBy(() -> classroomCourseService.getClassroomCourses(classroomId))
+        assertThatThrownBy(() -> classroomCourseService.getClassroomCourses(
+                classroomId, 0, 10, null, null, null, null))
                 .isInstanceOf(ClassroomNotFoundException.class)
                 .hasMessageContaining(classroomId.toString());
     }
+
 
     @Test
     void getClassroomCourses_returnsEmptyList_whenNoCoursesAssigned() {
@@ -263,10 +266,11 @@ class ClassroomCourseServiceTest {
         when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
                 .thenReturn(List.of());
 
-        List<ClassroomCourseDetailsResponse> result =
-                classroomCourseService.getClassroomCourses(classroomId);
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, null, null, null);
 
-        assertThat(result).isEmpty();
+        assertThat(result.getContent()).isEmpty();
+        assertThat(result.getTotalElements()).isEqualTo(0L);
     }
 
     @Test
@@ -281,12 +285,13 @@ class ClassroomCourseServiceTest {
                 .thenReturn(List.of(cc));
         when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
 
-        List<ClassroomCourseDetailsResponse> result =
-                classroomCourseService.getClassroomCourses(classroomId);
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, null, null, null);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getCourseId()).isEqualTo(courseId);
-        assertThat(result.get(0).getAssignedAt()).isEqualTo(cc.getAssignedAt());
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getCourseId()).isEqualTo(courseId);
+        assertThat(result.getContent().get(0).getAssignedAt()).isEqualTo(cc.getAssignedAt());
+        assertThat(result.getTotalElements()).isEqualTo(1L);
     }
 
     @Test
@@ -295,7 +300,6 @@ class ClassroomCourseServiceTest {
         cc.setClassroomId(classroomId);
         cc.setCourseId(courseId);
         cc.setAssignedAt(LocalDateTime.of(2026, 4, 28, 10, 0));
-
         course.setStatus(CourseStatus.DRAFT);
 
         when(classroomRepository.existsById(classroomId)).thenReturn(true);
@@ -303,14 +307,117 @@ class ClassroomCourseServiceTest {
                 .thenReturn(List.of(cc));
         when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
 
-        List<ClassroomCourseDetailsResponse> result =
-                classroomCourseService.getClassroomCourses(classroomId);
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, null, null, null);
 
-        assertThat(result).isEmpty();
+        assertThat(result.getContent()).isEmpty();
+        assertThat(result.getTotalElements()).isEqualTo(0L);
     }
 
     @Test
-    void getClassroomCourses_throwsBadRequest_whenCourseNotFoundDuringMapping() {
+    void getClassroomCourses_withSearch_filtersOnTitle() {
+        UUID mathId = UUID.randomUUID();
+        UUID historyId = UUID.randomUUID();
+
+        Course math = buildCourse(mathId, "Math 101", null, CourseStatus.PUBLISHED);
+        Course history = buildCourse(historyId, "History", null, CourseStatus.PUBLISHED);
+
+        ClassroomCourse cc1 = buildCc(mathId);
+        ClassroomCourse cc2 = buildCc(historyId);
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(cc1, cc2));
+        when(courseRepository.findById(mathId)).thenReturn(Optional.of(math));
+        when(courseRepository.findById(historyId)).thenReturn(Optional.of(history));
+
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, 0, 10, "math", null, null, null);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("Math 101");
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+    }
+
+    @Test
+    void getClassroomCourses_withCategory_filtersOnCategory() {
+        UUID scienceId = UUID.randomUUID();
+        UUID humanitiesId = UUID.randomUUID();
+
+        Course science = buildCourse(scienceId, "Math 101", "Science", CourseStatus.PUBLISHED);
+        Course humanities = buildCourse(humanitiesId, "History", "Humanities", CourseStatus.PUBLISHED);
+
+        ClassroomCourse cc1 = buildCc(scienceId);
+        ClassroomCourse cc2 = buildCc(humanitiesId);
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(cc1, cc2));
+        when(courseRepository.findById(scienceId)).thenReturn(Optional.of(science));
+        when(courseRepository.findById(humanitiesId)).thenReturn(Optional.of(humanities));
+
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, "Science", null, null);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("Math 101");
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+    }
+
+    @Test
+    void getClassroomCourses_sortByTitle_returnsAscendingOrder() {
+        UUID aId = UUID.randomUUID();
+        UUID zId = UUID.randomUUID();
+
+        Course courseA = buildCourse(aId, "Algebra", null, CourseStatus.PUBLISHED);
+        Course courseZ = buildCourse(zId, "Zoology", null, CourseStatus.PUBLISHED);
+
+        ClassroomCourse cc1 = buildCc(zId);
+        ClassroomCourse cc2 = buildCc(aId);
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(cc1, cc2));
+        when(courseRepository.findById(zId)).thenReturn(Optional.of(courseZ));
+        when(courseRepository.findById(aId)).thenReturn(Optional.of(courseA));
+
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, null, "title", "asc");
+
+        assertThat(result.getContent())
+                .extracting(ClassroomCourseDetailsResponse::getTitle)
+                .containsExactly("Algebra", "Zoology");
+    }
+
+    @Test
+    void getClassroomCourses_paginationSlicesCorrectly() {
+        UUID aId = UUID.randomUUID();
+        UUID bId = UUID.randomUUID();
+        UUID cId = UUID.randomUUID();
+
+        Course courseA = buildCourse(aId, "A", null, CourseStatus.PUBLISHED);
+        Course courseB = buildCourse(bId, "B", null, CourseStatus.PUBLISHED);
+        Course courseC = buildCourse(cId, "C", null, CourseStatus.PUBLISHED);
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(buildCc(aId), buildCc(bId), buildCc(cId)));
+        when(courseRepository.findById(aId)).thenReturn(Optional.of(courseA));
+        when(courseRepository.findById(bId)).thenReturn(Optional.of(courseB));
+        when(courseRepository.findById(cId)).thenReturn(Optional.of(courseC));
+
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, 0, 2, null, null, "title", "asc");
+
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getTotalElements()).isEqualTo(3L);
+        assertThat(result.getContent())
+                .extracting(ClassroomCourseDetailsResponse::getTitle)
+                .containsExactly("A", "B");
+    }
+
+    @Test
+    void getClassroomCourses_ignoresCourse_whenCourseNotFoundDuringMapping() {
         ClassroomCourse cc = new ClassroomCourse();
         cc.setClassroomId(classroomId);
         cc.setCourseId(courseId);
@@ -321,9 +428,11 @@ class ClassroomCourseServiceTest {
                 .thenReturn(List.of(cc));
         when(courseRepository.findById(courseId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> classroomCourseService.getClassroomCourses(classroomId))
-                .isInstanceOf(ClassroomBadRequestException.class)
-                .hasMessageContaining(courseId.toString());
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, null, null, null);
+
+        assertThat(result.getContent()).isEmpty();
+        assertThat(result.getTotalElements()).isEqualTo(0L);
     }
 
     @Test
@@ -521,5 +630,23 @@ class ClassroomCourseServiceTest {
                         org.assertj.core.groups.Tuple.tuple(secondStudentId, firstCourseId),
                         org.assertj.core.groups.Tuple.tuple(secondStudentId, secondCourseId)
                 );
+    }
+
+    private ClassroomCourse buildCc(UUID courseId) {
+        ClassroomCourse cc = new ClassroomCourse();
+        cc.setClassroomId(classroomId);
+        cc.setCourseId(courseId);
+        cc.setAssignedAt(LocalDateTime.now());
+        return cc;
+    }
+
+    private Course buildCourse(UUID id, String title, String category, CourseStatus status) {
+        Course c = new Course();
+        c.setId(id);
+        c.setTitle(title);
+        c.setCategory(category);
+        c.setStatus(status);
+        c.setCreatedBy(courseCreator.getId());
+        return c;
     }
 }
