@@ -110,8 +110,19 @@ public class UserController {
 
     @Operation(
             summary = "Get all users",
-            description = "Returns the full platform-wide user list. This endpoint is reserved for the global ADMIN role and is intentionally not available to ORGANIZATION_ADMIN. " +
-                    "If you need an organization-scoped list instead of a cross-platform list, use the dedicated organization user endpoint."
+            description = """
+                    Returns the full platform-wide user list. This endpoint is reserved for the global ADMIN role and is intentionally not available to ORGANIZATION_ADMIN.
+                    If you need an organization-scoped list instead of a cross-platform list, use the dedicated organization user endpoint.
+
+                    Query parameters:
+                    - `page` — zero-based page index; defaults to 0 when omitted or negative
+                    - `size` — number of items per page; defaults to 10 when omitted or invalid
+                    - `search` — case-insensitive text filter applied to first name, last name, and email
+                    - `role` — optional role filter such as ADMIN, ORGANIZATION_ADMIN, TEACHER, STUDENT, or PARENT
+                    - `status` — optional lifecycle-status filter such as ACTIVE, PENDING, or BLOCKED
+                    - `sortBy` — field used for sorting; allowed values are `firstName`, `lastName`, `email`, and `createdAt`
+                    - `sortDir` — sort direction; use `asc` or `desc`
+                    """
     )
     @ApiResponse(
             responseCode = "200",
@@ -145,8 +156,19 @@ public class UserController {
 
     @Operation(
             summary = "Get users",
-            description = "Returns the users that belong to the authenticated organization administrator's organization. This endpoint is specifically organization-scoped. " +
-                    "Unlike the global user-list endpoint for ADMIN, this one does not expose users from other organizations and is intended for tenant-level administration only."
+            description = """
+                    Returns the users that belong to the authenticated organization administrator's organization. This endpoint is specifically organization-scoped.
+                    Unlike the global user-list endpoint for ADMIN, this one does not expose users from other organizations and is intended for tenant-level administration only.
+
+                    Query parameters:
+                    - `page` — zero-based page index; defaults to 0 when omitted or negative
+                    - `size` — number of items per page; defaults to 10 when omitted or invalid
+                    - `search` — case-insensitive text filter applied to first name, last name, and email
+                    - `role` — optional role filter such as TEACHER, STUDENT, PARENT, or ORGANIZATION_ADMIN
+                    - `status` — optional lifecycle-status filter such as ACTIVE, PENDING, or BLOCKED
+                    - `sortBy` — field used for sorting; allowed values are `firstName`, `lastName`, and `email`
+                    - `sortDir` — sort direction; use `asc` or `desc`
+                    """
     )
     @ApiResponse(
             responseCode = "200",
@@ -358,6 +380,21 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
+    @Operation(
+            summary = "Export organization users as CSV",
+            description = """
+                    Exports the users that belong to the authenticated organization administrator's organization as a CSV file.
+                    The export is organization-scoped and does not include users from other organizations.
+
+                    Query parameters:
+                    - `search` — optional case-insensitive text filter applied to first name, last name, and email before export
+                    - `role` — optional role filter applied before export
+                    - `status` — optional lifecycle-status filter applied before export
+                    """
+    )
+    @ApiResponse(responseCode = "200", description = "CSV generated successfully", content = @Content)
+    @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
+    @ApiResponse(responseCode = "403", description = "Access denied", content = @Content)
     @PreAuthorize("hasRole('ORGANIZATION_ADMIN')")
     @GetMapping("/organization/export")
     public ResponseEntity<byte[]> exportOrganizationUsers(@RequestParam (required = false) String search,

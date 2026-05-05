@@ -9,22 +9,23 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class SubscriptionExceptionHandler {
+    private static final String ERROR = "error";
 
     @ExceptionHandler(SubscriptionNotActiveException.class)
     public ResponseEntity<Map<String, String>> handleSubscriptionNotActive(SubscriptionNotActiveException ex) {
         return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
-                .body(Map.of("error", ex.getMessage()));
+                .body(Map.of(ERROR, ex.getMessage()));
     }
 
     @ExceptionHandler(UserLimitExceededException.class)
     public ResponseEntity<Map<String, String>> handleUserLimitExceeded(UserLimitExceededException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("error", ex.getMessage()));
+                .body(Map.of(ERROR, ex.getMessage()));
     }
 
     @ExceptionHandler(ClassroomLimitExceededException.class)
     public ResponseEntity<Map<String, String>> handleClassroomLimitExceeded(ClassroomLimitExceededException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("error", ex.getMessage()));
+                .body(Map.of(ERROR, ex.getMessage()));
     }
 }

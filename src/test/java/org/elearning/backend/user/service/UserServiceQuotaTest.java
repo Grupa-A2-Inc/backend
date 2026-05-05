@@ -15,7 +15,6 @@ import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.User;
-import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -178,7 +177,7 @@ class UserServiceQuotaTest {
 
         assertThat(response.getTotal()).isEqualTo(3);
         assertThat(response.getSucceeded()).isEqualTo(3);
-        assertThat(response.getFailed()).isEqualTo(0);
+        assertThat(response.getFailed()).isZero();
     }
 
     // --- import bulk peste limită — import parțial ---
@@ -240,7 +239,7 @@ class UserServiceQuotaTest {
         BulkImportResponse response = userImportService.importUsers(new CreateUserBulkRequest(requests));
 
         assertThat(response.getTotal()).isEqualTo(2);
-        assertThat(response.getSucceeded()).isEqualTo(0);
+        assertThat(response.getSucceeded()).isZero();
         assertThat(response.getFailed()).isEqualTo(2);
         response.getResults().forEach(r -> {
             assertThat(r.isSuccess()).isFalse();

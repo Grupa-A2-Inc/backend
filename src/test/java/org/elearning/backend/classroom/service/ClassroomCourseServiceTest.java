@@ -270,7 +270,7 @@ class ClassroomCourseServiceTest {
                 classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, null, null, null);
 
         assertThat(result.getContent()).isEmpty();
-        assertThat(result.getTotalElements()).isEqualTo(0L);
+        assertThat(result.getTotalElements()).isZero();
     }
 
     @Test
@@ -311,7 +311,7 @@ class ClassroomCourseServiceTest {
                 classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, null, null, null);
 
         assertThat(result.getContent()).isEmpty();
-        assertThat(result.getTotalElements()).isEqualTo(0L);
+        assertThat(result.getTotalElements()).isZero();
     }
 
     @Test
@@ -432,7 +432,7 @@ class ClassroomCourseServiceTest {
                 classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, null, null, null);
 
         assertThat(result.getContent()).isEmpty();
-        assertThat(result.getTotalElements()).isEqualTo(0L);
+        assertThat(result.getTotalElements()).isZero();
     }
 
     @Test

@@ -204,7 +204,7 @@ class ClassroomServiceTest {
         assertThat(result.getContent().get(0).getName()).isEqualTo("A");
         assertThat(result.getContent().get(1).getDescription()).isEqualTo("Second");
         assertThat(result.getTotalElements()).isEqualTo(2L);
-        assertThat(result.getPage()).isEqualTo(0);
+        assertThat(result.getPage()).isZero();
         assertThat(result.getSize()).isEqualTo(10);
     }
 
@@ -888,7 +888,7 @@ class ClassroomServiceTest {
         PaginatedResponse<ClassroomMemberResponse> result =
                 classroomService.listClassroomMembers(classroomId, null, 0, 5, null, null, null);
 
-        assertThat(result.getPage()).isEqualTo(0);
+        assertThat(result.getPage()).isZero();
         assertThat(result.getSize()).isEqualTo(5);
         assertThat(result.getTotalElements()).isEqualTo(1L);
     }

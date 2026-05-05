@@ -6,6 +6,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.classroom.dto.request.ModifyClassroomMembersRequest;
@@ -74,9 +76,18 @@ public class ClassroomsController {
 
     @Operation(
             summary = "List organization classrooms",
-            description = "Returns the classrooms that belong to the authenticated caller's organization. The result is organization-scoped rather than platform-wide. " +
-                    "This means an ORGANIZATION_ADMIN sees only the classrooms from the organization they administer, not classrooms from other organizations. " +
-                    "This endpoint is meant for administrative overviews inside one tenant boundary."
+            description = """
+                    Returns the classrooms that belong to the authenticated caller's organization. The result is organization-scoped rather than platform-wide.
+                    This means an ORGANIZATION_ADMIN sees only the classrooms from the organization they administer, not classrooms from other organizations.
+                    This endpoint is meant for administrative overviews inside one tenant boundary.
+
+                    Query parameters:
+                    - `page` — zero-based page index
+                    - `size` — number of items per page
+                    - `search` — optional case-insensitive text filter for classroom name or description, depending on service implementation
+                    - `sortBy` — optional field used for sorting the classroom list
+                    - `sortDir` — optional sort direction; use `asc` or `desc`
+                    """
     )
     @ApiResponse(
             responseCode = "200",
@@ -91,8 +102,8 @@ public class ClassroomsController {
     @PreAuthorize("@accessService.canCreateClassroom(authentication)")
     public ResponseEntity<PaginatedResponse<ClassroomResponse>> getMyOrganizationClassrooms(
             @AuthenticationPrincipal CustomUserDetails currentUser,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) @Min(0) Integer page,
+            @RequestParam(required = false) @Min(0) @Max(1000) Integer size,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDir) {
@@ -205,9 +216,19 @@ public class ClassroomsController {
 
     @Operation(
             summary = "List courses in classroom",
-            description = "Returns the courses assigned to the specified classroom. Visibility to this list depends on the caller's relationship to the classroom rather than " +
-                    "a single admin-only rule. A platform ADMIN may access broadly, an ORGANIZATION_ADMIN may access according to organization-scoped classroom rules, " +
-                    "and teachers or students may gain access only through classroom membership or other access-service checks."
+            description = """
+                    Returns the courses assigned to the specified classroom. Visibility to this list depends on the caller's relationship to the classroom rather than
+                    a single admin-only rule. A platform ADMIN may access broadly, an ORGANIZATION_ADMIN may access according to organization-scoped classroom rules,
+                    and teachers or students may gain access only through classroom membership or other access-service checks.
+
+                    Query parameters:
+                    - `page` — zero-based page index
+                    - `size` — number of items per page
+                    - `search` — optional case-insensitive text filter applied to classroom-course results
+                    - `category` — optional course-category filter
+                    - `sortBy` — optional field used for sorting the classroom-course list
+                    - `sortDir` — optional sort direction; use `asc` or `desc`
+                    """
     )
     @ApiResponse(
             responseCode = "200",
@@ -223,8 +244,8 @@ public class ClassroomsController {
     @PreAuthorize("@accessService.canViewClassroomCourses(authentication, #classroomId)")
     public ResponseEntity<PaginatedResponse<ClassroomCourseDetailsResponse>> getClassroomCourses(
             @P("classroomId") @PathVariable UUID classroomId,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) @Min(0) Integer page,
+            @RequestParam(required = false) @Min(0) @Max(1000) Integer size,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String sortBy,
@@ -295,9 +316,19 @@ public class ClassroomsController {
 
     @Operation(
             summary = "List classroom members",
-            description = "Returns the members of the specified classroom and optionally filters the result by membership type, such as TEACHER or STUDENT. " +
-                    "This endpoint is broader than classroom-management endpoints in some cases because access may also be granted to teachers who are actually assigned to the classroom. " +
-                    "The distinction remains important: ADMIN is platform-wide, ORGANIZATION_ADMIN is organization-wide, and teacher access is membership-based rather than administrative."
+            description = """
+                    Returns the members of the specified classroom and optionally filters the result by membership type, such as TEACHER or STUDENT.
+                    This endpoint is broader than classroom-management endpoints in some cases because access may also be granted to teachers who are actually assigned to the classroom.
+                    The distinction remains important: ADMIN is platform-wide, ORGANIZATION_ADMIN is organization-wide, and teacher access is membership-based rather than administrative.
+
+                    Query parameters:
+                    - `role` — optional membership-type filter, typically `TEACHER` or `STUDENT`
+                    - `page` — zero-based page index
+                    - `size` — number of items per page
+                    - `search` — optional case-insensitive text filter applied to member data
+                    - `sortBy` — optional field used for sorting the member list
+                    - `sortDir` — optional sort direction; use `asc` or `desc`
+                    """
     )
     @ApiResponse(
             responseCode = "200",
@@ -314,8 +345,8 @@ public class ClassroomsController {
     public ResponseEntity<PaginatedResponse<ClassroomMemberResponse>> listClassroomMembers(
             @P("classroomId") @PathVariable UUID classroomId,
             @RequestParam(required = false) MembershipType role,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) @Min(0) Integer page,
+            @RequestParam(required = false) @Min(0) @Max(1000) Integer size,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDir) {
