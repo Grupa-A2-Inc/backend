@@ -14,6 +14,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.student.entity.Student;
+import org.elearning.backend.subscription.service.EntitlementService;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UserPaginationRequest;
@@ -54,6 +55,7 @@ public class UserService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final AiStudentRegistrationService aiStudentRegistrationService;
+    private final EntitlementService entitlementService;
 
     private static final String USER_NO_EXIST = "User does not exist: ";
     private static final String DELIMITER = ",";
@@ -86,6 +88,10 @@ public class UserService {
 
         Role role = roleRepository.findByName(request.getRoleName())
                 .orElseThrow(() -> new UserRoleNotFoundException("Role does not exist: " + request.getRoleName()));
+
+        if (request.getOrganizationId() != null) {
+            entitlementService.canCreateUser(request.getOrganizationId());
+        }
 
         User user = createUserEntityForRole(request.getRoleName());
         user.setEmail(request.getEmail());
