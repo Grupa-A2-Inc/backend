@@ -5,8 +5,12 @@ import org.elearning.backend.classroom.entity.Classroom;
 import org.elearning.backend.classroom.entity.MembershipType;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.CourseRepository;
+import org.elearning.backend.content.repository.LessonRepository;
+import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -50,6 +54,12 @@ class AccessServiceTest {
 
     @Mock
     private CourseRepository courseRepository;
+
+    @Mock
+    private LessonRepository lessonRepository;
+
+    @Mock
+    private CourseEnrollmentRepository courseEnrollmentRepository;
 
     @Mock
     private Authentication authentication;
@@ -262,6 +272,192 @@ class AccessServiceTest {
                 authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
                 UUID.randomUUID()
         )).isFalse();
+    }
+
+    @Test
+    void canEditCourse_returnsFalseForOrganizationAdminWhenCourseHasNoCreator() {
+        UUID organizationId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+        Course course = new Course();
+        course.setId(courseId);
+        course.setCreatedBy(null);
+
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+
+        assertThat(accessService.canEditCourse(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, organizationId)),
+                courseId
+        )).isFalse();
+    }
+
+    @Test
+    void canDeleteUser_returnsFalseWhenOrganizationAdminHasNoOrganization() {
+        UUID targetUserId = UUID.randomUUID();
+        User targetUser = makeUser(RoleName.STUDENT, UUID.randomUUID());
+        targetUser.setId(targetUserId);
+        when(userRepository.findById(targetUserId)).thenReturn(Optional.of(targetUser));
+
+        assertThat(accessService.canDeleteUser(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, null)),
+                targetUserId
+        )).isFalse();
+    }
+
+    @Test
+    void canSubmitAdaptiveSession_returnsTrueForStudent() {
+        assertThat(accessService.canSubmitAdaptiveSession(
+                authenticationFor(makeUser(RoleName.STUDENT, UUID.randomUUID())),
+                UUID.randomUUID()
+        )).isTrue();
+    }
+
+    @Test
+    void canMarkViewedLesson_returnsTrueForStudentWithAccessibleLesson() {
+        UUID lessonId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        Lesson lesson = new Lesson();
+        Chapter chapter = new Chapter();
+        Course course = new Course();
+        course.setId(courseId);
+        chapter.setCourse(course);
+        lesson.setChapter(chapter);
+
+        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)).thenReturn(true);
+
+        User student = makeUser(RoleName.STUDENT, UUID.randomUUID());
+        student.setId(studentId);
+
+        assertThat(accessService.canMarkViewedLesson(authenticationFor(student), lessonId)).isTrue();
+    }
+
+    @Test
+    void canEditCourse_returnsFalseWhenCourseDoesNotExist() {
+        UUID courseId = UUID.randomUUID();
+        when(courseRepository.findById(courseId)).thenReturn(Optional.empty());
+
+        assertThat(accessService.canEditCourse(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
+                courseId
+        )).isFalse();
+    }
+
+    @Test
+    void canViewCourseChapters_returnsFalseForOrganizationAdminWhenCreatorUserIsMissing() {
+        UUID organizationId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+
+        Course course = new Course();
+        course.setId(courseId);
+        course.setCreatedBy(creatorId);
+
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(creatorId)).thenReturn(Optional.empty());
+
+        assertThat(accessService.canViewCourseChapters(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, organizationId)),
+                courseId
+        )).isFalse();
+    }
+
+    @Test
+    void canViewCourseChapters_returnsFalseForOrganizationAdminWhenCreatorHasNoOrganization() {
+        UUID organizationId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+
+        Course course = new Course();
+        course.setId(courseId);
+        course.setCreatedBy(creatorId);
+
+        User creator = makeUser(RoleName.TEACHER, null);
+        creator.setId(creatorId);
+
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(userRepository.findById(creatorId)).thenReturn(Optional.of(creator));
+
+        assertThat(accessService.canViewCourseChapters(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, organizationId)),
+                courseId
+        )).isFalse();
+    }
+
+    @Test
+    void canViewParent_returnsFalseForOrganizationAdminWhenTargetParentIsMissing() {
+        UUID parentId = UUID.randomUUID();
+        when(userRepository.findById(parentId)).thenReturn(Optional.empty());
+
+        assertThat(accessService.canViewParent(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, UUID.randomUUID())),
+                parentId
+        )).isFalse();
+    }
+
+    @Test
+    void canMarkViewedLesson_returnsFalseForStudentWithoutCourseAccess() {
+        UUID lessonId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+
+        Lesson lesson = new Lesson();
+        Chapter chapter = new Chapter();
+        Course course = new Course();
+        course.setId(courseId);
+        chapter.setCourse(course);
+        lesson.setChapter(chapter);
+
+        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(any(), eq(courseId))).thenReturn(false);
+
+        assertThat(accessService.canMarkViewedLesson(
+                authenticationFor(makeUser(RoleName.STUDENT, UUID.randomUUID())),
+                lessonId
+        )).isFalse();
+    }
+
+    @Test
+    void canMarkViewedLesson_returnsFalseForTeacher() {
+        assertThat(accessService.canMarkViewedLesson(
+                authenticationFor(makeUser(RoleName.TEACHER, UUID.randomUUID())),
+                UUID.randomUUID()
+        )).isFalse();
+    }
+
+    @Test
+    void isCourseCreatedInOrganization_returnsFalseWhenOrganizationIdIsNull() throws Exception {
+        Course course = new Course();
+        course.setCreatedBy(UUID.randomUUID());
+
+        var method = AccessService.class.getDeclaredMethod(
+                "isCourseCreatedInOrganization",
+                Course.class,
+                UUID.class
+        );
+        method.setAccessible(true);
+
+        boolean result = (boolean) method.invoke(accessService, course, null);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void belongsToOrganization_returnsFalseWhenOrganizationIdIsNull() throws Exception {
+        User user = makeUser(RoleName.STUDENT, UUID.randomUUID());
+
+        var method = AccessService.class.getDeclaredMethod(
+                "belongsToOrganization",
+                User.class,
+                UUID.class
+        );
+        method.setAccessible(true);
+
+        boolean result = (boolean) method.invoke(accessService, user, null);
+
+        assertThat(result).isFalse();
     }
 
     @Test

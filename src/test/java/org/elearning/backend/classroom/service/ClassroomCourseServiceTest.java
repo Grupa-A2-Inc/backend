@@ -417,6 +417,75 @@ class ClassroomCourseServiceTest {
     }
 
     @Test
+    void getClassroomCourses_sortByAssignedAtDescending_returnsDescendingOrder() {
+        UUID firstId = UUID.randomUUID();
+        UUID secondId = UUID.randomUUID();
+
+        ClassroomCourse earlier = buildCc(firstId);
+        earlier.setAssignedAt(LocalDateTime.of(2026, 4, 28, 8, 0));
+        ClassroomCourse later = buildCc(secondId);
+        later.setAssignedAt(LocalDateTime.of(2026, 4, 28, 10, 0));
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(earlier, later));
+        when(courseRepository.findById(firstId)).thenReturn(Optional.of(buildCourse(firstId, "A", null, CourseStatus.PUBLISHED)));
+        when(courseRepository.findById(secondId)).thenReturn(Optional.of(buildCourse(secondId, "B", null, CourseStatus.PUBLISHED)));
+
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, 0, 10, null, null, "assignedAt", "desc");
+
+        assertThat(result.getContent())
+                .extracting(ClassroomCourseDetailsResponse::getCourseId)
+                .containsExactly(secondId, firstId);
+    }
+
+    @Test
+    void getClassroomCourses_withInvalidSortAndBlankFilters_usesDefaults() {
+        UUID firstId = UUID.randomUUID();
+        UUID secondId = UUID.randomUUID();
+
+        ClassroomCourse earlier = buildCc(firstId);
+        earlier.setAssignedAt(LocalDateTime.of(2026, 4, 28, 8, 0));
+        ClassroomCourse later = buildCc(secondId);
+        later.setAssignedAt(LocalDateTime.of(2026, 4, 28, 10, 0));
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(earlier, later));
+        when(courseRepository.findById(firstId)).thenReturn(Optional.of(buildCourse(firstId, "A", "Science", CourseStatus.PUBLISHED)));
+        when(courseRepository.findById(secondId)).thenReturn(Optional.of(buildCourse(secondId, "B", "Math", CourseStatus.PUBLISHED)));
+
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, -1, 0, " ", " ", "invalid", " ");
+
+        assertThat(result.getPage()).isZero();
+        assertThat(result.getSize()).isEqualTo(10);
+        assertThat(result.getContent())
+                .extracting(ClassroomCourseDetailsResponse::getCourseId)
+                .containsExactly(firstId, secondId);
+    }
+
+    @Test
+    void getClassroomCourses_withNullPageAndSize_usesDefaults() {
+        UUID singleCourseId = UUID.randomUUID();
+        ClassroomCourse cc = buildCc(singleCourseId);
+
+        when(classroomRepository.existsById(classroomId)).thenReturn(true);
+        when(classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId))
+                .thenReturn(List.of(cc));
+        when(courseRepository.findById(singleCourseId))
+                .thenReturn(Optional.of(buildCourse(singleCourseId, "Math", null, CourseStatus.PUBLISHED)));
+
+        PaginatedResponse<ClassroomCourseDetailsResponse> result =
+                classroomCourseService.getClassroomCourses(classroomId, null, null, null, null, null, null);
+
+        assertThat(result.getPage()).isZero();
+        assertThat(result.getSize()).isEqualTo(10);
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
     void getClassroomCourses_ignoresCourse_whenCourseNotFoundDuringMapping() {
         ClassroomCourse cc = new ClassroomCourse();
         cc.setClassroomId(classroomId);

@@ -147,7 +147,9 @@ public class ClassroomService {
 
         int pageVal  = (page == null || page < 0)   ? 0  : page;
         int sizeVal  = (size == null || size <= 0)   ? 10 : size;
-        String field = (sortBy != null && Set.of("name", "createdAt").contains(sortBy)) ? sortBy : "name";
+        String field = (sortBy != null && Set.of(DEFAULT_CLASSROOM_SORT_FIELD, CREATED_AT_FIELD).contains(sortBy))
+                ? sortBy
+                : DEFAULT_CLASSROOM_SORT_FIELD;
         String dir   = (sortDir == null || sortDir.isBlank()) ? "asc" : sortDir.toLowerCase();
 
         Sort sort = dir.equals("desc")
@@ -156,10 +158,7 @@ public class ClassroomService {
         Pageable pageable = PageRequest.of(pageVal, sizeVal, sort);
 
         Specification<ClassroomMembership> spec = Specification.where(
-                (root, query, cb) -> {
-                    query.distinct(true);
-                    return cb.equal(root.get("user").get("id"), userId);
-                }
+                (root, query, cb) -> cb.equal(root.get("user").get("id"), userId)
         );
 
         if (search != null && !search.isBlank()) {

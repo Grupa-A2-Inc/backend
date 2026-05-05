@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
@@ -100,7 +101,7 @@ class ClassroomServiceGetMyClassroomsTest {
                 classroomService.getMyClassrooms(userId, 0, 10, null, null, null);
 
         assertThat(result.getContent()).isEmpty();
-        assertThat(result.getTotalElements()).isEqualTo(0L);
+        assertThat(result.getTotalElements()).isZero();
     }
 
     @Test
@@ -143,7 +144,7 @@ class ClassroomServiceGetMyClassroomsTest {
         PaginatedResponse<ClassroomResponse> result =
                 classroomService.getMyClassrooms(userId, 0, 5, null, null, null);
 
-        assertThat(result.getPage()).isEqualTo(0);
+        assertThat(result.getPage()).isZero();
         assertThat(result.getSize()).isEqualTo(5);
         assertThat(result.getTotalElements()).isEqualTo(2L);
         assertThat(result.getContent()).hasSize(2);
@@ -176,6 +177,50 @@ class ClassroomServiceGetMyClassroomsTest {
 
         assertThat(result).isNotNull();
         verify(classroomMembershipRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void getMyClassrooms_withCreatedAtDescSort_usesRequestedPageable() {
+        UUID userId = UUID.randomUUID();
+        User user = buildUser(userId, RoleName.STUDENT);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(classroomMembershipRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 3), 0L));
+
+        classroomService.getMyClassrooms(userId, 1, 3, " math ", "createdAt", "desc");
+
+        var pageableCaptor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+        verify(classroomMembershipRepository).findAll(any(Specification.class), pageableCaptor.capture());
+
+        Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isEqualTo(1);
+        assertThat(pageable.getPageSize()).isEqualTo(3);
+        assertThat(pageable.getSort().getOrderFor("classroom.createdAt"))
+                .extracting(Sort.Order::getDirection)
+                .isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getMyClassrooms_withNegativePageZeroSizeAndBlankSortDirection_usesDefaults() {
+        UUID userId = UUID.randomUUID();
+        User user = buildUser(userId, RoleName.STUDENT);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(classroomMembershipRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0L));
+
+        classroomService.getMyClassrooms(userId, -1, 0, " ", "name", " ");
+
+        var pageableCaptor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+        verify(classroomMembershipRepository).findAll(any(Specification.class), pageableCaptor.capture());
+
+        Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isZero();
+        assertThat(pageable.getPageSize()).isEqualTo(10);
+        assertThat(pageable.getSort().getOrderFor("classroom.name"))
+                .extracting(Sort.Order::getDirection)
+                .isEqualTo(Sort.Direction.ASC);
     }
 
     private User buildUser(UUID id, RoleName roleName) {
