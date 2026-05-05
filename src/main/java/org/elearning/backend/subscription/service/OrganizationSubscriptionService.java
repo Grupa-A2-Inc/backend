@@ -8,6 +8,7 @@ import org.elearning.backend.organization.exception.OrganizationSubscriptionNotF
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.subscription.dto.request.CreateOrganizationSubscriptionRequest;
 import org.elearning.backend.subscription.dto.request.UpdateOrganizationSubscriptionRequest;
+import org.elearning.backend.subscription.dto.request.UpdateSubscriptionPlanRequest;
 import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionResponse;
 import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionStatusResponse;
 import org.elearning.backend.subscription.dto.response.SubscriptionPlanResponse;
@@ -146,5 +147,23 @@ public class OrganizationSubscriptionService {
                         plan.getUpdatedAt()
                 )
         );
+    }
+
+    // gaseste subscription ul activ al organizatiei, schimba planul cu cel nou si salveaza
+    @Transactional
+    public OrganizationSubscriptionResponse changePlan(UUID organizationId, UpdateSubscriptionPlanRequest request) {
+        OrganizationSubscription subscription = organizationSubscriptionRepository
+                .findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(organizationId, CURRENT_STATUSES)
+                .orElseThrow(() -> new OrganizationSubscriptionNotFoundException(
+                        "No active subscription found for organization: " + organizationId
+                ));
+
+        SubscriptionPlan newPlan = subscriptionPlanRepository.findById(request.getPlanId())
+                .orElseThrow(() -> new EntityNotFoundException("Subscription plan not found: " + request.getPlanId()));
+
+        subscription.setSubscriptionPlan(newPlan);
+
+        OrganizationSubscription saved = organizationSubscriptionRepository.save(subscription);
+        return toResponse(saved);
     }
 }

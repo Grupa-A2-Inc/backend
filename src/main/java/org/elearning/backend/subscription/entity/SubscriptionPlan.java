@@ -51,6 +51,9 @@ public class SubscriptionPlan {
     @Column(length = 3)
     private String currency;
 
+    @Column(name = "stripe_price_id")
+    private String stripePriceId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
