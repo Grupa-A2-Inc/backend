@@ -92,7 +92,7 @@ class EntitlementServiceTest {
                 .findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(eq(organizationId), any()))
                 .thenReturn(Optional.of(activeSubscription));
 
-        assertThat(entitlementService.hasFeatureAccess(organizationId, "ADAPTIVE_LEARNING")).isTrue();
+        assertThat(entitlementService.hasFeatureAccess(organizationId)).isTrue();
     }
 
     @Test
@@ -102,7 +102,7 @@ class EntitlementServiceTest {
                 .findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(eq(organizationId), any()))
                 .thenReturn(Optional.of(activeSubscription));
 
-        assertThat(entitlementService.hasFeatureAccess(organizationId, "ADAPTIVE_LEARNING")).isFalse();
+        assertThat(entitlementService.hasFeatureAccess(organizationId)).isFalse();
     }
 
     @Test
@@ -111,7 +111,7 @@ class EntitlementServiceTest {
                 .findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(eq(organizationId), any()))
                 .thenReturn(Optional.empty());
 
-        assertThat(entitlementService.hasFeatureAccess(organizationId, "ADAPTIVE_LEARNING")).isFalse();
+        assertThat(entitlementService.hasFeatureAccess(organizationId)).isFalse();
     }
 
     @Test
@@ -162,6 +162,8 @@ class EntitlementServiceTest {
                 .thenReturn(buildUsers(3));
 
         entitlementService.canCreateUsers(organizationId, 5);
+
+        verify(userRepository).findByOrganizationId(organizationId);
     }
 
     @Test

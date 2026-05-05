@@ -147,7 +147,7 @@ class ClassroomServiceListMembersTest {
         PaginatedResponse<ClassroomMemberResponse> result =
                 classroomService.listClassroomMembers(classroomId, null, 0, 5, null, null, null);
 
-        assertThat(result.getPage()).isEqualTo(0);
+        assertThat(result.getPage()).isZero();
         assertThat(result.getSize()).isEqualTo(5);
         assertThat(result.getTotalElements()).isEqualTo(1L);
     }

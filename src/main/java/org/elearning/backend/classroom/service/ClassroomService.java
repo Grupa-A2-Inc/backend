@@ -35,18 +35,40 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ClassroomService {
+    private static final String CLASSROOM_NOT_FOUND = "Classroom not found: ";
+    private static final String CLASSROOM_NAME_CONFLICT_TEMPLATE =
+            "Classroom with name '%s' already exists in this organization";
+    private static final String DEFAULT_CLASSROOM_SORT_FIELD = "name";
+    private static final String DEFAULT_MEMBER_SORT_FIELD = "firstName";
+    private static final String CREATED_AT_FIELD = "createdAt";
+    private static final String LAST_NAME_FIELD = "lastName";
+    private static final String EMAIL_FIELD = "email";
+    private static final String USER_SORT_PREFIX = "user.";
+    private static final String ASC_SORT_DIRECTION = "asc";
+    private static final String DESC_SORT_DIRECTION = "desc";
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final Set<String> CLASSROOM_ALLOWED_SORT_FIELDS = Set.of(
+            DEFAULT_CLASSROOM_SORT_FIELD,
+            CREATED_AT_FIELD
+    );
+    private static final Set<String> CLASSROOM_MEMBER_ALLOWED_SORT_FIELDS = Set.of(
+            DEFAULT_MEMBER_SORT_FIELD,
+            LAST_NAME_FIELD,
+            EMAIL_FIELD
+    );
 
     private final ClassroomRepository classroomRepository;
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
     private final ClassroomMembershipRepository classroomMembershipRepository;
-    private static final String CLASS_NOT_FOUND = "Classroom not found: ";
     private final ClassroomCourseRepository classroomCourseRepository;
     private final CourseEnrollmentRepository courseEnrollmentRepository;
 
@@ -56,7 +78,7 @@ public class ClassroomService {
 
         if (classroomRepository.existsByOrganizationIdAndNameIgnoreCase(organization.getId(), request.getName())) {
             throw new ClassroomConflictException(
-                    "Classroom with name '" + request.getName() + "' already exists in this organization"
+                    CLASSROOM_NAME_CONFLICT_TEMPLATE.formatted(request.getName())
             );
         }
 
@@ -76,12 +98,12 @@ public class ClassroomService {
 
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
 
-        int pageVal  = (page == null || page < 0)   ? 0    : page;
-        int sizeVal  = (size == null || size <= 0)   ? 10   : size;
-        String field = (sortBy != null && Set.of("name", "createdAt").contains(sortBy)) ? sortBy : "name";
-        String dir   = (sortDir == null || sortDir.isBlank()) ? "asc" : sortDir.toLowerCase();
+        int pageVal = normalizePage(page);
+        int sizeVal = normalizeSize(size);
+        String field = normalizeSortField(sortBy, CLASSROOM_ALLOWED_SORT_FIELDS, DEFAULT_CLASSROOM_SORT_FIELD);
+        String dir = normalizeSortDirection(sortDir);
 
-        Sort sort = dir.equals("desc") ? Sort.by(field).descending() : Sort.by(field).ascending();
+        Sort sort = DESC_SORT_DIRECTION.equals(dir) ? Sort.by(field).descending() : Sort.by(field).ascending();
         Pageable pageable = PageRequest.of(pageVal, sizeVal, sort);
 
         Specification<Classroom> spec = Specification.where(
@@ -109,7 +131,7 @@ public class ClassroomService {
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
 
         Classroom classroom = classroomRepository.findByIdAndOrganizationId(classroomId, organizationId)
-                .orElseThrow(() -> new ClassroomNotFoundException(CLASS_NOT_FOUND + classroomId));
+                .orElseThrow(() -> new ClassroomNotFoundException(CLASSROOM_NOT_FOUND + classroomId));
 
         return toResponse(classroom);
     }
@@ -119,7 +141,7 @@ public class ClassroomService {
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
 
         Classroom classroom = classroomRepository.findByIdAndOrganizationId(classroomId, organizationId)
-                .orElseThrow(() -> new ClassroomNotFoundException(CLASS_NOT_FOUND + classroomId));
+                .orElseThrow(() -> new ClassroomNotFoundException(CLASSROOM_NOT_FOUND + classroomId));
 
         if (request.getName() != null && !request.getName().isBlank()) {
             boolean duplicateName = classroomRepository.existsByOrganizationIdAndNameIgnoreCase(organizationId, request.getName())
@@ -127,7 +149,7 @@ public class ClassroomService {
 
             if (duplicateName) {
                 throw new ClassroomConflictException(
-                        "Classroom with name '" + request.getName() + "' already exists in this organization"
+                        CLASSROOM_NAME_CONFLICT_TEMPLATE.formatted(request.getName())
                 );
             }
 
@@ -146,7 +168,7 @@ public class ClassroomService {
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
 
         Classroom classroom = classroomRepository.findByIdAndOrganizationId(classroomId, organizationId)
-                .orElseThrow(() -> new ClassroomNotFoundException(CLASS_NOT_FOUND + classroomId));
+                .orElseThrow(() -> new ClassroomNotFoundException(CLASSROOM_NOT_FOUND + classroomId));
 
         classroomRepository.delete(classroom);
     }
@@ -241,15 +263,14 @@ public class ClassroomService {
         classroomRepository.findById(classroomId)
                 .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found"));
 
-        int pageVal  = (page == null || page < 0)   ? 0  : page;
-        int sizeVal  = (size == null || size <= 0)   ? 10 : size;
-        String field = (sortBy != null && Set.of("firstName", "lastName", "email").contains(sortBy)) ? sortBy : "firstName";
-        String dir   = (sortDir == null || sortDir.isBlank()) ? "asc" : sortDir.toLowerCase();
+        int pageVal = normalizePage(page);
+        int sizeVal = normalizeSize(size);
+        String field = normalizeSortField(sortBy, CLASSROOM_MEMBER_ALLOWED_SORT_FIELDS, DEFAULT_MEMBER_SORT_FIELD);
+        String dir = normalizeSortDirection(sortDir);
 
-        // sortăm pe câmpul din user — path-ul e "user.firstName" etc.
-        Sort sort = dir.equals("desc")
-                ? Sort.by("user." + field).descending()
-                : Sort.by("user." + field).ascending();
+        Sort sort = DESC_SORT_DIRECTION.equals(dir)
+                ? Sort.by(USER_SORT_PREFIX + field).descending()
+                : Sort.by(USER_SORT_PREFIX + field).ascending();
         Pageable pageable = PageRequest.of(pageVal, sizeVal, sort);
 
         Specification<ClassroomMembership> spec = Specification.where(
@@ -264,9 +285,9 @@ public class ClassroomService {
         if (search != null && !search.isBlank()) {
             String like = "%" + search.toLowerCase().trim() + "%";
             spec = spec.and((root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("user").get("firstName")), like),
-                    cb.like(cb.lower(root.get("user").get("lastName")),  like),
-                    cb.like(cb.lower(root.get("user").get("email")),     like)
+                    cb.like(cb.lower(root.get("user").get(DEFAULT_MEMBER_SORT_FIELD)), like),
+                    cb.like(cb.lower(root.get("user").get(LAST_NAME_FIELD)), like),
+                    cb.like(cb.lower(root.get("user").get(EMAIL_FIELD)), like)
             ));
         }
 
@@ -290,6 +311,24 @@ public class ClassroomService {
     private Classroom getClassroomOrThrow(UUID classroomId) {
         return classroomRepository.findById(classroomId)
                 .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found."));
+    }
+
+    private int normalizePage(Integer page) {
+        return page == null || page < 0 ? DEFAULT_PAGE : page;
+    }
+
+    private int normalizeSize(Integer size) {
+        return size == null || size <= 0 ? DEFAULT_PAGE_SIZE : size;
+    }
+
+    private String normalizeSortField(String sortBy, Set<String> allowedFields, String defaultField) {
+        return sortBy != null && allowedFields.contains(sortBy) ? sortBy : defaultField;
+    }
+
+    private String normalizeSortDirection(String sortDir) {
+        return sortDir == null || sortDir.isBlank()
+                ? ASC_SORT_DIRECTION
+                : sortDir.toLowerCase(Locale.ROOT);
     }
 
     private List<User> getValidMembersForClassroom(Set<UUID> memberIds, Classroom classroom) {

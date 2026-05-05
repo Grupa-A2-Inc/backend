@@ -73,7 +73,16 @@ public class OrganizationController {
 
     @Operation(
             summary = "Get all organizations",
-            description = "Returns the list of all organizations"
+            description = """
+                    Returns the list of all organizations.
+
+                    Query parameters:
+                    - `page` — zero-based page index; defaults to 0 when omitted or negative
+                    - `size` — number of items per page; defaults to 10 when omitted or invalid
+                    - `search` — optional case-insensitive text filter used to match organization names
+                    - `sortBy` — field used for sorting; use one of the fields supported by the organization listing service
+                    - `sortDir` — sort direction; use `asc` or `desc`
+                    """
     )
     @ApiResponse(
             responseCode = "200",

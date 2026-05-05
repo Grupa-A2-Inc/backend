@@ -31,7 +31,7 @@ public class EntitlementService {
     private final UserRepository userRepository;
     private final ClassroomRepository classroomRepository;
 
-    public boolean hasFeatureAccess(UUID organizationId, String feature) {
+    public boolean hasFeatureAccess(UUID organizationId) {
         return resolveActiveSubscription(organizationId)
                 .map(sub -> sub.getSubscriptionPlan().getHasPremiumFeatures())
                 .orElse(false);

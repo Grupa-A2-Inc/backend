@@ -37,6 +37,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.util.function.BiPredicate;
 
 @Service("accessService")
 @RequiredArgsConstructor
@@ -63,12 +64,11 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
-        return currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN
-                && currentUser.getOrganizationId() != null
+        return isOrganizationAdmin(currentUser)
                 && currentUser.getOrganizationId().equals(request.getOrganizationId());
     }
 
@@ -79,11 +79,11 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
-        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
+        if (!isOrganizationAdmin(currentUser)) {
             return false;
         }
 
@@ -98,7 +98,7 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
@@ -106,15 +106,7 @@ public class AccessService {
             return true;
         }
 
-        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
-            return false;
-        }
-
-        User targetUser = userRepository.findById(targetUserId).orElse(null);
-
-        return targetUser != null
-                && targetUser.getOrganization() != null
-                && currentUser.getOrganizationId().equals(targetUser.getOrganization().getId());
+        return canOrganizationAdminAccessUser(currentUser, targetUserId);
     }
 
     public boolean canEditUser(Authentication authentication, UUID targetUserId) {
@@ -128,19 +120,7 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
-            return true;
-        }
-
-        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
-            return false;
-        }
-
-        User targetUser = userRepository.findById(targetUserId).orElse(null);
-
-        return targetUser != null
-                && targetUser.getOrganization() != null
-                && currentUser.getOrganizationId().equals(targetUser.getOrganization().getId());
+        return canAdminOrOrganizationAdminAccessUser(authentication, targetUserId);
     }
 
     public boolean canViewOrganization(Authentication authentication, UUID organizationId) {
@@ -150,12 +130,11 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
-        return currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN
-                && currentUser.getOrganizationId() != null
+        return isOrganizationAdmin(currentUser)
                 && currentUser.getOrganizationId().equals(organizationId)
                 && organizationRepository.existsById(organizationId);
     }
@@ -171,7 +150,7 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
@@ -179,8 +158,7 @@ public class AccessService {
 
         return targetUser != null
                 && targetUser.getOrganization() != null
-                && currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN
-                && currentUser.getOrganizationId() != null
+                && isOrganizationAdmin(currentUser)
                 && currentUser.getOrganizationId().equals(targetUser.getOrganization().getId());
     }
 
@@ -191,7 +169,7 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
@@ -201,7 +179,7 @@ public class AccessService {
     public boolean canViewAllParents(Authentication authentication) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        return currentUser != null && currentUser.getRoleName() == RoleName.ADMIN;
+        return currentUser != null && isAdmin(currentUser);
     }
 
     public boolean canViewParent(Authentication authentication, UUID parentId) {
@@ -215,11 +193,11 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
-        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
+        if (!isOrganizationAdmin(currentUser)) {
             return false;
         }
 
@@ -237,13 +215,13 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
         Parent parent = parentRepository.findById(parentId).orElse(null);
 
-        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
+        if (isOrganizationAdmin(currentUser)) {
             return belongsToOrganization(parent, currentUser.getOrganizationId());
         }
 
@@ -529,15 +507,13 @@ public class AccessService {
             return false;
         }
 
-        return currentUser.getRoleName() == RoleName.TEACHER;
+        return isTeacher(currentUser);
     }
 
     public boolean canCreateClassroom(Authentication authentication) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        return currentUser != null
-                && currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN
-                && currentUser.getOrganizationId() != null;
+        return currentUser != null && isOrganizationAdmin(currentUser);
     }
 
     public boolean canAssignCoursesToClassroom(Authentication authentication,
@@ -549,7 +525,7 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() != RoleName.TEACHER
+        if (!isTeacher(currentUser)
                 || currentUser.getOrganizationId() == null
                 || request == null
                 || request.getCourseIds() == null
@@ -584,13 +560,12 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
-        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
-            return currentUser.getOrganizationId() != null
-                    && currentUser.getOrganizationId().equals(classroom.getOrganization().getId());
+        if (isOrganizationAdmin(currentUser)) {
+            return currentUser.getOrganizationId().equals(classroom.getOrganization().getId());
         }
 
         return false;
@@ -611,12 +586,11 @@ public class AccessService {
 
         UUID classroomOrganizationId = classroom.getOrganization().getId();
 
-        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
-            return currentUser.getOrganizationId() != null
-                    && currentUser.getOrganizationId().equals(classroomOrganizationId);
+        if (isOrganizationAdmin(currentUser)) {
+            return currentUser.getOrganizationId().equals(classroomOrganizationId);
         }
 
-        if (currentUser.getRoleName() == RoleName.TEACHER) {
+        if (isTeacher(currentUser)) {
             return classroomMembershipRepository.existsByClassroomIdAndUserIdAndMembershipType(
                     classroomId,
                     currentUser.getUserId(),
@@ -638,8 +612,7 @@ public class AccessService {
             return true;
         }
 
-        if (currentUser.getRoleName() == RoleName.TEACHER
-                || currentUser.getRoleName() == RoleName.STUDENT) {
+        if (isTeacher(currentUser) || isStudent(currentUser)) {
             return classroomMembershipRepository
                     .existsByClassroomIdAndUserId(classroomId, currentUser.getUserId());
         }
@@ -654,7 +627,7 @@ public class AccessService {
             return false;
         }
 
-        return currentUser.getRoleName() == RoleName.STUDENT
+        return isStudent(currentUser)
                 && canAccessLessonCourse(authentication, lessonId);
     }
 
@@ -691,11 +664,11 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
-        return currentUser.getRoleName() == RoleName.TEACHER;
+        return isTeacher(currentUser);
     }
 
     private boolean isStudent(Authentication authentication) {
@@ -705,7 +678,7 @@ public class AccessService {
             return false;
         }
 
-        return currentUser.getRoleName() == RoleName.STUDENT;
+        return isStudent(currentUser);
     }
 
     @Description("Returns true if the user can manage the given test, false otherwise")
@@ -733,7 +706,7 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
@@ -768,61 +741,59 @@ public class AccessService {
 
     @Description("Returns true if the user can access the given course, false otherwise")
     private boolean canAccessCourse(Authentication authentication, UUID courseId) {
-        CustomUserDetails currentUser = extractCurrentUser(authentication);
+        return evaluateCourseAccess(authentication, courseId, (currentUser, course) -> {
+            if (isTeacher(currentUser)) {
+                return currentUser.getUserId().equals(course.getCreatedBy());
+            }
 
-        if (currentUser == null) {
+            if (isStudent(currentUser)) {
+                return courseEnrollmentRepository.existsByStudentIdAndCourseId(currentUser.getUserId(), courseId);
+            }
+
             return false;
-        }
-
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
-            return true;
-        }
-
-        Course course = courseRepository.findById(courseId).orElse(null);
-
-        if (course == null) {
-            return false;
-        }
-
-        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
-            return isCourseCreatedInOrganization(course, currentUser.getOrganizationId());
-        }
-
-        if (currentUser.getRoleName() == RoleName.TEACHER) {
-            return currentUser.getUserId().equals(course.getCreatedBy());
-        }
-
-        if (currentUser.getRoleName() == RoleName.STUDENT) {
-            return courseEnrollmentRepository.existsByStudentIdAndCourseId(currentUser.getUserId(), courseId);
-        }
-
-        return false;
+        });
     }
 
     @Description("Returns true if the user can manage the given course, false otherwise")
     private boolean canManageCourse(Authentication authentication, UUID courseId) {
+        return evaluateCourseAccess(authentication, courseId, (currentUser, course) ->
+                isTeacher(currentUser) && currentUser.getUserId().equals(course.getCreatedBy())
+        );
+    }
+
+    private Course findCourse(UUID courseId) {
+        return courseRepository.findById(courseId).orElse(null);
+    }
+
+    private boolean evaluateCourseAccess(
+            Authentication authentication,
+            UUID courseId,
+            BiPredicate<CustomUserDetails, Course> evaluator
+    ) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
         if (currentUser == null) {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
-        Course course = courseRepository.findById(courseId).orElse(null);
-
+        Course course = findCourse(courseId);
         if (course == null) {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN) {
-            return isCourseCreatedInOrganization(course, currentUser.getOrganizationId());
+        if (isOrganizationAdmin(currentUser)) {
+            return canOrganizationAdminAccessCourse(currentUser, course);
         }
 
-        return currentUser.getRoleName() == RoleName.TEACHER
-                && currentUser.getUserId().equals(course.getCreatedBy());
+        return evaluator.test(currentUser, course);
+    }
+
+    private boolean canOrganizationAdminAccessCourse(CustomUserDetails currentUser, Course course) {
+        return isCourseCreatedInOrganization(course, currentUser.getOrganizationId());
     }
 
     private boolean isCourseCreatedInOrganization(Course course, UUID organizationId) {
@@ -844,17 +815,11 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 
-        if (currentUser.getRoleName() != RoleName.ORGANIZATION_ADMIN || currentUser.getOrganizationId() == null) {
-            return false;
-        }
-
-        User targetUser = userRepository.findById(targetUserId).orElse(null);
-
-        return belongsToOrganization(targetUser, currentUser.getOrganizationId());
+        return canOrganizationAdminAccessUser(currentUser, targetUserId);
     }
 
     private boolean belongsToOrganization(User user, UUID organizationId) {
@@ -862,6 +827,32 @@ public class AccessService {
                 && user.getOrganization() != null
                 && organizationId != null
                 && organizationId.equals(user.getOrganization().getId());
+    }
+
+    private boolean canOrganizationAdminAccessUser(CustomUserDetails currentUser, UUID targetUserId) {
+        if (!isOrganizationAdmin(currentUser)) {
+            return false;
+        }
+
+        User targetUser = userRepository.findById(targetUserId).orElse(null);
+        return belongsToOrganization(targetUser, currentUser.getOrganizationId());
+    }
+
+    private boolean isAdmin(CustomUserDetails currentUser) {
+        return currentUser.getRoleName() == RoleName.ADMIN;
+    }
+
+    private boolean isOrganizationAdmin(CustomUserDetails currentUser) {
+        return currentUser.getRoleName() == RoleName.ORGANIZATION_ADMIN
+                && currentUser.getOrganizationId() != null;
+    }
+
+    private boolean isTeacher(CustomUserDetails currentUser) {
+        return currentUser.getRoleName() == RoleName.TEACHER;
+    }
+
+    private boolean isStudent(CustomUserDetails currentUser) {
+        return currentUser.getRoleName() == RoleName.STUDENT;
     }
 
     @Description("Returns true if the user can manage the given lesson resource, false otherwise")
@@ -872,7 +863,7 @@ public class AccessService {
             return false;
         }
 
-        if (currentUser.getRoleName() == RoleName.ADMIN) {
+        if (isAdmin(currentUser)) {
             return true;
         }
 

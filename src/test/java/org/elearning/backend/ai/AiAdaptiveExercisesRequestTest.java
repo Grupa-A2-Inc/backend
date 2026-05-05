@@ -22,9 +22,10 @@ class AiAdaptiveExercisesRequestTest {
 
         String json = objectMapper.writeValueAsString(request);
 
-        assertThat(json).contains("\"studentId\":\"1ad3147b-3138-4701-beb9-e3afb7f0ef75\"");
-        assertThat(json).contains("\"subjectId\":2");
-        assertThat(json).contains("\"topicId\":7");
-        assertThat(json).contains("\"count\":5");
+        assertThat(json)
+                .contains("\"studentId\":\"1ad3147b-3138-4701-beb9-e3afb7f0ef75\"")
+                .contains("\"subjectId\":2")
+                .contains("\"topicId\":7")
+                .contains("\"count\":5");
     }
 }
