@@ -21,6 +21,8 @@ import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.subscription.exception.ClassroomLimitExceededException;
+import org.elearning.backend.subscription.service.EntitlementService;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.exception.UserNotFoundException;
@@ -42,6 +44,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -77,6 +80,9 @@ class ClassroomServiceTest {
 
     @Mock
     private CourseEnrollmentRepository courseEnrollmentRepository;
+
+    @Mock
+    private EntitlementService entitlementService;
 
     @Test
     void createClassroom_savesClassroomForRequesterOrganization() {
@@ -1196,5 +1202,66 @@ class ClassroomServiceTest {
                         org.assertj.core.groups.Tuple.tuple(studentId, firstCourseId),
                         org.assertj.core.groups.Tuple.tuple(studentId, secondCourseId)
                 );
+    }
+
+    @Test
+    void createClassroom_whenBelowLimit_createsSuccessfully() {
+        UUID userId = UUID.randomUUID();
+        UUID orgId  = UUID.randomUUID();
+
+        Organization organization = new Organization();
+        organization.setId(orgId);
+
+        User requester = new User();
+        requester.setId(userId);
+        requester.setOrganization(organization);
+
+        Classroom saved = new Classroom();
+        saved.setId(UUID.randomUUID());
+        saved.setOrganization(organization);
+        saved.setName("Clasa A");
+        saved.setDescription(null);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(organization));
+        doNothing().when(entitlementService).canCreateClassroom(orgId);
+        when(classroomRepository.existsByOrganizationIdAndNameIgnoreCase(orgId, "Clasa A"))
+                .thenReturn(false);
+        when(classroomRepository.save(any(Classroom.class))).thenReturn(saved);
+
+        CreateClassroomRequest request = new CreateClassroomRequest("Clasa A", null);
+        ClassroomResponse response = classroomService.createClassroom(request, userId);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getName()).isEqualTo("Clasa A");
+        verify(entitlementService).canCreateClassroom(orgId);
+        verify(classroomRepository).save(any(Classroom.class));
+    }
+
+    @Test
+    void createClassroom_whenAtLimit_throwsClassroomLimitExceededException() {
+        UUID userId = UUID.randomUUID();
+        UUID orgId  = UUID.randomUUID();
+
+        Organization organization = new Organization();
+        organization.setId(orgId);
+
+        User requester = new User();
+        requester.setId(userId);
+        requester.setOrganization(organization);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(organization));
+        doThrow(new ClassroomLimitExceededException(orgId, 5))
+                .when(entitlementService).canCreateClassroom(orgId);
+
+        CreateClassroomRequest request = new CreateClassroomRequest("Clasa B", null);
+
+        assertThatThrownBy(() -> classroomService.createClassroom(request, userId))
+                .isInstanceOf(ClassroomLimitExceededException.class)
+                .hasMessageContaining("5");
+
+        verify(entitlementService).canCreateClassroom(orgId);
+        verify(classroomRepository, never()).save(any());
     }
 }
