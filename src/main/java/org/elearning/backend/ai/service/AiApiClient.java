@@ -38,9 +38,9 @@ public class AiApiClient {
     private static final String API_KEY_HEADER = "X-API-Key";
     private static final String AI_SUCCESS_STATUS = "ok";
 
-    private static final String GENERATE_TEST_URI = "/api/v1/generate";
-    private static final String ADAPTIVE_EXERCISES_URI = "/api/v1/adaptive/exercises";
-    private static final String ADAPTIVE_FEEDBACK_URI = "/api/v1/adaptive/feedback";
+    private static final String GENERATE_TEST_URI = "/ai/api/v1/generate";
+    private static final String ADAPTIVE_EXERCISES_URI = "/ai/api/v1/adaptive/exercises";
+    private static final String ADAPTIVE_FEEDBACK_URI = "/ai/api/v1/adaptive/feedback";
     private static final String STUDENT_REGISTRATION_URI = "/ai/api/v1/students";
 
     private final String apiKey;
@@ -263,7 +263,7 @@ public class AiApiClient {
     static String readErrorResponseBody(ClientHttpResponse response) {
         try {
             String responseBody = StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8);
-            return responseBody.isBlank() ? "<empty>" : responseBody;
+            return responseBody == null || responseBody.isBlank() ? "<empty>" : responseBody;
         } catch (IOException e) {
             return "<unreadable>";
         }
