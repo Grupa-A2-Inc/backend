@@ -23,6 +23,7 @@ import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.subscription.service.EntitlementService;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.exception.UserNotFoundException;
 import org.elearning.backend.user.repository.UserRepository;
@@ -71,10 +72,13 @@ public class ClassroomService {
     private final ClassroomMembershipRepository classroomMembershipRepository;
     private final ClassroomCourseRepository classroomCourseRepository;
     private final CourseEnrollmentRepository courseEnrollmentRepository;
+    private final EntitlementService entitlementService;
 
     @Transactional
     public ClassroomResponse createClassroom(CreateClassroomRequest request, UUID requesterUserId) {
         Organization organization = getRequesterOrganization(requesterUserId);
+
+        entitlementService.canCreateClassroom(organization.getId());
 
         if (classroomRepository.existsByOrganizationIdAndNameIgnoreCase(organization.getId(), request.getName())) {
             throw new ClassroomConflictException(
