@@ -50,6 +50,7 @@ import org.elearning.backend.classroom.entity.ClassroomCourse;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 @org.springframework.test.context.ActiveProfiles("test")
@@ -238,6 +239,52 @@ class ClassroomServiceTest {
         assertThat(classroomService.getMyOrganizationClassrooms(
                 requester.getId(), 0, 10, null, "invalidField", "asc"))
                 .isNotNull();
+    }
+
+    @Test
+    void getMyOrganizationClassrooms_withCreatedAtDescSort_usesRequestedPageable() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 4), 0L));
+
+        classroomService.getMyOrganizationClassrooms(requester.getId(), 1, 4, " ", "createdAt", "desc");
+
+        var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(classroomRepository).findAll(any(Specification.class), pageableCaptor.capture());
+
+        Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isEqualTo(1);
+        assertThat(pageable.getPageSize()).isEqualTo(4);
+        assertThat(pageable.getSort().getOrderFor("createdAt"))
+                .extracting(Sort.Order::getDirection)
+                .isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getMyOrganizationClassrooms_withNegativePageZeroSizeAndBlankSortDirection_usesDefaults() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0L));
+
+        classroomService.getMyOrganizationClassrooms(requester.getId(), -1, 0, " ", "name", " ");
+
+        var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(classroomRepository).findAll(any(Specification.class), pageableCaptor.capture());
+
+        Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isZero();
+        assertThat(pageable.getPageSize()).isEqualTo(10);
+        assertThat(pageable.getSort().getOrderFor("name"))
+                .extracting(Sort.Order::getDirection)
+                .isEqualTo(Sort.Direction.ASC);
     }
 
     @Test

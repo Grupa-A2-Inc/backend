@@ -3,13 +3,14 @@ package org.elearning.backend.subscription.service;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.model.Subscription;
-import com.stripe.net.Webhook;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.subscription.config.StripeConfig;
 import org.elearning.backend.subscription.entity.OrganizationSubscription;
 import org.elearning.backend.subscription.entity.OrganizationSubscriptionStatus;
 import org.elearning.backend.subscription.entity.SubscriptionPlan;
 import org.elearning.backend.subscription.entity.SubscriptionProvider;
+import org.elearning.backend.subscription.exception.StripeWebhookVerificationException;
 import org.elearning.backend.subscription.repository.OrganizationSubscriptionRepository;
 import org.elearning.backend.subscription.repository.SubscriptionPlanRepository;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.time.ZoneId;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class StripeWebhookService {
 
@@ -33,7 +35,7 @@ public class StripeWebhookService {
         try {
             return stripeClientWrapper.constructWebhookEvent(payload, sigHeader, stripeConfig.getWebhookSecret());
         } catch (SignatureVerificationException e) {
-            throw new RuntimeException("Invalid Stripe webhook signature", e);
+            throw new StripeWebhookVerificationException("Invalid Stripe webhook signature", e);
         }
     }
 
@@ -43,7 +45,7 @@ public class StripeWebhookService {
             case "checkout.session.completed" -> handleCheckoutCompleted(event);
             case "customer.subscription.updated" -> handleSubscriptionUpdated(event);
             case "customer.subscription.deleted" -> handleSubscriptionDeleted(event);
-            default -> {}
+            default -> log.debug("Ignoring unsupported Stripe event type: {}", event.getType());
         }
     }
 

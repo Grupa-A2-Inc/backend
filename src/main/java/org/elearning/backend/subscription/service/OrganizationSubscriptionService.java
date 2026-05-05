@@ -83,6 +83,14 @@ public class OrganizationSubscriptionService {
         return toStatusResponse(subscription);
     }
 
+    @Transactional(readOnly = true)
+    public List<SubscriptionPlanResponse> getAllSubscriptionPlans() {
+        return subscriptionPlanRepository.findAllByOrderByDisplayNameAsc()
+                .stream()
+                .map(this::toSubscriptionPlanResponse)
+                .toList();
+    }
+
     public OrganizationSubscriptionResponse updateOrganizationSubscription(UUID id, UpdateOrganizationSubscriptionRequest request) {
         OrganizationSubscription subscription = organizationSubscriptionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Organization subscription not found: " + id));
@@ -126,26 +134,28 @@ public class OrganizationSubscriptionService {
     }
 
     private OrganizationSubscriptionStatusResponse toStatusResponse(OrganizationSubscription subscription) {
-        SubscriptionPlan plan = subscription.getSubscriptionPlan();
-
         return new OrganizationSubscriptionStatusResponse(
                 subscription.getOrganization().getId(),
                 subscription.getStatus(),
                 subscription.getCurrentPeriodStart(),
                 subscription.getCurrentPeriodEnd(),
-                new SubscriptionPlanResponse(
-                        plan.getId(),
-                        plan.getCode(),
-                        plan.getDisplayName(),
-                        plan.getMaxUsers(),
-                        plan.getMaxClassrooms(),
-                        plan.getMaxCourses(),
-                        plan.getHasPremiumFeatures(),
-                        plan.getPriceMonthly(),
-                        plan.getCurrency(),
-                        plan.getCreatedAt(),
-                        plan.getUpdatedAt()
-                )
+                toSubscriptionPlanResponse(subscription.getSubscriptionPlan())
+        );
+    }
+
+    private SubscriptionPlanResponse toSubscriptionPlanResponse(SubscriptionPlan plan) {
+        return new SubscriptionPlanResponse(
+                plan.getId(),
+                plan.getCode(),
+                plan.getDisplayName(),
+                plan.getMaxUsers(),
+                plan.getMaxClassrooms(),
+                plan.getMaxCourses(),
+                plan.getHasPremiumFeatures(),
+                plan.getPriceMonthly(),
+                plan.getCurrency(),
+                plan.getCreatedAt(),
+                plan.getUpdatedAt()
         );
     }
 

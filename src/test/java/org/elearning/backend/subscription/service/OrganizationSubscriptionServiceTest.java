@@ -1,11 +1,13 @@
 package org.elearning.backend.subscription.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.exception.OrganizationNotFoundException;
 import org.elearning.backend.organization.exception.OrganizationSubscriptionNotFoundException;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.subscription.dto.request.CreateOrganizationSubscriptionRequest;
 import org.elearning.backend.subscription.dto.request.UpdateOrganizationSubscriptionRequest;
+import org.elearning.backend.subscription.dto.request.UpdateSubscriptionPlanRequest;
 import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionResponse;
 import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionStatusResponse;
 import org.elearning.backend.subscription.entity.OrganizationSubscription;
@@ -83,6 +85,43 @@ class OrganizationSubscriptionServiceTest {
     }
 
     @Test
+    void createOrganizationSubscription_throwsWhenOrganizationDoesNotExist() {
+        UUID organizationId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        CreateOrganizationSubscriptionRequest request = CreateOrganizationSubscriptionRequest.builder()
+                .organizationId(organizationId)
+                .subscriptionPlanId(planId)
+                .build();
+
+        when(organizationRepository.findById(organizationId)).thenReturn(Optional.empty());
+
+        assertThrows(
+                EntityNotFoundException.class,
+                () -> organizationSubscriptionService.createOrganizationSubscription(request)
+        );
+    }
+
+    @Test
+    void createOrganizationSubscription_throwsWhenPlanDoesNotExist() {
+        UUID organizationId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        Organization organization = new Organization();
+        organization.setId(organizationId);
+        CreateOrganizationSubscriptionRequest request = CreateOrganizationSubscriptionRequest.builder()
+                .organizationId(organizationId)
+                .subscriptionPlanId(planId)
+                .build();
+
+        when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
+        when(subscriptionPlanRepository.findById(planId)).thenReturn(Optional.empty());
+
+        assertThrows(
+                EntityNotFoundException.class,
+                () -> organizationSubscriptionService.createOrganizationSubscription(request)
+        );
+    }
+
+    @Test
     void getOrganizationSubscriptionById_returnsMappedResponse() {
         UUID organizationId = UUID.randomUUID();
         OrganizationSubscription subscription = buildSubscription(organizationId, OrganizationSubscriptionStatus.ACTIVE);
@@ -95,6 +134,17 @@ class OrganizationSubscriptionServiceTest {
         assertThat(response.getId()).isEqualTo(subscription.getId());
         assertThat(response.getOrganizationId()).isEqualTo(organizationId);
         assertThat(response.getSubscriptionPlanId()).isEqualTo(subscription.getSubscriptionPlan().getId());
+    }
+
+    @Test
+    void getOrganizationSubscriptionById_throwsWhenSubscriptionMissing() {
+        UUID subscriptionId = UUID.randomUUID();
+        when(organizationSubscriptionRepository.findById(subscriptionId)).thenReturn(Optional.empty());
+
+        assertThrows(
+                EntityNotFoundException.class,
+                () -> organizationSubscriptionService.getOrganizationSubscriptionById(subscriptionId)
+        );
     }
 
     @Test
@@ -229,6 +279,94 @@ class OrganizationSubscriptionServiceTest {
         assertThat(response.getStatus()).isEqualTo(OrganizationSubscriptionStatus.CANCELED);
         assertThat(response.getProvider()).isEqualTo(SubscriptionProvider.MANUAL);
         assertThat(response.getProviderSubscriptionId()).isEqualTo("sub_updated");
+    }
+
+    @Test
+    void updateOrganizationSubscription_throwsWhenSubscriptionMissing() {
+        UUID subscriptionId = UUID.randomUUID();
+        UpdateOrganizationSubscriptionRequest request = UpdateOrganizationSubscriptionRequest.builder()
+                .subscriptionPlanId(UUID.randomUUID())
+                .build();
+
+        when(organizationSubscriptionRepository.findById(subscriptionId)).thenReturn(Optional.empty());
+
+        assertThrows(
+                EntityNotFoundException.class,
+                () -> organizationSubscriptionService.updateOrganizationSubscription(subscriptionId, request)
+        );
+    }
+
+    @Test
+    void changePlan_updatesCurrentActiveSubscription() {
+        UUID organizationId = UUID.randomUUID();
+        UUID currentPlanId = UUID.randomUUID();
+        UUID newPlanId = UUID.randomUUID();
+        OrganizationSubscription existing = buildSubscription(organizationId, OrganizationSubscriptionStatus.ACTIVE);
+        existing.setSubscriptionPlan(buildPlan(currentPlanId));
+        SubscriptionPlan newPlan = buildPlan(newPlanId);
+        UpdateSubscriptionPlanRequest request = new UpdateSubscriptionPlanRequest();
+        request.setPlanId(newPlanId);
+
+        when(organizationSubscriptionRepository.findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(
+                organizationId,
+                List.of(
+                        OrganizationSubscriptionStatus.ACTIVE,
+                        OrganizationSubscriptionStatus.TRIALING,
+                        OrganizationSubscriptionStatus.PAST_DUE
+                )
+        )).thenReturn(Optional.of(existing));
+        when(subscriptionPlanRepository.findById(newPlanId)).thenReturn(Optional.of(newPlan));
+        when(organizationSubscriptionRepository.save(existing)).thenReturn(existing);
+
+        OrganizationSubscriptionResponse response = organizationSubscriptionService.changePlan(organizationId, request);
+
+        assertThat(existing.getSubscriptionPlan()).isSameAs(newPlan);
+        assertThat(response.getSubscriptionPlanId()).isEqualTo(newPlanId);
+    }
+
+    @Test
+    void changePlan_throwsWhenNoActiveSubscriptionExists() {
+        UUID organizationId = UUID.randomUUID();
+        UpdateSubscriptionPlanRequest request = new UpdateSubscriptionPlanRequest();
+        request.setPlanId(UUID.randomUUID());
+
+        when(organizationSubscriptionRepository.findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(
+                organizationId,
+                List.of(
+                        OrganizationSubscriptionStatus.ACTIVE,
+                        OrganizationSubscriptionStatus.TRIALING,
+                        OrganizationSubscriptionStatus.PAST_DUE
+                )
+        )).thenReturn(Optional.empty());
+
+        assertThrows(
+                OrganizationSubscriptionNotFoundException.class,
+                () -> organizationSubscriptionService.changePlan(organizationId, request)
+        );
+    }
+
+    @Test
+    void changePlan_throwsWhenPlanDoesNotExist() {
+        UUID organizationId = UUID.randomUUID();
+        UUID newPlanId = UUID.randomUUID();
+        OrganizationSubscription existing = buildSubscription(organizationId, OrganizationSubscriptionStatus.ACTIVE);
+        UpdateSubscriptionPlanRequest request = new UpdateSubscriptionPlanRequest();
+        request.setPlanId(newPlanId);
+
+        when(organizationSubscriptionRepository.findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(
+                organizationId,
+                List.of(
+                        OrganizationSubscriptionStatus.ACTIVE,
+                        OrganizationSubscriptionStatus.TRIALING,
+                        OrganizationSubscriptionStatus.PAST_DUE
+                )
+        )).thenReturn(Optional.of(existing));
+        when(subscriptionPlanRepository.findById(newPlanId)).thenReturn(Optional.empty());
+
+        assertThrows(
+                EntityNotFoundException.class,
+                () -> organizationSubscriptionService.changePlan(organizationId, request)
+        );
     }
 
     private OrganizationSubscription buildSubscription(UUID organizationId, OrganizationSubscriptionStatus status) {

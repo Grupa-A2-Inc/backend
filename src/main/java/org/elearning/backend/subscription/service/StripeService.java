@@ -4,10 +4,10 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.subscription.config.StripeConfig;
 import org.elearning.backend.subscription.dto.request.CheckoutRequest;
 import org.elearning.backend.subscription.dto.response.CheckoutSessionResponse;
 import org.elearning.backend.subscription.entity.SubscriptionPlan;
+import org.elearning.backend.subscription.exception.StripeCheckoutException;
 import org.elearning.backend.subscription.repository.SubscriptionPlanRepository;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +18,6 @@ import java.util.UUID;
 public class StripeService {
 
     private final SubscriptionPlanRepository subscriptionPlanRepository;
-    private final StripeConfig stripeConfig;
     private final StripeClientWrapper stripeClientWrapper;
 
     public CheckoutSessionResponse createCheckoutSession(UUID organizationId, CheckoutRequest request) {
@@ -49,7 +48,7 @@ public class StripeService {
             return new CheckoutSessionResponse(session.getUrl(), session.getId());
 
         } catch (StripeException e) {
-            throw new RuntimeException("Failed to create Stripe checkout session: " + e.getMessage(), e);
+            throw new StripeCheckoutException("Failed to create Stripe checkout session", e);
         }
     }
 }

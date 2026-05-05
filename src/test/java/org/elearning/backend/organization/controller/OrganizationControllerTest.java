@@ -4,10 +4,15 @@ import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
 import org.elearning.backend.organization.service.OrganizationService;
+import org.elearning.backend.subscription.dto.request.CheckoutRequest;
+import org.elearning.backend.subscription.dto.request.UpdateSubscriptionPlanRequest;
+import org.elearning.backend.subscription.dto.response.CheckoutSessionResponse;
+import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionResponse;
 import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionStatusResponse;
 import org.elearning.backend.subscription.dto.response.SubscriptionPlanResponse;
 import org.elearning.backend.subscription.entity.OrganizationSubscriptionStatus;
 import org.elearning.backend.subscription.service.OrganizationSubscriptionService;
+import org.elearning.backend.subscription.service.StripeService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,6 +38,9 @@ class OrganizationControllerTest {
 
     @Mock
     private OrganizationSubscriptionService organizationSubscriptionService;
+
+    @Mock
+    private StripeService stripeService;
 
     @InjectMocks
     private OrganizationController organizationController;
@@ -128,6 +136,57 @@ class OrganizationControllerTest {
         verify(organizationService).deleteOrganization(id);
         assertThat(response.getStatusCode().value()).isEqualTo(204);
         assertThat(response.getBody()).isNull();
+    }
+
+    @Test
+    void createCheckoutSession_returns200Ok() {
+        UUID organizationId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        CheckoutRequest request = new CheckoutRequest();
+        request.setPlanId(planId);
+        request.setSuccessUrl("http://localhost:3000/success");
+        request.setCancelUrl("http://localhost:3000/cancel");
+        CheckoutSessionResponse responseBody = new CheckoutSessionResponse(
+                "https://checkout.stripe.com/test",
+                "cs_test_123"
+        );
+
+        when(stripeService.createCheckoutSession(organizationId, request)).thenReturn(responseBody);
+
+        ResponseEntity<CheckoutSessionResponse> response =
+                organizationController.createCheckoutSession(organizationId, request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isSameAs(responseBody);
+    }
+
+    @Test
+    void changeSubscriptionPlan_returns200Ok() {
+        UUID organizationId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        UpdateSubscriptionPlanRequest request = new UpdateSubscriptionPlanRequest();
+        request.setPlanId(planId);
+        OrganizationSubscriptionResponse responseBody = new OrganizationSubscriptionResponse(
+                UUID.randomUUID(),
+                organizationId,
+                planId,
+                OrganizationSubscriptionStatus.ACTIVE,
+                null,
+                null,
+                null,
+                LocalDateTime.of(2026, 1, 1, 0, 0),
+                LocalDateTime.of(2026, 2, 1, 0, 0),
+                LocalDateTime.of(2026, 1, 1, 0, 0),
+                LocalDateTime.of(2026, 1, 1, 0, 0)
+        );
+
+        when(organizationSubscriptionService.changePlan(organizationId, request)).thenReturn(responseBody);
+
+        ResponseEntity<OrganizationSubscriptionResponse> response =
+                organizationController.changeSubscriptionPlan(organizationId, request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isSameAs(responseBody);
     }
 
     private OrganizationResponse makeResponse() {
