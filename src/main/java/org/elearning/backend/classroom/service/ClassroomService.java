@@ -114,6 +114,50 @@ public class ClassroomService {
         return toResponse(classroom);
     }
 
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ClassroomResponse> getMyClassrooms(
+            UUID userId,
+            Integer page, Integer size,
+            String search, String sortBy, String sortDir) {
+
+        userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User does not exist: " + userId));
+
+        int pageVal  = (page == null || page < 0)   ? 0  : page;
+        int sizeVal  = (size == null || size <= 0)   ? 10 : size;
+        String field = (sortBy != null && Set.of("name", "createdAt").contains(sortBy)) ? sortBy : "name";
+        String dir   = (sortDir == null || sortDir.isBlank()) ? "asc" : sortDir.toLowerCase();
+
+        Sort sort = dir.equals("desc")
+                ? Sort.by("classroom." + field).descending()
+                : Sort.by("classroom." + field).ascending();
+        Pageable pageable = PageRequest.of(pageVal, sizeVal, sort);
+
+        Specification<ClassroomMembership> spec = Specification.where(
+                (root, query, cb) -> {
+                    query.distinct(true);
+                    return cb.equal(root.get("user").get("id"), userId);
+                }
+        );
+
+        if (search != null && !search.isBlank()) {
+            String like = "%" + search.toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("classroom").get("name")), like));
+        }
+
+        Page<ClassroomMembership> resultPage = classroomMembershipRepository.findAll(spec, pageable);
+
+        return new PaginatedResponse<>(
+                resultPage.getContent().stream()
+                        .map(m -> toResponse(m.getClassroom()))
+                        .toList(),
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements()
+        );
+    }
+
     @Transactional
     public ClassroomResponse patchClassroom(UUID classroomId, UpdateClassroomRequest request, UUID requesterUserId) {
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
