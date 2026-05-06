@@ -25,9 +25,6 @@ import java.util.List;
 public class ProfessorRatingController extends GlobalHttpStatusCodes {
     private final ProfessorRatingService professorRatingService;
 
-    private static final String OK = "200";
-    private static final String FORBIDDEN = "403";
-
     @Operation(summary = "Get average ratings for all lessons", description = "Returns the average rating and full rating statistics for all lessons owned by the authenticated professor.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Ratings retrieved successfully"),

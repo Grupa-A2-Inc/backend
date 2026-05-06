@@ -26,11 +26,6 @@ public class LessonRatingController extends GlobalHttpStatusCodes {
 
     private final LessonRatingService lessonRatingService;
 
-    private static final String OK = "200";
-    private static final String BAD_REQUEST = "400";
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
-
     @Operation(summary = "Rate a lesson", description = "Submits or updates a rating and optional comment for the specified lesson by the authenticated user.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Rating submitted successfully"),

@@ -1,7 +1,6 @@
 package org.elearning.backend.feedback.service;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.feedback.dto.LessonRatingFullStatsDto;
 import org.elearning.backend.feedback.dto.ProfessorLessonRatingProjection;

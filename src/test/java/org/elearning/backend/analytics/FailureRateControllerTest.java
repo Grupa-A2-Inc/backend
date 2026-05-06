@@ -47,6 +47,7 @@ class FailureRateControllerTest {
     void tearDown() {
         restTemplate.getRestTemplate().setInterceptors(List.of());
         jdbcTemplate.execute("DELETE FROM test_results");
+        jdbcTemplate.execute("DELETE FROM test_attempts");
         jdbcTemplate.execute("DELETE FROM analytics_alerts");
         jdbcTemplate.execute("DELETE FROM tests");
         jdbcTemplate.execute("DELETE FROM lessons");
@@ -122,6 +123,37 @@ class FailureRateControllerTest {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         return headers;
+    }
+
+    private UUID insertStudent() {
+        UUID studentId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, role_type, status) " +
+                        "VALUES (?, ?, ?, ?, ?, (SELECT id FROM roles WHERE name = 'STUDENT'), 'User', 'ACTIVE')",
+                studentId, "student-" + studentId + "@test.com", "password", "Test", "Student"
+        );
+        return studentId;
+    }
+
+    private void insertTestResult(UUID testId, UUID studentId, boolean isPassed) {
+        UUID attemptId = UUID.randomUUID();
+
+        jdbcTemplate.update(
+                "INSERT INTO test_attempts (id, test_id, student_id, started_at, status) " +
+                        "VALUES (?, ?, ?, CURRENT_TIMESTAMP, 'DONE')", // <-- Changed from 'COMPLETED' to 'DONE'
+                attemptId, testId, studentId
+        );
+
+        jdbcTemplate.update(
+                "INSERT INTO test_results (attempt_id, student_id, test_id, score, score_percent, passed, completed_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                attemptId,
+                studentId,
+                testId,
+                isPassed ? 1.0000 : 0.4000,
+                isPassed ? 100.00 : 40.00,
+                isPassed
+        );
     }
 
     // --- TESTS FOR GET /tests/{testId}/analytics/failure-rate ---
@@ -305,5 +337,142 @@ class FailureRateControllerTest {
 
         assertThat(response.getStatusCode()).isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", otherTeacherId);
+    }
+
+    @Test
+    void shouldCalculateTestFailureRateWithAttemptsSuccessfully() {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        UUID testId = insertTest(lessonId, authenticatedUserId);
+        insertAnalyticsAlert(testId, authenticatedUserId, 50.0);
+
+        UUID studentId1 = insertStudent();
+        UUID studentId2 = insertStudent();
+        insertTestResult(testId, studentId1, false);
+        insertTestResult(testId, studentId2, true);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/tests/" + testId + "/analytics/failure-rate",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"failureRate\":50.0");
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenTestHasNoAnalyticsAlert() {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        UUID testId = insertTest(lessonId, authenticatedUserId);
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/tests/" + testId + "/analytics/failure-rate",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void shouldReturnForbiddenWhenGettingLessonFailureRateForOtherTeachersLesson() {
+        UUID otherTeacherId = insertAuthenticatedUser();
+        UUID courseId = insertCourse(otherTeacherId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        insertTest(lessonId, otherTeacherId);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + lessonId + "/analytics/failure-rate",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void shouldReturnForbiddenWhenStudentGetsAlerts() {
+        UUID studentId = insertStudent();
+        String studentToken = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
+
+        restTemplate.getRestTemplate().setInterceptors(List.of((request, body, execution) -> {
+            request.getHeaders().setBearerAuth(studentToken);
+            return execution.execute(request, body);
+        }));
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/professors/me/alerts",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void shouldGetCourseFailureRateChartDataWithPointsSuccessfully() {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        UUID testId = insertTest(lessonId, authenticatedUserId);
+
+        UUID studentId = insertStudent();
+        insertTestResult(testId, studentId, false);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/courses/" + courseId + "/analytics/chart-data",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).startsWith("[");
+        assertThat(response.getBody()).contains("failureRatePoints");
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenPostingAlertForNonExistentTest() {
+        String body = """
+                {
+                    "failureThreshold": 65.5
+                }
+                """;
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                REQUEST_MAPPING + "/tests/" + UUID.randomUUID() + "/analytics/alerts",
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+        assertThat(response.getStatusCode()).isIn(HttpStatus.NOT_FOUND, HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenGettingChartDataForNonExistentCourse() {
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/analytics/chart-data",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isIn(HttpStatus.NOT_FOUND, HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void shouldGetCourseFailureRateChartDataWhenSomeLessonsHaveNoTests() {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId1 = insertLesson(chapterId);
+        insertTest(lessonId1, authenticatedUserId);
+        UUID lessonId2 = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO lessons (id, chapter_id, title, order_index) VALUES (?, ?, ?, ?)",
+                lessonId2, chapterId, "Lesson Without Test", 2
+        );
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/courses/" + courseId + "/analytics/chart-data",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("failureRatePoints");
     }
 }
