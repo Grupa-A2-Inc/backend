@@ -1,6 +1,7 @@
 package org.elearning.backend.user.service;
 
 import org.elearning.backend.ai.service.AiStudentRegistrationService;
+import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.auth.service.ActivationTokenService;
 import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.organization.entity.Organization;
@@ -245,6 +246,37 @@ class UserServiceQuotaTest {
             assertThat(r.isSuccess()).isFalse();
             assertThat(r.getErrorMessage()).isNotBlank();
         });
+    }
+
+    @Test
+    void importUsers_whenAiStudentRegistrationFails_marksStudentAsFailed() {
+        CreateUserRequest request = buildRequest("student-ai-fail@test.com", organizationId);
+
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
+        when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(studentRole));
+        doNothing().when(entitlementService).canCreateUser(organizationId);
+        when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(UUID.randomUUID());
+            u.setRole(studentRole);
+            u.setOrganization(organization);
+            return u;
+        });
+        doThrow(new AiApiException("AI sync failed"))
+                .when(aiStudentRegistrationService)
+                .registerStudent(any(UUID.class));
+
+        BulkImportResponse response = userImportService.importUsers(new CreateUserBulkRequest(List.of(request)));
+
+        assertThat(response.getTotal()).isEqualTo(1);
+        assertThat(response.getSucceeded()).isZero();
+        assertThat(response.getFailed()).isEqualTo(1);
+        assertThat(response.getResults().get(0).isSuccess()).isFalse();
+        assertThat(response.getResults().get(0).getEmail()).isEqualTo(request.getEmail());
+        assertThat(response.getResults().get(0).getErrorMessage()).contains("AI sync failed");
+        verify(activationTokenService, never()).generateActivationToken(any());
+        verify(emailService, never()).sendActivationEmail(any(), any(), any());
     }
 
     // --- helpers ---
