@@ -13,6 +13,7 @@ import org.elearning.backend.feedback.dto.RateLessonResponseDto;
 import org.elearning.backend.feedback.service.LessonRatingService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +35,7 @@ public class LessonRatingController extends GlobalHttpStatusCodes {
             @ApiResponse(responseCode = NOT_FOUND, description = "Lesson not found")
     })
     @PostMapping("/lessons/{lessonId}/ratings")
+    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<RateLessonResponseDto> rateLesson(@RequestBody @Valid RateLessonDto requestDto,
                                                             @AuthenticationPrincipal CustomUserDetails customUserDetails,
                                                             @PathVariable UUID lessonId) {
@@ -46,6 +48,7 @@ public class LessonRatingController extends GlobalHttpStatusCodes {
             @ApiResponse(responseCode = FORBIDDEN, description = "Access denied"),
             @ApiResponse(responseCode = NOT_FOUND, description = "Lesson not found")
     })
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER')")
     @GetMapping("/lessons/{lessonId}/ratings/summary")
     public ResponseEntity<LessonRatingSummaryDto> getRatingSummary(
             @PathVariable UUID lessonId,
