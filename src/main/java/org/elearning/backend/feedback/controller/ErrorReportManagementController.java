@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.feedback.dto.ErrorReportDto;
 import org.elearning.backend.feedback.dto.GetErrorReportDto;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "Error Report Management", description = "Management of question error reports submitted by students")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
