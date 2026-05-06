@@ -3,6 +3,7 @@ package org.elearning.backend.feedback.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.feedback.dto.DescriptionRequestDto;
@@ -16,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Question Error Reports", description = "Reporting and managing errors found in test questions")
 @RestController
 @RequestMapping("/api/v1")
 public class QuestionErrorReportController extends GlobalHttpStatusCodes {

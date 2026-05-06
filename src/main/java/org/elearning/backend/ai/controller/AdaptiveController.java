@@ -64,6 +64,12 @@ public class AdaptiveController extends GlobalHttpStatusCodes {
      * @param userDetails authentication principal for the current user; the student's UUID is taken from this object
      * @return an AdaptiveStartDto describing the created adaptive session
      */
+    @Operation(summary = "Start an adaptive session", description = "Starts a new adaptive learning session for the authenticated student using the specified subject, topic, and question count.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = OK, description = "Adaptive session started successfully"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Subject or topic not found"),
+            @ApiResponse(responseCode = UNPROCESSABLE_CONTENT, description = "Validation error in request parameters")
+    })
     @PostMapping("/adaptive/start")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<AdaptiveStartDto> startAdaptiveSession(@RequestBody AdaptiveStartRequestDto request, @AuthenticationPrincipal CustomUserDetails userDetails)
