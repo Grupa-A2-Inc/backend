@@ -466,8 +466,10 @@ class ChapterControllerTest {
      */
     @Test
     void shouldThrowExceptionWhenGettingChaptersForNonExistentCourseDirectly() {
+        UUID randomCourseId = UUID.randomUUID(); // Extracted outside the lambda
+
         assertThrows(CourseNotFoundException.class, () -> {
-            chapterService.getAllChaptersFromCourse(UUID.randomUUID());
+            chapterService.getAllChaptersFromCourse(randomCourseId); // Only ONE invocation inside
         });
     }
 
@@ -477,8 +479,10 @@ class ChapterControllerTest {
      */
     @Test
     void shouldThrowExceptionWhenDeletingNonExistentChapterDirectly() {
+        UUID randomChapterId = UUID.randomUUID();
+
         assertThrows(ChapterNotFoundException.class, () -> {
-            chapterService.deleteChapter(UUID.randomUUID());
+            chapterService.deleteChapter(randomChapterId);
         });
     }
 
@@ -488,11 +492,11 @@ class ChapterControllerTest {
      */
     @Test
     void shouldThrowExceptionWhenUpdatingMetadataForNonExistentChapterDirectly() {
+        UUID randomChapterId = UUID.randomUUID();
         ChapterDtoPost emptyDto = new ChapterDtoPost();
-        // We just need a valid DTO object, the fields don't matter because the existence check happens first
 
         assertThrows(ChapterNotFoundException.class, () -> {
-            chapterService.updateChapterMetadata(UUID.randomUUID(), emptyDto);
+            chapterService.updateChapterMetadata(randomChapterId, emptyDto);
         });
     }
 
