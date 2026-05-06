@@ -30,7 +30,6 @@ public class SubscriptionPlanController {
             description = "Returns all available subscription plans ordered by display name"
     )
     @ApiResponse(
-            responseCode = "200",
             responseCode = OK,
             description = "Subscription plans retrieved successfully",
             content = @Content(
