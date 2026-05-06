@@ -2,6 +2,8 @@ package org.elearning.backend.content.controller;
 
 import org.elearning.backend.auth.service.AccountActivationService;
 import org.elearning.backend.auth.service.EmailService;
+import org.elearning.backend.content.exception.CourseNotFoundException;
+import org.elearning.backend.content.service.ChapterService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -22,9 +24,15 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.elearning.backend.content.exception.ChapterNotFoundException;
+import org.elearning.backend.content.dto.ChapterDtoPost;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class ChapterControllerTest {
+    @Autowired
+    private ChapterService chapterService;
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -450,6 +458,42 @@ class ChapterControllerTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * SERVICE LAYER TEST
+     * Covers the 'CourseNotFoundException' branch in ChapterService.getAllChaptersFromCourse
+     */
+    @Test
+    void shouldThrowExceptionWhenGettingChaptersForNonExistentCourseDirectly() {
+        assertThrows(CourseNotFoundException.class, () -> {
+            chapterService.getAllChaptersFromCourse(UUID.randomUUID());
+        });
+    }
+
+    /**
+     * SERVICE LAYER TEST
+     * Covers the 'ChapterNotFoundException' branch in ChapterService.deleteChapter
+     */
+    @Test
+    void shouldThrowExceptionWhenDeletingNonExistentChapterDirectly() {
+        assertThrows(ChapterNotFoundException.class, () -> {
+            chapterService.deleteChapter(UUID.randomUUID());
+        });
+    }
+
+    /**
+     * SERVICE LAYER TEST
+     * Covers the 'ChapterNotFoundException' branch in ChapterService.updateChapterMetadata
+     */
+    @Test
+    void shouldThrowExceptionWhenUpdatingMetadataForNonExistentChapterDirectly() {
+        ChapterDtoPost emptyDto = new ChapterDtoPost();
+        // We just need a valid DTO object, the fields don't matter because the existence check happens first
+
+        assertThrows(ChapterNotFoundException.class, () -> {
+            chapterService.updateChapterMetadata(UUID.randomUUID(), emptyDto);
+        });
     }
 
     /**

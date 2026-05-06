@@ -35,88 +35,58 @@ class ErrorReportRoutingServiceTest {
 
     @Test
     void shouldLogWarningWhenReportNotFound(CapturedOutput output) {
-        // Arrange
         UUID reportId = UUID.randomUUID();
         when(questionErrorReportRepository.findById(reportId)).thenReturn(Optional.empty());
-
-        // Act
         errorReportRoutingService.route(reportId);
-
-        // Assert
         assertThat(output.getOut())
                 .contains("[ERROR REPORT ROUTING] Raport cu id " + reportId + " nu a fost gasit pentru rutare.");
-
-        // Verify we returned early and never queried the question repository
         verify(questionRepository, never()).findById(any());
     }
 
     @Test
     void shouldLogWarningWhenQuestionNotFound(CapturedOutput output) {
-        // Arrange
         UUID reportId = UUID.randomUUID();
         Integer questionId = 100;
-
         QuestionErrorReport report = new QuestionErrorReport();
         report.setId(reportId);
         report.setQuestionId(questionId);
-
         when(questionErrorReportRepository.findById(reportId)).thenReturn(Optional.of(report));
         when(questionRepository.findById(questionId)).thenReturn(Optional.empty());
-
-        // Act
         errorReportRoutingService.route(reportId);
-
-        // Assert
         assertThat(output.getOut())
                 .contains("[ERROR REPORT ROUTING] Intrebarea cu id " + questionId + " raportata in raportul " + reportId + " nu a fost gasita pentru rutare.");
     }
 
     @Test
     void shouldLogInfoWhenQuestionIsAiGenerated(CapturedOutput output) {
-        // Arrange
         UUID reportId = UUID.randomUUID();
         Integer questionId = 100;
-
         QuestionErrorReport report = new QuestionErrorReport();
         report.setId(reportId);
         report.setQuestionId(questionId);
-
         Question question = new Question();
         question.setId(questionId);
         question.setSource(QuestionSource.AI_GENERATED);
-
         when(questionErrorReportRepository.findById(reportId)).thenReturn(Optional.of(report));
         when(questionRepository.findById(questionId)).thenReturn(Optional.of(question));
-
-        // Act
         errorReportRoutingService.route(reportId);
-
-        // Assert
         assertThat(output.getOut())
                 .contains("[AI ROUTING] Raport " + reportId + " rutat la AI team - question " + questionId + " este AI_GENERATED");
     }
 
     @Test
     void shouldDoNothingWhenQuestionIsManual(CapturedOutput output) {
-        // Arrange
         UUID reportId = UUID.randomUUID();
         Integer questionId = 100;
-
         QuestionErrorReport report = new QuestionErrorReport();
         report.setId(reportId);
         report.setQuestionId(questionId);
-
         Question question = new Question();
         question.setId(questionId);
         question.setSource(QuestionSource.MANUAL);
-
         when(questionErrorReportRepository.findById(reportId)).thenReturn(Optional.of(report));
         when(questionRepository.findById(questionId)).thenReturn(Optional.of(question));
-
-        // Act
         errorReportRoutingService.route(reportId);
-
-        // Assert
         assertThat(output.getOut()).doesNotContain("[ERROR REPORT ROUTING]");
         assertThat(output.getOut()).doesNotContain("[AI ROUTING]");
     }
