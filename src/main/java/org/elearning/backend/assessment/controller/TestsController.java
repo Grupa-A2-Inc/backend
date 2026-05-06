@@ -5,10 +5,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 // SWAGGER ADDED
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.dto.question_dto.QuestionDataForUsersDto;
 import org.elearning.backend.assessment.dto.assigment_dto.TestEditDto;
 import org.elearning.backend.assessment.dto.assigment_dto.TestEntityDto;
 import org.elearning.backend.assessment.service.TestService;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,23 +26,10 @@ import java.util.UUID;
 @Tag(name = "Tests", description = "Test lifecycle management")
 @RestController
 @RequestMapping("/api/v1")
-public class TestsController {
+@RequiredArgsConstructor
+public class TestsController extends GlobalHttpStatusCodes {
 
     private final TestService testService;
-
-    private static final String CREATED = "201";
-    private static final String OK = "200";
-    private static final String NO_CONTENT = "204";
-
-    private static final String CONFLICT = "409";
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
-
-
-
-    public TestsController(TestService testService){
-        this.testService = testService;
-    }
 
     @Operation(summary = "Create new test",
             description = "Creates a new test for a given lesson associated with a teacher")
@@ -108,7 +97,6 @@ public class TestsController {
 
     /**
      * Update title, description, time duration, and AI usage flag of a draft test.
-     *
      * Applies the provided editable fields to the test identified by testId. The operation
      * is permitted only when the test is currently in draft state.
      *

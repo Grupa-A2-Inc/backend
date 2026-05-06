@@ -1,6 +1,7 @@
 package org.elearning.backend.feedback.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.feedback.dto.LessonRatingFullStatsDto;
 import org.elearning.backend.feedback.service.ProfessorRatingService;
 import org.elearning.backend.security.auth.CustomUserDetails;
@@ -16,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/professors")
 @RequiredArgsConstructor
-public class ProfessorRatingController {
+public class ProfessorRatingController extends GlobalHttpStatusCodes {
     private final ProfessorRatingService professorRatingService;
 
     @GetMapping("/me/lessons/ratings")

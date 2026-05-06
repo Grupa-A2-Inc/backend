@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.feedback.dto.DescriptionRequestDto;
 import org.elearning.backend.feedback.dto.ErrorReportDto;
 import org.elearning.backend.feedback.service.QuestionErrorReportService;
@@ -17,12 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1")
-public class QuestionErrorReportController {
-    private static final String CREATED = "201";
-
-    private static final String BAD_REQUEST = "400";
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
+public class QuestionErrorReportController extends GlobalHttpStatusCodes {
 
     private final QuestionErrorReportService questionErrorReportService;
 

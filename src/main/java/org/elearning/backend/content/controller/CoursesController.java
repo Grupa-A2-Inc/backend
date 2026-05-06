@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.content.dto.UpdateCourseDto;
 import org.elearning.backend.content.dto.ResponseCourseDto;
 import org.elearning.backend.content.dto.ResponseCourseFullViewDto;
@@ -27,7 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/courses")
 @RequiredArgsConstructor
-public class CoursesController {
+public class CoursesController extends GlobalHttpStatusCodes {
 
     private final CourseService courseService;
 
@@ -42,10 +43,10 @@ public class CoursesController {
                     """
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Course successfully created"),
-            @ApiResponse(responseCode = "400", description = "Invalid input data — missing required fields or malformed JSON"),
-            @ApiResponse(responseCode = "401", description = "Not authenticated"),
-            @ApiResponse(responseCode = "403", description = "Authenticated user does not have permission to create courses")
+            @ApiResponse(responseCode = CREATED, description = "Course successfully created"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid input data — missing required fields or malformed JSON"),
+            @ApiResponse(responseCode = UNAUTHORIZED, description = "Not authenticated"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Authenticated user does not have permission to create courses")
     })
     @PostMapping
     @PreAuthorize("@accessService.canCreateCourse(authentication)")
@@ -74,8 +75,8 @@ public class CoursesController {
                     """
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Page of public courses successfully returned"),
-            @ApiResponse(responseCode = "401", description = "Not authenticated")
+            @ApiResponse(responseCode = OK, description = "Page of public courses successfully returned"),
+            @ApiResponse(responseCode = UNAUTHORIZED, description = "Not authenticated")
     })
     @GetMapping("/public")
     @PreAuthorize("@accessService.canViewPublicCourses(authentication)")
@@ -100,9 +101,9 @@ public class CoursesController {
                     """
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Page of user's courses successfully returned"),
-            @ApiResponse(responseCode = "401", description = "Not authenticated"),
-            @ApiResponse(responseCode = "403", description = "Authenticated user does not have permission to view their courses")
+            @ApiResponse(responseCode = OK, description = "Page of user's courses successfully returned"),
+            @ApiResponse(responseCode = UNAUTHORIZED, description = "Not authenticated"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Authenticated user does not have permission to view their courses")
     })
     @GetMapping("/my-courses")
     @PreAuthorize("@accessService.canViewMyCourses(authentication)")
@@ -124,11 +125,11 @@ public class CoursesController {
                     """
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Course successfully updated"),
-            @ApiResponse(responseCode = "400", description = "Invalid input data"),
-            @ApiResponse(responseCode = "401", description = "Not authenticated"),
-            @ApiResponse(responseCode = "403", description = "Authenticated user does not own this course"),
-            @ApiResponse(responseCode = "404", description = "Course not found")
+            @ApiResponse(responseCode = OK, description = "Course successfully updated"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid input data"),
+            @ApiResponse(responseCode = UNAUTHORIZED, description = "Not authenticated"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Authenticated user does not own this course"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found")
     })
     @PutMapping("/{id}")
     @PreAuthorize("@accessService.canReplaceCourse(authentication,#id)")
@@ -149,11 +150,11 @@ public class CoursesController {
                     """
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Course successfully patched"),
-            @ApiResponse(responseCode = "400", description = "Invalid input data"),
-            @ApiResponse(responseCode = "401", description = "Not authenticated"),
-            @ApiResponse(responseCode = "403", description = "Authenticated user does not own this course"),
-            @ApiResponse(responseCode = "404", description = "Course not found")
+            @ApiResponse(responseCode = OK, description = "Course successfully patched"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid input data"),
+            @ApiResponse(responseCode = UNAUTHORIZED, description = "Not authenticated"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Authenticated user does not own this course"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found")
     })
     @PatchMapping("/{id}")
     @PreAuthorize("@accessService.canEditCourse(authentication,#id)")
@@ -174,10 +175,10 @@ public class CoursesController {
                     """
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Course successfully deleted — no content returned"),
-            @ApiResponse(responseCode = "401", description = "Not authenticated"),
-            @ApiResponse(responseCode = "403", description = "Authenticated user does not own this course"),
-            @ApiResponse(responseCode = "404", description = "Course not found")
+            @ApiResponse(responseCode = NO_CONTENT, description = "Course successfully deleted — no content returned"),
+            @ApiResponse(responseCode = UNAUTHORIZED, description = "Not authenticated"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Authenticated user does not own this course"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found")
     })
     @DeleteMapping("/{id}")
     @PreAuthorize("@accessService.canDeleteCourse(authentication,#id)")
@@ -198,10 +199,10 @@ public class CoursesController {
                     """
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Full course view successfully returned"),
-            @ApiResponse(responseCode = "401", description = "Not authenticated"),
-            @ApiResponse(responseCode = "403", description = "Authenticated user does not have access to this course"),
-            @ApiResponse(responseCode = "404", description = "Course not found")
+            @ApiResponse(responseCode = OK, description = "Full course view successfully returned"),
+            @ApiResponse(responseCode = UNAUTHORIZED, description = "Not authenticated"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Authenticated user does not have access to this course"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found")
     })
     @GetMapping("/{courseId}/full-view")
     @PreAuthorize("@accessService.canViewCourseFullView(authentication,#id)")
