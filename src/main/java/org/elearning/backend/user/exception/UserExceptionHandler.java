@@ -59,4 +59,10 @@ public class UserExceptionHandler extends GlobalExceptionHandler {
         return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler(CsvImportException.class)
+    public ResponseEntity<Map<String, String>> handleCsvImport(CsvImportException ex) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("error", ex.getMessage()));
+    }
+
 }
