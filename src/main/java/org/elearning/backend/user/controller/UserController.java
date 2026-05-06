@@ -18,6 +18,7 @@ import org.elearning.backend.user.dto.request.UpdateUserStatusRequest;
 import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.UserStatus;
+import org.elearning.backend.user.service.CsvImportService;
 import org.elearning.backend.user.service.UserImportService;
 import org.elearning.backend.user.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -42,6 +45,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserImportService userImportService;
+    private final CsvImportService csvImportService;
 
     @Operation(
             summary = "Create a new user",
@@ -113,6 +117,33 @@ public class UserController {
     @PostMapping("/import")
     public ResponseEntity<BulkImportResponse> importUsers(@Valid @RequestBody CreateUserBulkRequest request) {
         BulkImportResponse response = userImportService.importUsers(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Bulk import users from CSV",
+            description = "Creates multiple users from a CSV file upload. The CSV must have headers: " +
+                    "email,firstName,lastName,roleName. The organization is inferred from the authenticated user. " +
+                    "Uses partial success — each row is processed independently."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Import processed — check 'results' for individual outcomes",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = BulkImportResponse.class)
+            )
+    )
+    @ApiResponse(responseCode = "400", description = "Invalid file or headers", content = @Content)
+    @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
+    @ApiResponse(responseCode = "403", description = "Access denied", content = @Content)
+    @PreAuthorize("hasRole('ORGANIZATION_ADMIN')")
+    @PostMapping(value = "/import/csv", consumes = "multipart/form-data")
+    public ResponseEntity<BulkImportResponse> importUsersFromCsv(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID organizationId = currentUser.getOrganizationId();
+        BulkImportResponse response = csvImportService.importFromCsv(file, organizationId);
         return ResponseEntity.ok(response);
     }
 
