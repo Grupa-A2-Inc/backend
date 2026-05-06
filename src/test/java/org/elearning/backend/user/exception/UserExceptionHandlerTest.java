@@ -90,6 +90,14 @@ class UserExceptionHandlerTest {
         assertThat(response.getBody()).containsEntry("message", "boom");
     }
 
+    @Test
+    void handlesCsvImport() {
+        var response = handler.handleCsvImport(new CsvImportException("bad csv"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).containsEntry("error", "bad csv");
+    }
+
     private MethodArgumentNotValidException validationException(List<FieldError> fieldErrors) {
         try {
             Method method = getClass().getDeclaredMethod("sampleValidationTarget", String.class);

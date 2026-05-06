@@ -53,62 +53,8 @@ public class CsvImportService {
 
             while ((line = reader.readLine()) != null) {
                 lineNumber++;
-                String trimmed = line.trim();
-
-                if (trimmed.isEmpty()) {
-                    continue;
-                }
-
-                String[] parts = trimmed.split(",", -1);
-
-                if (parts.length != 4) {
-                    results.add(UserImportResult.failed(
-                            "line " + lineNumber,
-                            "Row " + lineNumber + " has " + parts.length + " columns, expected 4"
-                    ));
-                    continue;
-                }
-
-                String email = parts[0].trim();
-                String firstName = parts[1].trim();
-                String lastName = parts[2].trim();
-                String roleNameRaw = parts[3].trim();
-
-                if (email.isEmpty() || firstName.isEmpty() || lastName.isEmpty() || roleNameRaw.isEmpty()) {
-                    results.add(UserImportResult.failed(
-                            email.isEmpty() ? "line " + lineNumber : email,
-                            "Row " + lineNumber + " has empty required fields"
-                    ));
-                    continue;
-                }
-
-                if (!VALID_ROLES.contains(roleNameRaw.toUpperCase())) {
-                    results.add(UserImportResult.failed(
-                            email,
-                            "Row " + lineNumber + ": invalid role '" + roleNameRaw + "'"
-                    ));
-                    continue;
-                }
-
-                if (seenEmails.contains(email.toLowerCase())) {
-                    results.add(UserImportResult.failed(
-                            email,
-                            "Row " + lineNumber + ": duplicate email in CSV '" + email + "'"
-                    ));
-                    continue;
-                }
-
-                seenEmails.add(email.toLowerCase());
-
-                CreateUserRequest request = CreateUserRequest.builder()
-                        .email(email)
-                        .firstName(firstName)
-                        .lastName(lastName)
-                        .roleName(RoleName.valueOf(roleNameRaw.toUpperCase()))
-                        .organizationId(organizationId)
-                        .build();
-
-                results.add(userImportService.tryCreateSingleUser(request));
+                processCsvLine(line, lineNumber, organizationId, seenEmails)
+                        .ifPresent(results::add);
             }
 
         } catch (CsvImportException e) {
@@ -118,6 +64,76 @@ public class CsvImportService {
         }
 
         return new BulkImportResponse(results);
+    }
+
+    private java.util.Optional<UserImportResult> processCsvLine(
+            String line,
+            int lineNumber,
+            UUID organizationId,
+            Set<String> seenEmails
+    ) {
+        String trimmed = line.trim();
+        if (trimmed.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+
+        String[] parts = trimmed.split(",", -1);
+        UserImportResult validationFailure = validateCsvRow(parts, lineNumber, seenEmails);
+        if (validationFailure != null) {
+            return java.util.Optional.of(validationFailure);
+        }
+
+        String email = parts[0].trim();
+        String normalizedEmail = email.toLowerCase();
+        seenEmails.add(normalizedEmail);
+
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email(email)
+                .firstName(parts[1].trim())
+                .lastName(parts[2].trim())
+                .roleName(RoleName.valueOf(parts[3].trim().toUpperCase()))
+                .organizationId(organizationId)
+                .build();
+
+        return java.util.Optional.of(userImportService.tryCreateSingleUser(request));
+    }
+
+    private UserImportResult validateCsvRow(String[] parts, int lineNumber, Set<String> seenEmails) {
+        if (parts.length != 4) {
+            return UserImportResult.failed(
+                    "line " + lineNumber,
+                    "Row " + lineNumber + " has " + parts.length + " columns, expected 4"
+            );
+        }
+
+        String email = parts[0].trim();
+        String firstName = parts[1].trim();
+        String lastName = parts[2].trim();
+        String roleNameRaw = parts[3].trim();
+
+        if (email.isEmpty() || firstName.isEmpty() || lastName.isEmpty() || roleNameRaw.isEmpty()) {
+            return UserImportResult.failed(
+                    email.isEmpty() ? "line " + lineNumber : email,
+                    "Row " + lineNumber + " has empty required fields"
+            );
+        }
+
+        if (!VALID_ROLES.contains(roleNameRaw.toUpperCase())) {
+            return UserImportResult.failed(
+                    email,
+                    "Row " + lineNumber + ": invalid role '" + roleNameRaw + "'"
+            );
+        }
+
+        String normalizedEmail = email.toLowerCase();
+        if (seenEmails.contains(normalizedEmail)) {
+            return UserImportResult.failed(
+                    email,
+                    "Row " + lineNumber + ": duplicate email in CSV '" + email + "'"
+            );
+        }
+
+        return null;
     }
 
     private void validateFile(MultipartFile file) {
