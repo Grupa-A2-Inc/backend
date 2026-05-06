@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 // SWAGGER ADDED
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.enrollment.service.CertificateGeneratorService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
@@ -22,14 +23,9 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-public class CertificateGeneratorController {
+public class CertificateGeneratorController extends GlobalHttpStatusCodes {
 
     private final CertificateGeneratorService certificateGeneratorService;
-
-    private static final String OK = "200";
-
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
 
     @Operation(summary = "Generate certificate",
             description = "Generates a PDF file to demonstrate the completion of an official course")

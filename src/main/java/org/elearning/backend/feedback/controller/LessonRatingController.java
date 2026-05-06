@@ -2,6 +2,7 @@ package org.elearning.backend.feedback.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.feedback.dto.LessonRatingSummaryDto;
 import org.elearning.backend.feedback.dto.RateLessonDto;
 import org.elearning.backend.feedback.dto.RateLessonResponseDto;
@@ -16,7 +17,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-public class LessonRatingController {
+public class LessonRatingController extends GlobalHttpStatusCodes {
 
     private final LessonRatingService lessonRatingService;
 

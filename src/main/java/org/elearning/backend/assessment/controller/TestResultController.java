@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.assessment.dto.attempt_dto.AttemptReportDTO;
 import org.elearning.backend.assessment.dto.attempt_dto.AttemptStatusDTO;
 import org.elearning.backend.assessment.service.TestResultService;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,13 +26,8 @@ import java.util.UUID;
 @Tag(name = "Test Results", description = "Test attempt results and history")
 @RestController
 @RequiredArgsConstructor
-public class TestResultController {
+public class TestResultController extends GlobalHttpStatusCodes {
     private final TestResultService testResultService;
-
-    private static final String OK = "200";
-
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
 
     /**
      * Retrieve the result of a specific test attempt for the authenticated user.

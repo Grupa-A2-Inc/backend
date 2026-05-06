@@ -10,6 +10,7 @@ import org.elearning.backend.assessment.dto.question_dto.QuestionRequestDto;
 import org.elearning.backend.assessment.dto.question_dto.QuestionResponseDto;
 import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.assessment.service.QuestionService;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,21 +29,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tests/{testId}/questions")
 @RequiredArgsConstructor
-public class QuestionController {
+public class QuestionController extends GlobalHttpStatusCodes {
 
     private final QuestionService questionService;
 
-    private static final String CREATED = "201";
-    private static final String OK = "200";
-    private static final String NO_CONTENT = "204";
-
-    private static final String BAD_REQUEST = "400";
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
-
     /**
      * Create a question (Single, Multi, or True/False) for the specified test.
-     *
      * The test must be in DRAFT state and the caller must have ownership; access is enforced by security checks.
      *
      * @param testId     the UUID of the test to add the question to
@@ -125,7 +117,6 @@ public class QuestionController {
 
     /**
      * Replace an existing question and its options for the specified test.
-     *
      * The test must be in DRAFT state and must be owned by the authenticated professor.
      *
      * @param testId      the UUID of the test containing the question
@@ -155,7 +146,6 @@ public class QuestionController {
 
     /**
      * Deletes the specified question and its associated options.
-     *
      * The test must be in DRAFT state and the authenticated professor must own the test.
      *
      * @param testId     UUID of the test that contains the question

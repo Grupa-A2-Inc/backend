@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.feedback.dto.ErrorReportDto;
 import org.elearning.backend.feedback.dto.GetErrorReportDto;
 import org.elearning.backend.feedback.exception.DifferentIdException;
@@ -23,12 +24,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
-public class ErrorReportManagementController {
-    private static final String OK = "200";
-
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
-    private static final String CONFLICT = "409";
+public class ErrorReportManagementController extends GlobalHttpStatusCodes {
 
     private final ErrorReportManagementService errorReportManagementService;
 

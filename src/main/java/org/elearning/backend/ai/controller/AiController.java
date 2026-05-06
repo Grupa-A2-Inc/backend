@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.ai.dto.*;
 import org.elearning.backend.ai.service.AiGenerationService;
 import org.elearning.backend.ai.service.AiQuestionInjectorService;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
@@ -24,17 +25,9 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
-public class AiController {
+public class AiController extends GlobalHttpStatusCodes {
     private final AiQuestionInjectorService aiQuestionInjectorService;
     private final AiGenerationService aiService;
-
-    private static final String OK = "200";
-    private static final String ACCEPTED = "202";
-    private static final String BAD_REQUEST = "400";
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
-    private static final String CONFLICT = "409";
-    private static final String UNPROCESSABLE_CONTENT = "422";
 
     /**
      * Injects AI-generated questions from the specified AI request into a test.

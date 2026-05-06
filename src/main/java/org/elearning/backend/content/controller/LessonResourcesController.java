@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.content.dto.ResponseLessonResourceDto;
 import org.elearning.backend.content.dto.UpdateLessonResourceDto;
 import org.elearning.backend.content.dto.CreateLessonResourceDto;
@@ -20,18 +22,15 @@ import java.util.UUID;
 @Tag(name = "Lesson Resources", description = "Lesson resource administration")
 @RestController
 @RequestMapping("/api/v1")
-public class LessonResourcesController {
+@RequiredArgsConstructor
+public class LessonResourcesController extends GlobalHttpStatusCodes {
     private final LessonResourceService lessonResourceService;
-
-    public LessonResourcesController(LessonResourceService lessonResourceService) {
-        this.lessonResourceService = lessonResourceService;
-    }
 
     @Operation(summary = "Create a new lesson resource", description = "Creates a new resource associated with a lesson given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Resource successfully created"),
-            @ApiResponse(responseCode = "400", description = "Title or URL cannot be null"),
-            @ApiResponse(responseCode = "404", description = "Lesson not found")
+            @ApiResponse(responseCode = CREATED, description = "Resource successfully created"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Title or URL cannot be null"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Lesson not found")
     })
     @PostMapping("/lessons/{lessonId}/resources")
     @PreAuthorize("@accessService.canCreateLessonResource(authentication,#id)")
@@ -44,8 +43,8 @@ public class LessonResourcesController {
 
     @Operation(summary = "Get all lesson resources", description = "Returns all resources associated with a lesson given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Resources successfully returned"),
-            @ApiResponse(responseCode = "404", description = "Lesson not found")
+            @ApiResponse(responseCode = OK, description = "Resources successfully returned"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Lesson not found")
     })
     @GetMapping("/lessons/{lessonId}/resources")
     @PreAuthorize("@accessService.canViewLessonResources(authentication,#id)")
@@ -55,8 +54,8 @@ public class LessonResourcesController {
 
     @Operation(summary = "Delete a lesson resource", description = "Deletes a resource given by its ID from a lesson given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Resource successfully deleted"),
-            @ApiResponse(responseCode = "404", description = "Resource not found or does not belong to the specified lesson")
+            @ApiResponse(responseCode = NO_CONTENT, description = "Resource successfully deleted"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Resource not found or does not belong to the specified lesson")
     })
     @DeleteMapping("/lessons/{lessonId}/resources/{resourceId}")
     @PreAuthorize("@accessService.canDeleteLessonResource(authentication,#id)")
@@ -67,8 +66,8 @@ public class LessonResourcesController {
 
     @Operation(summary = "Update a lesson resource", description = "Updates the title and/or URL of a resource given by its ID from a lesson given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Resource successfully updated"),
-            @ApiResponse(responseCode = "404", description = "Resource not found, does not belong to the specified lesson, or lesson not found")
+            @ApiResponse(responseCode = OK, description = "Resource successfully updated"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Resource not found, does not belong to the specified lesson, or lesson not found")
     })
     @PatchMapping("/lessons/{lessonId}/resources/{resourceId}")
     @PreAuthorize("@accessService.canEditLessonResource(authentication,#id)")

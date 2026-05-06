@@ -3,6 +3,7 @@ package org.elearning.backend.enrollment.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -27,16 +28,9 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
-public class CourseEnrollmentController {
+public class CourseEnrollmentController extends GlobalHttpStatusCodes {
 
     private final CourseEnrollmentService enrollmentService;
-
-    private static final String CREATED = "201";
-    private static final String OK = "200";
-    private static final String NO_CONTENT = "204";
-    private static final String NOT_FOUND = "404";
-    private static final String CONFLICT = "409";
-    private static final String FORBIDDEN = "403";
 
     @Operation(summary = "Enroll in a course", description = "Enrolls the authenticated student in the specified course")
     @ApiResponses(value = {
