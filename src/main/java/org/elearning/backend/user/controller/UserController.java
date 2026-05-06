@@ -32,6 +32,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
+    private static final String OK = "200";
+    private static final String CREATED = "201";
+    private static final String NO_CONTENT = "204";
+    private static final String BAD_REQUEST = "400";
+    private static final String UNAUTHORIZED = "401";
+    private static final String FORBIDDEN = "403";
+    private static final String NOT_FOUND = "404";
+
     private final UserService userService;
     private final UserImportService userImportService;
 
@@ -42,7 +50,7 @@ public class UserController {
                     "The request is evaluated against the target organization in the payload, so organization-scoped administrators cannot create users for another organization."
     )
     @ApiResponse(
-            responseCode = "201",
+            responseCode = CREATED,
             description = "User created successfully",
             content = @Content(
                     mediaType = "application/json",
@@ -50,17 +58,17 @@ public class UserController {
             )
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Bad request",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
@@ -79,7 +87,7 @@ public class UserController {
                     "Mixed-organization imports are therefore not valid for organization-scoped administrators."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Import processed — check 'results' for individual outcomes",
             content = @Content(
                     mediaType = "application/json",
@@ -87,17 +95,17 @@ public class UserController {
             )
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Request body invalid",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
@@ -115,17 +123,17 @@ public class UserController {
                     If you need an organization-scoped list instead of a cross-platform list, use the dedicated organization user endpoint.
 
                     Query parameters:
-                    - `page` — zero-based page index; defaults to 0 when omitted or negative
-                    - `size` — number of items per page; defaults to 10 when omitted or invalid
-                    - `search` — case-insensitive text filter applied to first name, last name, and email
-                    - `role` — optional role filter such as ADMIN, ORGANIZATION_ADMIN, TEACHER, STUDENT, or PARENT
-                    - `status` — optional lifecycle-status filter such as ACTIVE, PENDING, or BLOCKED
-                    - `sortBy` — field used for sorting; allowed values are `firstName`, `lastName`, `email`, and `createdAt`
-                    - `sortDir` — sort direction; use `asc` or `desc`
+                    - `page` — zero-based page index; accepts integers `0` or greater; defaults to `0` when omitted or negative
+                    - `size` — number of items per page; accepts positive integers; defaults to `10` when omitted or invalid
+                    - `search` — case-insensitive text filter applied to first name, last name, and email; accepts any text value
+                    - `role` — optional role filter; accepted values are `ADMIN`, `ORGANIZATION_ADMIN`, `TEACHER`, `STUDENT`, and `PARENT`
+                    - `status` — optional lifecycle-status filter; accepted values are `ACTIVE`, `INACTIVE`, `BLOCKED`, and `PENDING`
+                    - `sortBy` — field used for sorting; accepted values are `firstName`, `lastName`, `email`, and `createdAt`
+                    - `sortDir` — sort direction; accepted values are `asc` and `desc`
                     """
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Users retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
@@ -133,12 +141,12 @@ public class UserController {
             )
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
@@ -161,17 +169,17 @@ public class UserController {
                     Unlike the global user-list endpoint for ADMIN, this one does not expose users from other organizations and is intended for tenant-level administration only.
 
                     Query parameters:
-                    - `page` — zero-based page index; defaults to 0 when omitted or negative
-                    - `size` — number of items per page; defaults to 10 when omitted or invalid
-                    - `search` — case-insensitive text filter applied to first name, last name, and email
-                    - `role` — optional role filter such as TEACHER, STUDENT, PARENT, or ORGANIZATION_ADMIN
-                    - `status` — optional lifecycle-status filter such as ACTIVE, PENDING, or BLOCKED
-                    - `sortBy` — field used for sorting; allowed values are `firstName`, `lastName`, and `email`
-                    - `sortDir` — sort direction; use `asc` or `desc`
+                    - `page` — zero-based page index; accepts integers `0` or greater; defaults to `0` when omitted or negative
+                    - `size` — number of items per page; accepts positive integers; defaults to `10` when omitted or invalid
+                    - `search` — case-insensitive text filter applied to first name, last name, and email; accepts any text value
+                    - `role` — optional role filter; accepted values are `ADMIN`, `ORGANIZATION_ADMIN`, `TEACHER`, `STUDENT`, and `PARENT`
+                    - `status` — optional lifecycle-status filter; accepted values are `ACTIVE`, `INACTIVE`, `BLOCKED`, and `PENDING`
+                    - `sortBy` — field used for sorting; accepted values are `firstName`, `lastName`, and `email`
+                    - `sortDir` — sort direction; accepted values are `asc` and `desc`
                     """
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Users retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
@@ -179,12 +187,12 @@ public class UserController {
             )
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
@@ -209,27 +217,27 @@ public class UserController {
                     "This prevents organization-scoped administrators from changing the lifecycle state of users belonging to another tenant."
     )
     @ApiResponse(
-            responseCode = "204",
+            responseCode = NO_CONTENT,
             description = "User updated successfully",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Bad request",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "404",
+            responseCode = NOT_FOUND,
             description = "User not found",
             content = @Content
     )
@@ -248,7 +256,7 @@ public class UserController {
                     "Some users may also be allowed to view their own record through the same access rule."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "User retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
@@ -256,17 +264,17 @@ public class UserController {
             )
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "404",
+            responseCode = NOT_FOUND,
             description = "User not found",
             content = @Content
     )
@@ -282,27 +290,27 @@ public class UserController {
                     "while ORGANIZATION_ADMIN is limited to users from the same organization. The operation is meant for administrative maintenance of account metadata and profile fields."
     )
     @ApiResponse(
-            responseCode = "204",
+            responseCode = NO_CONTENT,
             description = "User updated successfully",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Bad request",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "404",
+            responseCode = NOT_FOUND,
             description = "User not found",
             content = @Content
     )
@@ -320,22 +328,22 @@ public class UserController {
                     "should expect to remove users from another tenant."
     )
     @ApiResponse(
-            responseCode = "204",
+            responseCode = NO_CONTENT,
             description = "User deleted successfully",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "404",
+            responseCode = NOT_FOUND,
             description = "User not found",
             content = @Content
     )
@@ -353,22 +361,22 @@ public class UserController {
                     "An ORGANIZATION_ADMIN does not automatically inherit unrestricted password control over every account in the system."
     )
     @ApiResponse(
-            responseCode = "204",
+            responseCode = NO_CONTENT,
             description = "Password change with success",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "404",
+            responseCode = NOT_FOUND,
             description = "User not found",
             content = @Content
     )
@@ -387,14 +395,14 @@ public class UserController {
                     The export is organization-scoped and does not include users from other organizations.
 
                     Query parameters:
-                    - `search` — optional case-insensitive text filter applied to first name, last name, and email before export
-                    - `role` — optional role filter applied before export
-                    - `status` — optional lifecycle-status filter applied before export
+                    - `search` — optional case-insensitive text filter applied to first name, last name, and email before export; accepts any text value
+                    - `role` — optional role filter applied before export; accepted values are `ADMIN`, `ORGANIZATION_ADMIN`, `TEACHER`, `STUDENT`, and `PARENT`
+                    - `status` — optional lifecycle-status filter applied before export; accepted values are `ACTIVE`, `INACTIVE`, `BLOCKED`, and `PENDING`
                     """
     )
-    @ApiResponse(responseCode = "200", description = "CSV generated successfully", content = @Content)
-    @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
-    @ApiResponse(responseCode = "403", description = "Access denied", content = @Content)
+    @ApiResponse(responseCode = OK, description = "CSV generated successfully", content = @Content)
+    @ApiResponse(responseCode = UNAUTHORIZED, description = "Unauthorized", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "Access denied", content = @Content)
     @PreAuthorize("hasRole('ORGANIZATION_ADMIN')")
     @GetMapping("/organization/export")
     public ResponseEntity<byte[]> exportOrganizationUsers(@RequestParam (required = false) String search,

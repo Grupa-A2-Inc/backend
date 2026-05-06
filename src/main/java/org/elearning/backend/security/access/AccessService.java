@@ -60,7 +60,7 @@ public class AccessService {
     public boolean canCreateUser(Authentication authentication, CreateUserRequest request) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || request == null) {
             return false;
         }
 
@@ -75,7 +75,7 @@ public class AccessService {
     public boolean canImportUsers(Authentication authentication, CreateUserBulkRequest request) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || request == null || request.getUsers() == null) {
             return false;
         }
 
@@ -146,7 +146,7 @@ public class AccessService {
     public boolean canDeleteUser(Authentication authentication, UUID targetUserId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || targetUserId == null) {
             return false;
         }
 
@@ -189,7 +189,7 @@ public class AccessService {
     public boolean canManageParentStudent(Authentication authentication, UUID parentId, UUID studentId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || parentId == null || studentId == null) {
             return false;
         }
 
@@ -211,7 +211,7 @@ public class AccessService {
     public boolean canViewParentStudents(Authentication authentication, UUID parentId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || parentId == null) {
             return false;
         }
 
@@ -232,9 +232,13 @@ public class AccessService {
 
     @Description("Returns true if the user can view the lessons from the given chapter, false otherwise")
     public boolean canViewChapterLessons(Authentication authentication, UUID targetChapterId) {
+        if (targetChapterId == null) {
+            return false;
+        }
+
         Chapter chapter = chapterRepository.findById(targetChapterId).orElse(null);
 
-        if (chapter == null) {
+        if (chapter == null || chapter.getCourse() == null || chapter.getCourse().getId() == null) {
             return false;
         }
 
@@ -368,26 +372,15 @@ public class AccessService {
 
     @Description("Defines who can start a specific test. Returns true if the user can access the course of that test, false otherwise")
     public boolean canStartTest(Authentication authentication, UUID targetTestId) {
-        Test test = testRepository.findById(targetTestId).orElse(null);
-
-        if (test == null) {
-            return false;
-        }
-
-        Lesson lesson = lessonRepository.findById(test.getLessonId()).orElse(null);
-
-        if (lesson == null) {
-            return false;
-        }
-
-        return canAccessCourse(authentication, lesson.getChapter().getCourse().getId());
+        UUID courseId = findCourseIdForTest(targetTestId);
+        return courseId != null && canAccessCourse(authentication, courseId);
     }
 
     @Description("Defines who can submit a specific attempt. Returns true if the attempt belongs to the current user, false otherwise")
     public boolean canSubmitAttempt(Authentication authentication, UUID targetAttemptId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || targetAttemptId == null) {
             return false;
         }
 
@@ -449,7 +442,7 @@ public class AccessService {
     public boolean canViewMyBestTestResult(Authentication authentication, UUID testId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || testId == null) {
             return false;
         }
 
@@ -457,19 +450,8 @@ public class AccessService {
             return false;
         }
 
-        Test test = testRepository.findById(testId).orElse(null);
-
-        if (test == null) {
-            return false;
-        }
-
-        Lesson lesson = lessonRepository.findById(test.getLessonId()).orElse(null);
-
-        if (lesson == null) {
-            return false;
-        }
-
-        return canAccessCourse(authentication, lesson.getChapter().getCourse().getId());
+        UUID courseId = findCourseIdForTest(testId);
+        return courseId != null && canAccessCourse(authentication, courseId);
     }
 
     @Description("Defines who can view their attempts for a test. Returns true if the user is a student and has access to the course")
@@ -481,7 +463,7 @@ public class AccessService {
     public boolean canViewAttemptResult(Authentication authentication, UUID attemptId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || attemptId == null) {
             return false;
         }
 
@@ -521,7 +503,7 @@ public class AccessService {
                                                AssignCoursesToClassroomRequest request) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || classroomId == null) {
             return false;
         }
 
@@ -551,7 +533,7 @@ public class AccessService {
     public boolean canManageClassroom(Authentication authentication, UUID classroomId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || classroomId == null) {
             return false;
         }
 
@@ -574,7 +556,7 @@ public class AccessService {
     public boolean canListClassroomMembers(Authentication authentication, UUID classroomId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || classroomId == null) {
             return false;
         }
 
@@ -632,15 +614,25 @@ public class AccessService {
     }
 
     private boolean canManageChapterCourse(Authentication authentication, UUID targetChapterId) {
+        if (targetChapterId == null) {
+            return false;
+        }
+
         return chapterRepository.findById(targetChapterId)
-                .map(chapter -> canManageCourse(authentication, chapter.getCourse().getId()))
+                .map(chapter -> chapter.getCourse() != null ? chapter.getCourse().getId() : null)
+                .map(courseId -> canManageCourse(authentication, courseId))
                 .orElse(false);
     }
 
     private boolean canManageLessonCourse(Authentication authentication, UUID targetLessonId) {
+        if (targetLessonId == null) {
+            return false;
+        }
+
         Lesson lesson = lessonRepository.findById(targetLessonId).orElse(null);
 
-        if (lesson == null) {
+        if (lesson == null || lesson.getChapter() == null || lesson.getChapter().getCourse() == null
+                || lesson.getChapter().getCourse().getId() == null) {
             return false;
         }
 
@@ -648,9 +640,14 @@ public class AccessService {
     }
 
     private boolean canAccessLessonCourse(Authentication authentication, UUID lessonId) {
+        if (lessonId == null) {
+            return false;
+        }
+
         Lesson lesson = lessonRepository.findById(lessonId).orElse(null);
 
-        if (lesson == null) {
+        if (lesson == null || lesson.getChapter() == null || lesson.getChapter().getCourse() == null
+                || lesson.getChapter().getCourse().getId() == null) {
             return false;
         }
 
@@ -683,26 +680,15 @@ public class AccessService {
 
     @Description("Returns true if the user can manage the given test, false otherwise")
     private boolean canManageTest(Authentication authentication, UUID targetTestId) {
-        Test test = testRepository.findById(targetTestId).orElse(null);
-
-        if (test == null) {
-            return false;
-        }
-
-        Lesson lesson = lessonRepository.findById(test.getLessonId()).orElse(null);
-
-        if (lesson == null) {
-            return false;
-        }
-
-        return canManageCourse(authentication, lesson.getChapter().getCourse().getId());
+        UUID courseId = findCourseIdForTest(targetTestId);
+        return courseId != null && canManageCourse(authentication, courseId);
     }
 
     @Description("Returns true if the user can manage the given test question, false otherwise")
     private boolean canManageTestQuestion(Authentication authentication, UUID targetTestId, Integer targetQuestionId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || targetTestId == null || targetQuestionId == null) {
             return false;
         }
 
@@ -736,6 +722,10 @@ public class AccessService {
             return false;
         }
 
+        if (lesson.getChapter() == null || lesson.getChapter().getCourse() == null || lesson.getChapter().getCourse().getId() == null) {
+            return false;
+        }
+
         return canManageCourse(authentication, lesson.getChapter().getCourse().getId());
     }
 
@@ -762,7 +752,29 @@ public class AccessService {
     }
 
     private Course findCourse(UUID courseId) {
+        if (courseId == null) {
+            return null;
+        }
+
         return courseRepository.findById(courseId).orElse(null);
+    }
+
+    private UUID findCourseIdForTest(UUID testId) {
+        if (testId == null) {
+            return null;
+        }
+
+        Test test = testRepository.findById(testId).orElse(null);
+        if (test == null) {
+            return null;
+        }
+
+        Lesson lesson = lessonRepository.findById(test.getLessonId()).orElse(null);
+        if (lesson == null || lesson.getChapter() == null || lesson.getChapter().getCourse() == null) {
+            return null;
+        }
+
+        return lesson.getChapter().getCourse().getId();
     }
 
     private boolean evaluateCourseAccess(
@@ -830,7 +842,7 @@ public class AccessService {
     }
 
     private boolean canOrganizationAdminAccessUser(CustomUserDetails currentUser, UUID targetUserId) {
-        if (!isOrganizationAdmin(currentUser)) {
+        if (!isOrganizationAdmin(currentUser) || targetUserId == null) {
             return false;
         }
 
@@ -859,7 +871,7 @@ public class AccessService {
     private boolean canManageLessonResource(Authentication authentication, UUID targetResourceId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
 
-        if (currentUser == null) {
+        if (currentUser == null || targetResourceId == null) {
             return false;
         }
 
@@ -870,6 +882,13 @@ public class AccessService {
         LessonResource lessonResource = lessonResourceRepository.findById(targetResourceId).orElse(null);
 
         if (lessonResource == null) {
+            return false;
+        }
+
+        if (lessonResource.getLesson() == null
+                || lessonResource.getLesson().getChapter() == null
+                || lessonResource.getLesson().getChapter().getCourse() == null
+                || lessonResource.getLesson().getChapter().getCourse().getId() == null) {
             return false;
         }
 

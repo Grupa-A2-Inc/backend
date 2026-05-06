@@ -7,6 +7,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -56,6 +57,21 @@ class OrganizationExceptionHandlerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(response.getBody()).containsEntry("message", "blocked");
+    }
+
+    @Test
+    void handlesBadRequestExceptions() {
+        var response = handler.handleBadRequest(new MethodArgumentTypeMismatchException(
+                "bad-id",
+                java.util.UUID.class,
+                "id",
+                null,
+                new IllegalArgumentException("malformed uuid")
+        ));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).containsEntry("status", 400);
+        assertThat(response.getBody().get("message").toString()).contains("malformed uuid");
     }
 
     @Test

@@ -21,6 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Subscription Plans", description = "Endpoints for listing available subscription plans")
 public class SubscriptionPlanController {
+    private static final String OK = "200";
 
     private final OrganizationSubscriptionService organizationSubscriptionService;
 
@@ -29,7 +30,7 @@ public class SubscriptionPlanController {
             description = "Returns all available subscription plans ordered by display name"
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Subscription plans retrieved successfully",
             content = @Content(
                     mediaType = "application/json",

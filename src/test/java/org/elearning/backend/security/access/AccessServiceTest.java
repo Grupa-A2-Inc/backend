@@ -493,6 +493,14 @@ class AccessServiceTest {
     }
 
     @Test
+    void canDeleteUser_returnsFalseWhenTargetUserIdIsNull() {
+        assertThat(accessService.canDeleteUser(
+                authenticationFor(makeUser(RoleName.ORGANIZATION_ADMIN, UUID.randomUUID())),
+                null
+        )).isFalse();
+    }
+
+    @Test
     void canDeleteUser_returnsTrueForAdmin() {
         assertThat(accessService.canDeleteUser(
                 authenticationFor(makeUser(RoleName.ADMIN, UUID.randomUUID())),

@@ -2,7 +2,9 @@ package org.elearning.backend.security.access;
 
 import org.elearning.backend.assessment.model.Question;
 import org.elearning.backend.assessment.model.TestAttempt;
+import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
+import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.assessment.repository.QuestionRepository;
 import org.elearning.backend.assessment.repository.TestAttemptRepository;
 import org.elearning.backend.assessment.repository.TestRepository;
@@ -25,6 +27,7 @@ import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.student.entity.Student;
 import org.elearning.backend.student.repository.StudentRepository;
+import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
@@ -79,6 +82,9 @@ class AccessServiceCoverageTest {
 
     @Mock
     private ClassroomMembershipRepository classroomMembershipRepository;
+
+    @Mock
+    private ClassroomRepository classroomRepository;
 
     @Mock
     private TestRepository testRepository;
@@ -154,6 +160,24 @@ class AccessServiceCoverageTest {
     }
 
     @Test
+    void createAndImportPermissions_returnFalseForNullRequests() {
+        UUID organizationId = UUID.randomUUID();
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+
+        assertThat(accessService.canCreateUser(orgAdmin, null)).isFalse();
+        assertThat(accessService.canImportUsers(orgAdmin, null)).isFalse();
+        assertThat(accessService.canImportUsers(orgAdmin, new CreateUserBulkRequest(null))).isFalse();
+    }
+
+    @Test
+    void userPermissions_returnFalseWhenOrganizationAdminReceivesNullTargetUserId() {
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, UUID.randomUUID()));
+
+        assertThat(accessService.canViewUser(orgAdmin, null)).isFalse();
+        assertThat(accessService.canUpdateUserStatus(orgAdmin, null)).isFalse();
+    }
+
+    @Test
     void parentPermissions_coverAdminOrgAdminAndParentAccess() {
         UUID organizationId = UUID.randomUUID();
         UUID otherOrganizationId = UUID.randomUUID();
@@ -204,6 +228,15 @@ class AccessServiceCoverageTest {
         assertThat(accessService.canManageParentStudent(orgAdmin, parentId, studentId)).isFalse();
         assertThat(accessService.canManageParentStudent(orgAdmin, parentId, otherStudentId)).isFalse();
         assertThat(accessService.canManageParentStudent(authenticationFor(user(RoleName.PARENT, organizationId)), parentId, otherStudentId)).isFalse();
+    }
+
+    @Test
+    void parentPermissions_returnFalseWhenIdsAreNull() {
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, UUID.randomUUID()));
+
+        assertThat(accessService.canManageParentStudent(orgAdmin, null, UUID.randomUUID())).isFalse();
+        assertThat(accessService.canManageParentStudent(orgAdmin, UUID.randomUUID(), null)).isFalse();
+        assertThat(accessService.canViewParentStudents(orgAdmin, null)).isFalse();
     }
 
     @Test
@@ -318,6 +351,63 @@ class AccessServiceCoverageTest {
     }
 
     @Test
+    void chapterAndLessonPermissions_returnFalseForBrokenRelationsAndNullIds() {
+        UUID chapterId = UUID.randomUUID();
+        UUID chapterWithCourseWithoutId = UUID.randomUUID();
+        UUID chapterWithNullCourse = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID lessonWithNullCourseId = UUID.randomUUID();
+        UUID lessonWithNullCourse = UUID.randomUUID();
+        UUID lessonWithNullChapter = UUID.randomUUID();
+
+        Chapter chapterWithoutCourse = new Chapter();
+        chapterWithoutCourse.setId(chapterId);
+        Chapter chapterWithoutCourseId = new Chapter();
+        chapterWithoutCourseId.setId(chapterWithCourseWithoutId);
+        chapterWithoutCourseId.setCourse(new Course());
+        Chapter chapterWithCourseNull = new Chapter();
+        chapterWithCourseNull.setId(chapterWithNullCourse);
+
+        Lesson lessonWithoutChapter = new Lesson();
+        lessonWithoutChapter.setId(lessonId);
+        Lesson lessonWithCourseWithoutId = new Lesson();
+        lessonWithCourseWithoutId.setId(lessonWithNullCourseId);
+        Chapter lessonChapterWithCourseWithoutId = new Chapter();
+        lessonChapterWithCourseWithoutId.setCourse(new Course());
+        lessonWithCourseWithoutId.setChapter(lessonChapterWithCourseWithoutId);
+        Lesson lessonWithCourseNull = new Lesson();
+        lessonWithCourseNull.setId(lessonWithNullCourse);
+        lessonWithCourseNull.setChapter(new Chapter());
+        Lesson lessonWithMissingChapter = new Lesson();
+        lessonWithMissingChapter.setId(lessonWithNullChapter);
+
+        when(chapterRepository.findById(chapterId)).thenReturn(Optional.of(chapterWithoutCourse));
+        when(chapterRepository.findById(chapterWithCourseWithoutId)).thenReturn(Optional.of(chapterWithoutCourseId));
+        when(chapterRepository.findById(chapterWithNullCourse)).thenReturn(Optional.of(chapterWithCourseNull));
+        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lessonWithoutChapter));
+        when(lessonRepository.findById(lessonWithNullCourseId)).thenReturn(Optional.of(lessonWithCourseWithoutId));
+        when(lessonRepository.findById(lessonWithNullCourse)).thenReturn(Optional.of(lessonWithCourseNull));
+        when(lessonRepository.findById(lessonWithNullChapter)).thenReturn(Optional.of(lessonWithMissingChapter));
+
+        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+
+        assertThat(accessService.canViewChapterLessons(teacher, null)).isFalse();
+        assertThat(accessService.canViewChapterLessons(teacher, chapterId)).isFalse();
+        assertThat(accessService.canViewChapterLessons(teacher, chapterWithCourseWithoutId)).isFalse();
+        assertThat(accessService.canCreateLessons(teacher, chapterWithNullCourse)).isFalse();
+        assertThat(accessService.canCreateLessons(teacher, null)).isFalse();
+        assertThat(accessService.canEditLessonMetaData(teacher, null)).isFalse();
+        assertThat(accessService.canEditLessonMetaData(teacher, lessonId)).isFalse();
+        assertThat(accessService.canEditLessonMetaData(teacher, lessonWithNullCourseId)).isFalse();
+        assertThat(accessService.canEditLessonMetaData(teacher, lessonWithNullCourse)).isFalse();
+        assertThat(accessService.canViewLessonResources(teacher, null)).isFalse();
+        assertThat(accessService.canViewLessonResources(teacher, lessonId)).isFalse();
+        assertThat(accessService.canViewLessonResources(teacher, lessonWithNullCourseId)).isFalse();
+        assertThat(accessService.canViewLessonResources(teacher, lessonWithNullChapter)).isFalse();
+        assertThat(accessService.canViewLessonResources(teacher, lessonWithNullCourse)).isFalse();
+    }
+
+    @Test
     void lessonPermissions_coverEditAndDeleteDelegates() {
         UUID lessonId = UUID.randomUUID();
         UUID missingLessonId = UUID.randomUUID();
@@ -391,6 +481,43 @@ class AccessServiceCoverageTest {
     }
 
     @Test
+    void lessonResourcePermissions_returnFalseForNullIdAndBrokenRelations() {
+        UUID resourceId = UUID.randomUUID();
+        UUID resourceWithNullChapter = UUID.randomUUID();
+        UUID resourceWithNullCourse = UUID.randomUUID();
+        UUID resourceWithNullCourseId = UUID.randomUUID();
+        LessonResource resourceWithoutLesson = new LessonResource();
+        resourceWithoutLesson.setId(resourceId);
+        LessonResource resourceWithBrokenChapter = new LessonResource();
+        resourceWithBrokenChapter.setId(resourceWithNullChapter);
+        resourceWithBrokenChapter.setLesson(new Lesson());
+        LessonResource resourceWithBrokenCourse = new LessonResource();
+        resourceWithBrokenCourse.setId(resourceWithNullCourse);
+        Lesson lessonWithNullCourse = new Lesson();
+        lessonWithNullCourse.setChapter(new Chapter());
+        resourceWithBrokenCourse.setLesson(lessonWithNullCourse);
+        LessonResource resourceWithBrokenCourseId = new LessonResource();
+        resourceWithBrokenCourseId.setId(resourceWithNullCourseId);
+        Lesson lesson = new Lesson();
+        Chapter chapter = new Chapter();
+        chapter.setCourse(new Course());
+        lesson.setChapter(chapter);
+        resourceWithBrokenCourseId.setLesson(lesson);
+        when(lessonResourceRepository.findById(resourceId)).thenReturn(Optional.of(resourceWithoutLesson));
+        when(lessonResourceRepository.findById(resourceWithNullChapter)).thenReturn(Optional.of(resourceWithBrokenChapter));
+        when(lessonResourceRepository.findById(resourceWithNullCourse)).thenReturn(Optional.of(resourceWithBrokenCourse));
+        when(lessonResourceRepository.findById(resourceWithNullCourseId)).thenReturn(Optional.of(resourceWithBrokenCourseId));
+
+        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+
+        assertThat(accessService.canEditLessonResource(teacher, null)).isFalse();
+        assertThat(accessService.canEditLessonResource(teacher, resourceId)).isFalse();
+        assertThat(accessService.canEditLessonResource(teacher, resourceWithNullChapter)).isFalse();
+        assertThat(accessService.canEditLessonResource(teacher, resourceWithNullCourse)).isFalse();
+        assertThat(accessService.canEditLessonResource(teacher, resourceWithNullCourseId)).isFalse();
+    }
+
+    @Test
     void coursePermissions_coverCreateViewAndManageOperations() {
         UUID courseId = UUID.randomUUID();
 
@@ -417,6 +544,13 @@ class AccessServiceCoverageTest {
         assertThat(accessService.canReplaceCourse(teacher, courseId)).isTrue();
         assertThat(accessService.canEditCourse(null, courseId)).isFalse();
         assertThat(accessService.canViewPublicCourses(null)).isTrue();
+    }
+
+    @Test
+    void coursePermissions_returnFalseWhenCourseIdIsNullForNonAdmin() {
+        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+
+        assertThat(accessService.canEditCourse(teacher, null)).isFalse();
     }
 
     @Test
@@ -454,6 +588,84 @@ class AccessServiceCoverageTest {
         assertThat(accessService.canStartTest(student, missingTestId)).isFalse();
         assertThat(accessService.canStartTest(student, orphanedTestId)).isFalse();
         assertThat(accessService.canStartTest(student, managedTestId)).isTrue();
+    }
+
+    @Test
+    void testPermissions_returnFalseForNullAndBrokenCourseChains() {
+        UUID testId = UUID.randomUUID();
+        UUID testWithNullCourseId = UUID.randomUUID();
+        UUID testWithNullCourse = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID lessonWithNullCourseId = UUID.randomUUID();
+        UUID lessonWithNullCourse = UUID.randomUUID();
+        org.elearning.backend.assessment.model.Test test = test(testId, lessonId);
+        org.elearning.backend.assessment.model.Test testBrokenAtCourseId = test(testWithNullCourseId, lessonWithNullCourseId);
+        org.elearning.backend.assessment.model.Test testBrokenAtCourse = test(testWithNullCourse, lessonWithNullCourse);
+        Lesson lessonWithoutChapter = new Lesson();
+        lessonWithoutChapter.setId(lessonId);
+        Lesson lessonWithCourseWithoutId = new Lesson();
+        lessonWithCourseWithoutId.setId(lessonWithNullCourseId);
+        Chapter chapter = new Chapter();
+        chapter.setCourse(new Course());
+        lessonWithCourseWithoutId.setChapter(chapter);
+        Lesson lessonWithMissingCourse = new Lesson();
+        lessonWithMissingCourse.setId(lessonWithNullCourse);
+        lessonWithMissingCourse.setChapter(new Chapter());
+
+        when(testRepository.findById(testId)).thenReturn(Optional.of(test));
+        when(testRepository.findById(testWithNullCourseId)).thenReturn(Optional.of(testBrokenAtCourseId));
+        when(testRepository.findById(testWithNullCourse)).thenReturn(Optional.of(testBrokenAtCourse));
+        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lessonWithoutChapter));
+        when(lessonRepository.findById(lessonWithNullCourseId)).thenReturn(Optional.of(lessonWithCourseWithoutId));
+        when(lessonRepository.findById(lessonWithNullCourse)).thenReturn(Optional.of(lessonWithMissingCourse));
+
+        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+        Authentication student = authenticationFor(user(RoleName.STUDENT, UUID.randomUUID()));
+
+        assertThat(accessService.canStartTest(student, null)).isFalse();
+        assertThat(accessService.canStartTest(student, testId)).isFalse();
+        assertThat(accessService.canStartTest(student, testWithNullCourseId)).isFalse();
+        assertThat(accessService.canStartTest(student, testWithNullCourse)).isFalse();
+        assertThat(accessService.canViewTest(teacher, null)).isFalse();
+        assertThat(accessService.canViewMyBestTestResult(student, null)).isFalse();
+        assertThat(accessService.canViewMyBestTestResult(student, testId)).isFalse();
+        assertThat(accessService.canViewMyBestTestResult(student, testWithNullCourseId)).isFalse();
+    }
+
+    @Test
+    void bestResultPermissions_returnFalseWhenCourseExistsButStudentHasNoAccess() {
+        UUID testId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+
+        org.elearning.backend.assessment.model.Test test = test(testId, lessonId);
+        Lesson lesson = lesson(lessonId, courseId);
+        User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+
+        when(testRepository.findById(testId)).thenReturn(Optional.of(test));
+        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId, UUID.randomUUID())));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(studentUser.getId(), courseId)).thenReturn(false);
+
+        assertThat(accessService.canViewMyBestTestResult(authenticationFor(studentUser), testId)).isFalse();
+    }
+
+    @Test
+    void startTestPermissions_returnFalseWhenCourseExistsButUserCannotAccessIt() {
+        UUID testId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+
+        org.elearning.backend.assessment.model.Test test = test(testId, lessonId);
+        Lesson lesson = lesson(lessonId, courseId);
+        User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+
+        when(testRepository.findById(testId)).thenReturn(Optional.of(test));
+        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId, UUID.randomUUID())));
+        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(studentUser.getId(), courseId)).thenReturn(false);
+
+        assertThat(accessService.canStartTest(authenticationFor(studentUser), testId)).isFalse();
     }
 
     @Test
@@ -533,6 +745,58 @@ class AccessServiceCoverageTest {
     }
 
     @Test
+    void testQuestionPermissions_returnFalseForNullIdsAndBrokenLessonChain() {
+        UUID targetTestId = UUID.randomUUID();
+        UUID targetTestWithNullCourseId = UUID.randomUUID();
+        UUID targetTestWithNullCourse = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID lessonWithNullCourseId = UUID.randomUUID();
+        UUID lessonWithNullCourse = UUID.randomUUID();
+        int questionId = 88;
+
+        org.elearning.backend.assessment.model.Test targetTest = test(targetTestId, lessonId);
+        org.elearning.backend.assessment.model.Test targetTestBrokenAtCourseId = test(targetTestWithNullCourseId, lessonWithNullCourseId);
+        org.elearning.backend.assessment.model.Test targetTestBrokenAtCourse = test(targetTestWithNullCourse, lessonWithNullCourse);
+        Question validQuestion = new Question();
+        validQuestion.setId(questionId);
+        validQuestion.setTest(targetTest);
+        Question validQuestionForBrokenCourseId = new Question();
+        validQuestionForBrokenCourseId.setId(questionId + 1);
+        validQuestionForBrokenCourseId.setTest(targetTestBrokenAtCourseId);
+        Question validQuestionForBrokenCourse = new Question();
+        validQuestionForBrokenCourse.setId(questionId + 2);
+        validQuestionForBrokenCourse.setTest(targetTestBrokenAtCourse);
+        Lesson lessonWithoutChapter = new Lesson();
+        lessonWithoutChapter.setId(lessonId);
+        Lesson lessonWithBrokenCourseId = new Lesson();
+        lessonWithBrokenCourseId.setId(lessonWithNullCourseId);
+        Chapter chapter = new Chapter();
+        chapter.setCourse(new Course());
+        lessonWithBrokenCourseId.setChapter(chapter);
+        Lesson lessonWithBrokenCourse = new Lesson();
+        lessonWithBrokenCourse.setId(lessonWithNullCourse);
+        lessonWithBrokenCourse.setChapter(new Chapter());
+
+        when(testRepository.findById(targetTestId)).thenReturn(Optional.of(targetTest));
+        when(testRepository.findById(targetTestWithNullCourseId)).thenReturn(Optional.of(targetTestBrokenAtCourseId));
+        when(testRepository.findById(targetTestWithNullCourse)).thenReturn(Optional.of(targetTestBrokenAtCourse));
+        when(questionRepository.findById(questionId)).thenReturn(Optional.of(validQuestion));
+        when(questionRepository.findById(questionId + 1)).thenReturn(Optional.of(validQuestionForBrokenCourseId));
+        when(questionRepository.findById(questionId + 2)).thenReturn(Optional.of(validQuestionForBrokenCourse));
+        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lessonWithoutChapter));
+        when(lessonRepository.findById(lessonWithNullCourseId)).thenReturn(Optional.of(lessonWithBrokenCourseId));
+        when(lessonRepository.findById(lessonWithNullCourse)).thenReturn(Optional.of(lessonWithBrokenCourse));
+
+        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+
+        assertThat(accessService.canViewTestQuestion(teacher, null, questionId)).isFalse();
+        assertThat(accessService.canViewTestQuestion(teacher, targetTestId, null)).isFalse();
+        assertThat(accessService.canViewTestQuestion(teacher, targetTestId, questionId)).isFalse();
+        assertThat(accessService.canViewTestQuestion(teacher, targetTestWithNullCourseId, questionId + 1)).isFalse();
+        assertThat(accessService.canViewTestQuestion(teacher, targetTestWithNullCourse, questionId + 2)).isFalse();
+    }
+
+    @Test
     void attemptPermissions_coverSubmitAndViewResultChecks() {
         UUID ownAttemptId = UUID.randomUUID();
         UUID otherAttemptId = UUID.randomUUID();
@@ -556,6 +820,14 @@ class AccessServiceCoverageTest {
         assertThat(accessService.canViewAttemptResult(authentication, missingAttemptId)).isFalse();
         assertThat(accessService.canViewAttemptResult(authentication, ownAttemptId)).isTrue();
         assertThat(accessService.canViewAttemptResult(authentication, otherAttemptId)).isFalse();
+    }
+
+    @Test
+    void attemptPermissions_returnFalseForNullAttemptIds() {
+        Authentication authentication = authenticationFor(user(RoleName.STUDENT, UUID.randomUUID()));
+
+        assertThat(accessService.canSubmitAttempt(authentication, null)).isFalse();
+        assertThat(accessService.canViewAttemptResult(authentication, null)).isFalse();
     }
 
     @Test
@@ -715,6 +987,19 @@ class AccessServiceCoverageTest {
         assertThat(accessService.canCreateChapter(orgAdminWithoutOrganization, nullOrganizationAdminCourseId)).isFalse();
         assertThat(accessService.canCreateChapter(otherTeacher, nullOrganizationAdminCourseId)).isFalse();
         assertThat(accessService.canCreateChapter(authenticationFor(user(RoleName.PARENT, organizationId)), nullOrganizationAdminCourseId)).isFalse();
+    }
+
+    @Test
+    void classroomPermissions_returnFalseForNullIdsAndRequests() {
+        UUID organizationId = UUID.randomUUID();
+        Authentication teacher = authenticationFor(user(RoleName.TEACHER, organizationId));
+        Authentication orgAdmin = authenticationFor(user(RoleName.ORGANIZATION_ADMIN, organizationId));
+        AssignCoursesToClassroomRequest request = new AssignCoursesToClassroomRequest();
+        request.setCourseIds(java.util.List.of(UUID.randomUUID()));
+
+        assertThat(accessService.canAssignCoursesToClassroom(teacher, null, request)).isFalse();
+        assertThat(accessService.canManageClassroom(orgAdmin, null)).isFalse();
+        assertThat(accessService.canListClassroomMembers(orgAdmin, null)).isFalse();
     }
 
     private Authentication authenticationFor(User user) {
