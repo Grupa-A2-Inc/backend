@@ -60,12 +60,18 @@ class AiControllerTest {
 
     private UUID teacherId;
     private String teacherToken;
+    private UUID studentId;
+    private String studentToken;
 
     @BeforeEach
     void setUp() {
         teacherId = UUID.randomUUID();
         insertUser(teacherId, RoleName.TEACHER);
         teacherToken = jwtUtil.generateAccessToken(teacherId, RoleName.TEACHER);
+        
+        studentId = UUID.randomUUID();
+        insertUser(studentId, RoleName.STUDENT);
+        studentToken = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
     }
 
     @AfterEach
@@ -78,6 +84,7 @@ class AiControllerTest {
         jdbcTemplate.execute("DELETE FROM chapters");
         jdbcTemplate.execute("DELETE FROM courses");
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", teacherId);
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", studentId);
     }
 
     // =========================================================================
@@ -279,11 +286,6 @@ class AiControllerTest {
                 .with(csrf());
     }
 
-        private MockHttpServletRequestBuilder authorizedGet(String urlTemplate, Object... uriVars) {
-                return get(urlTemplate, uriVars)
-                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + teacherToken);
-        }
-
     // =========================================================================
     // POST /api/v1/ai/request/{requestId}/inject
     // =========================================================================
@@ -433,7 +435,8 @@ class AiControllerTest {
                 CurriculumCatalogResponseDto response = new CurriculumCatalogResponseDto();
                 when(aiGenerationService.getCurriculumCatalog(any(CurriculumCatalogRequestDto.class))).thenReturn(response);
 
-                mockMvc.perform(authorizedGet("/api/v1/ai/catalog/curriculum")
+                mockMvc.perform(get("/api/v1/ai/catalog/curriculum")
+                                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + studentToken)
                                                 .param("grade", "9")
                                                 .param("subjectId", "12")
                                                 .param("topicId", "34"))
