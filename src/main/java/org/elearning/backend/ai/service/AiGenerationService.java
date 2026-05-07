@@ -2,9 +2,7 @@ package org.elearning.backend.ai.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.elearning.backend.ai.dto.AiGenerateRequestDto;
-import org.elearning.backend.ai.dto.AiGenerateResponseDto;
-import org.elearning.backend.ai.dto.AiRequestStatusDto;
+import org.elearning.backend.ai.dto.*;
 import org.elearning.backend.ai.exception.ValidationException;
 import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.ai.model.AiQuestionRequest;
@@ -97,7 +95,7 @@ public class AiGenerationService {
     }
 
     public AiGenerateResponseDto generateTestForLesson(AiGenerateRequestDto requestDto, UUID lessonId, UUID userId, RoleName role) {
-        Integer count = requestDto.getCount(); // asigura-te ca exista in DTO
+        Integer count = requestDto.getCount();
         if (count == null) {
             throw new ValidationException(" count is required.");
         }
@@ -110,5 +108,9 @@ public class AiGenerationService {
         responseDto.setLessonId(lessonId);
 
         return responseDto;
+    }
+
+    public CurriculumCatalogResponseDto getCurriculumCatalog(CurriculumCatalogRequestDto requestDto) {
+        return aiApiClient.getCurriculumCatalog(requestDto);
     }
 }

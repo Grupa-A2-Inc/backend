@@ -12,6 +12,7 @@ import org.elearning.backend.ai.service.AiQuestionInjectorService;
 import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -99,5 +100,21 @@ public class AiController extends GlobalHttpStatusCodes {
         UUID userId = userDetails.getUserId();
         RoleName role = userDetails.getRoleName();
         return ResponseEntity.ok(aiService.getRequestStatus(requestId, userId, role));
+    }
+
+    @Operation(
+            summary = "Get curriculum catalog",
+            description = "Returns curriculum catalog filtered by optional query parameters: grade, subjectId and topicId."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = OK, description = "Catalog returned successfully"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid query parameters"),
+            @ApiResponse(responseCode = UNAUTHORIZED, description = "Unauthorized"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied")
+    })
+    @PreAuthorize("hasRole('STUDENT')")
+    @GetMapping("/ai/catalog/curriculum")
+    public ResponseEntity<CurriculumCatalogResponseDto> getCurriculumCatalog(@ParameterObject CurriculumCatalogRequestDto requestDto) {
+        return ResponseEntity.ok(aiService.getCurriculumCatalog(requestDto));
     }
 }

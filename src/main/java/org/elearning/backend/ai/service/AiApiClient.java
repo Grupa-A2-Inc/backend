@@ -4,10 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
-import org.elearning.backend.ai.dto.AiAdaptiveResponse;
-import org.elearning.backend.ai.dto.AiAdaptiveExercisesRequest;
-import org.elearning.backend.ai.dto.AiGenerateResponse;
-import org.elearning.backend.ai.dto.AiStudentRegistrationResponse;
+import org.elearning.backend.ai.dto.*;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.elearning.backend.ai.exception.JsonSerializingException;
@@ -42,6 +39,7 @@ public class AiApiClient {
     private static final String ADAPTIVE_EXERCISES_URI = "/ai/api/v1/adaptive/exercises";
     private static final String ADAPTIVE_FEEDBACK_URI = "/ai/api/v1/adaptive/feedback";
     private static final String STUDENT_REGISTRATION_URI = "/ai/api/v1/students";
+    private static final String CURRICULUM_CATALOG_URI = "/ai/api/v1/catalog/curriculum";
 
     private final String apiKey;
     private final RestClient generateRestClient;
@@ -257,6 +255,49 @@ public class AiApiClient {
         } catch (ResourceAccessException e) {
             log.error("Timeout la student registration AI pentru studentId: {}", studentId);
             throw new AiTimeoutException("Timeout student registration AI: " + e.getMessage());
+        }
+    }
+
+    public CurriculumCatalogResponseDto getCurriculumCatalog(CurriculumCatalogRequestDto requestDto) {
+        try {
+            log.info("AI curriculum catalog request for student grade: {}", requestDto.getGrade());
+
+            CurriculumCatalogResponseDto response = generateRestClient.get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path(CURRICULUM_CATALOG_URI);
+
+                        if (requestDto.getSubjectId() != null) {
+                            uriBuilder.queryParam("subjectId", requestDto.getSubjectId());
+                        }
+                        if (requestDto.getTopicId() != null) {
+                            uriBuilder.queryParam("topicId", requestDto.getTopicId());
+                        }
+                        if (requestDto.getGrade() != null) {
+                            uriBuilder.queryParam("grade", requestDto.getGrade());
+                        }
+
+                        return uriBuilder.build();
+                    })
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(API_KEY_HEADER, apiKey)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, clientResponse) -> {
+                        String responseBody = readErrorResponseBody(clientResponse);
+                        log.error("AI curriculum catalog failed: status={} responseBody={}",
+                                clientResponse.getStatusCode(), responseBody);
+                        throw new AiApiException("AI API Error: " + responseBody);
+                    })
+                    .body(CurriculumCatalogResponseDto.class);
+
+            if (response == null) {
+                throw new AiApiException("AI curriculum catalog returned an empty response");
+            }
+
+            return response;
+
+        } catch (ResourceAccessException e) {
+            log.error("Timeout la curriculum catalog AI: {}", e.getMessage());
+            throw new AiTimeoutException("Timeout AI: " + e.getMessage());
         }
     }
 
