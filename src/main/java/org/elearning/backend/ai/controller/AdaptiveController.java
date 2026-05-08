@@ -10,6 +10,7 @@ import org.elearning.backend.ai.dto.AdaptiveResultDto;
 import org.elearning.backend.ai.dto.AdaptiveStartDto;
 import org.elearning.backend.ai.dto.AdaptiveStartRequestDto;
 import org.elearning.backend.ai.dto.AdaptiveSubmitRequestDto;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.ai.service.AdaptiveSessionService;
 import org.springframework.http.ResponseEntity;
@@ -25,17 +26,11 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-public class AdaptiveController {
+public class AdaptiveController extends GlobalHttpStatusCodes {
     private final AdaptiveSessionService adaptiveSessionService;
-
-    private static final String OK = "200";
-    private static final String NOT_FOUND = "404";
-    private static final String CONFLICT = "409";
-    private static final String UNPROCESSABLE_CONTENT = "422";
 
     /**
      * Submit a student's answers for an adaptive session and return the computed results.
-     *
      * Processes the submitted answers, calculates the total score, and returns per-question details
      * along with AI feedback status.
      *
@@ -69,6 +64,12 @@ public class AdaptiveController {
      * @param userDetails authentication principal for the current user; the student's UUID is taken from this object
      * @return an AdaptiveStartDto describing the created adaptive session
      */
+    @Operation(summary = "Start an adaptive session", description = "Starts a new adaptive learning session for the authenticated student using the specified subject, topic, and question count.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = OK, description = "Adaptive session started successfully"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Subject or topic not found"),
+            @ApiResponse(responseCode = UNPROCESSABLE_CONTENT, description = "Validation error in request parameters")
+    })
     @PostMapping("/adaptive/start")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<AdaptiveStartDto> startAdaptiveSession(@RequestBody AdaptiveStartRequestDto request, @AuthenticationPrincipal CustomUserDetails userDetails)

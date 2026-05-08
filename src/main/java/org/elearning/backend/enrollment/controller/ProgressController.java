@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.enrollment.dto.CompletedCourseDto;
 import org.elearning.backend.enrollment.dto.EnrolledCourseDto;
 import org.elearning.backend.enrollment.dto.ProgressWithLessonListDto;
@@ -30,15 +31,15 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-public class ProgressController {
+public class ProgressController extends GlobalHttpStatusCodes {
     private final ProgressService courseProgressService;
 
     // SWAGGER ADDED
     @Operation(summary = "Get my course progress", description = "Returns the authenticated student's progress for the specified course")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Progress retrieved successfully"),
-            @ApiResponse(responseCode = "404", description = "Course not found"),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = OK, description = "Progress retrieved successfully"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied")
     })
     @GetMapping("/courses/{courseId}/my-progress")
     @PreAuthorize("hasRole('STUDENT')")
@@ -53,9 +54,9 @@ public class ProgressController {
     // SWAGGER ADDED
     @Operation(summary = "Get all students' progress for a course", description = "Returns a paginated list of student progress for the specified course, accessible by the authenticated teacher")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Progress data returned successfully"),
-            @ApiResponse(responseCode = "404", description = "Course not found"),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = OK, description = "Progress data returned successfully"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied")
     })
     @GetMapping("/courses/{courseId}/students-progress")
     @PreAuthorize("hasRole('TEACHER')")
@@ -71,9 +72,9 @@ public class ProgressController {
     // SWAGGER ADDED
     @Operation(summary = "Get a student's courses progress", description = "Returns the list of enrolled courses and their progress for the specified student")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Progress data returned successfully"),
-            @ApiResponse(responseCode = "403", description = "Access denied"),
-            @ApiResponse(responseCode = "404", description = "Student not found")
+            @ApiResponse(responseCode = OK, description = "Progress data returned successfully"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Student not found")
     })
     @GetMapping("/students/{studentId}/courses-progress")
     @PreAuthorize("hasAnyRole('TEACHER', 'PARENT', 'ADMIN') or (hasRole('STUDENT') and #studentId == principal.id)")
@@ -85,8 +86,8 @@ public class ProgressController {
     // SWAGGER ADDED
     @Operation(summary = "Get my completed courses", description = "Returns a list of courses the authenticated student has completed")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Completed courses returned successfully"),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = OK, description = "Completed courses returned successfully"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied")
     })
     @GetMapping("/students/me/completed-courses")
     @PreAuthorize("hasRole('STUDENT')")

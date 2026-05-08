@@ -14,12 +14,15 @@ import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.enrollment.model.CourseEnrollment;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.subscription.exception.ClassroomLimitExceededException;
+import org.elearning.backend.subscription.service.EntitlementService;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.entity.UserStatus;
 import org.elearning.backend.user.exception.UserNotFoundException;
@@ -41,11 +44,17 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import org.elearning.backend.classroom.entity.ClassroomCourse;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @org.springframework.test.context.ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
@@ -71,6 +80,9 @@ class ClassroomServiceTest {
 
     @Mock
     private CourseEnrollmentRepository courseEnrollmentRepository;
+
+    @Mock
+    private EntitlementService entitlementService;
 
     @Test
     void createClassroom_savesClassroomForRequesterOrganization() {
@@ -177,7 +189,7 @@ class ClassroomServiceTest {
     }
 
     @Test
-    void getMyOrganizationClassrooms_returnsMappedClassrooms() {
+    void getMyOrganizationClassrooms_returnsPaginatedResponse() {
         User requester = makeUserWithOrganization();
         Organization organization = requester.getOrganization();
         Classroom first = makeClassroom(organization, "A", "First");
@@ -185,14 +197,100 @@ class ClassroomServiceTest {
 
         when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
         when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
-        when(classroomRepository.findAllByOrganizationIdOrderByNameAsc(organization.getId()))
-                .thenReturn(List.of(first, second));
+        when(classroomRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(
+                        List.of(first, second),
+                        PageRequest.of(0, 10),  // <-- adaugă asta
+                        2L
+                ));
 
-        List<ClassroomResponse> responses = classroomService.getMyOrganizationClassrooms(requester.getId());
+        PaginatedResponse<ClassroomResponse> result =
+                classroomService.getMyOrganizationClassrooms(requester.getId(), 0, 10, null, null, null);
 
-        assertThat(responses).hasSize(2);
-        assertThat(responses.get(0).getName()).isEqualTo("A");
-        assertThat(responses.get(1).getDescription()).isEqualTo("Second");
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getName()).isEqualTo("A");
+        assertThat(result.getContent().get(1).getDescription()).isEqualTo("Second");
+        assertThat(result.getTotalElements()).isEqualTo(2L);
+        assertThat(result.getPage()).isZero();
+        assertThat(result.getSize()).isEqualTo(10);
+    }
+
+    @Test
+    void getMyOrganizationClassrooms_withSearch_passesSpecToRepository() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        PaginatedResponse<ClassroomResponse> result =
+                classroomService.getMyOrganizationClassrooms(requester.getId(), 0, 10, "math", "name", "asc");
+
+        assertThat(result.getContent()).isEmpty();
+        verify(classroomRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void getMyOrganizationClassrooms_withInvalidSortBy_fallsBackToName() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        assertThat(classroomService.getMyOrganizationClassrooms(
+                requester.getId(), 0, 10, null, "invalidField", "asc"))
+                .isNotNull();
+    }
+
+    @Test
+    void getMyOrganizationClassrooms_withCreatedAtDescSort_usesRequestedPageable() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 4), 0L));
+
+        classroomService.getMyOrganizationClassrooms(requester.getId(), 1, 4, " ", "createdAt", "desc");
+
+        var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(classroomRepository).findAll(any(Specification.class), pageableCaptor.capture());
+
+        Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isEqualTo(1);
+        assertThat(pageable.getPageSize()).isEqualTo(4);
+        assertThat(pageable.getSort().getOrderFor("createdAt"))
+                .extracting(Sort.Order::getDirection)
+                .isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getMyOrganizationClassrooms_withNegativePageZeroSizeAndBlankSortDirection_usesDefaults() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0L));
+
+        classroomService.getMyOrganizationClassrooms(requester.getId(), -1, 0, " ", "name", " ");
+
+        var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(classroomRepository).findAll(any(Specification.class), pageableCaptor.capture());
+
+        Pageable pageable = pageableCaptor.getValue();
+        assertThat(pageable.getPageNumber()).isZero();
+        assertThat(pageable.getPageSize()).isEqualTo(10);
+        assertThat(pageable.getSort().getOrderFor("name"))
+                .extracting(Sort.Order::getDirection)
+                .isEqualTo(Sort.Direction.ASC);
     }
 
     @Test
@@ -751,65 +849,101 @@ class ClassroomServiceTest {
     }
 
     @Test
-    void listClassroomMembers_shouldReturnAllMembers_whenRoleIsNull() {
+    void listClassroomMembers_shouldReturnAllMembers_whenMembershipTypeIsNull() {
         UUID classroomId = UUID.randomUUID();
         UUID orgId = UUID.randomUUID();
-
         Classroom classroom = buildClassroom(classroomId, orgId);
+
         ClassroomMembership studentMembership =
                 buildMembership(classroom, buildUser(UUID.randomUUID(), orgId, RoleName.STUDENT), MembershipType.STUDENT);
         ClassroomMembership teacherMembership =
                 buildMembership(classroom, buildUser(UUID.randomUUID(), orgId, RoleName.TEACHER), MembershipType.TEACHER);
 
         when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
-        when(classroomMembershipRepository.findAllByClassroomId(classroomId))
-                .thenReturn(List.of(studentMembership, teacherMembership));
+        when(classroomMembershipRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(studentMembership, teacherMembership)));
 
-        List<ClassroomMemberResponse> result = classroomService.listClassroomMembers(classroomId, null);
+        PaginatedResponse<ClassroomMemberResponse> result =
+                classroomService.listClassroomMembers(classroomId, null, 0, 10, null, null, null);
 
-        assertThat(result).hasSize(2);
-        assertThat(result).extracting(ClassroomMemberResponse::getMembershipType)
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent())
+                .extracting(ClassroomMemberResponse::getMembershipType)
                 .containsExactlyInAnyOrder(MembershipType.STUDENT, MembershipType.TEACHER);
+        assertThat(result.getTotalElements()).isEqualTo(2L);
     }
 
     @Test
-    void listClassroomMembers_shouldReturnOnlyStudents_whenRoleIsStudent() {
+    void listClassroomMembers_shouldReturnOnlyStudents_whenMembershipTypeIsStudent() {
         UUID classroomId = UUID.randomUUID();
         UUID orgId = UUID.randomUUID();
-
         Classroom classroom = buildClassroom(classroomId, orgId);
+
         ClassroomMembership membership =
                 buildMembership(classroom, buildUser(UUID.randomUUID(), orgId, RoleName.STUDENT), MembershipType.STUDENT);
 
         when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
-        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(classroomId, MembershipType.STUDENT))
-                .thenReturn(List.of(membership));
+        when(classroomMembershipRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(membership)));
 
-        List<ClassroomMemberResponse> result =
-                classroomService.listClassroomMembers(classroomId, MembershipType.STUDENT);
+        PaginatedResponse<ClassroomMemberResponse> result =
+                classroomService.listClassroomMembers(classroomId, MembershipType.STUDENT, 0, 10, null, null, null);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getMembershipType()).isEqualTo(MembershipType.STUDENT);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getMembershipType()).isEqualTo(MembershipType.STUDENT);
     }
 
     @Test
-    void listClassroomMembers_shouldReturnOnlyTeachers_whenRoleIsTeacher() {
+    void listClassroomMembers_shouldReturnOnlyTeachers_whenMembershipTypeIsTeacher() {
         UUID classroomId = UUID.randomUUID();
         UUID orgId = UUID.randomUUID();
-
         Classroom classroom = buildClassroom(classroomId, orgId);
+
         ClassroomMembership membership =
                 buildMembership(classroom, buildUser(UUID.randomUUID(), orgId, RoleName.TEACHER), MembershipType.TEACHER);
 
         when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
-        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(classroomId, MembershipType.TEACHER))
-                .thenReturn(List.of(membership));
+        when(classroomMembershipRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(membership)));
 
-        List<ClassroomMemberResponse> result =
-                classroomService.listClassroomMembers(classroomId, MembershipType.TEACHER);
+        PaginatedResponse<ClassroomMemberResponse> result =
+                classroomService.listClassroomMembers(classroomId, MembershipType.TEACHER, 0, 10, null, null, null);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getMembershipType()).isEqualTo(MembershipType.TEACHER);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getMembershipType()).isEqualTo(MembershipType.TEACHER);
+    }
+
+    @Test
+    void listClassroomMembers_shouldThrow_whenClassroomDoesNotExist() {
+        UUID classroomId = UUID.randomUUID();
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.empty());
+
+        assertThrows(ClassroomNotFoundException.class,
+                () -> classroomService.listClassroomMembers(classroomId, null, 0, 10, null, null, null));
+
+        verify(classroomMembershipRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void listClassroomMembers_shouldReturnCorrectPaginationMetadata() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        Classroom classroom = buildClassroom(classroomId, orgId);
+
+        ClassroomMembership membership =
+                buildMembership(classroom, buildUser(UUID.randomUUID(), orgId, RoleName.STUDENT), MembershipType.STUDENT);
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(membership),
+                        PageRequest.of(0, 5), 1L));
+
+        PaginatedResponse<ClassroomMemberResponse> result =
+                classroomService.listClassroomMembers(classroomId, null, 0, 5, null, null, null);
+
+        assertThat(result.getPage()).isZero();
+        assertThat(result.getSize()).isEqualTo(5);
+        assertThat(result.getTotalElements()).isEqualTo(1L);
     }
 
     @Test
@@ -1068,5 +1202,66 @@ class ClassroomServiceTest {
                         org.assertj.core.groups.Tuple.tuple(studentId, firstCourseId),
                         org.assertj.core.groups.Tuple.tuple(studentId, secondCourseId)
                 );
+    }
+
+    @Test
+    void createClassroom_whenBelowLimit_createsSuccessfully() {
+        UUID userId = UUID.randomUUID();
+        UUID orgId  = UUID.randomUUID();
+
+        Organization organization = new Organization();
+        organization.setId(orgId);
+
+        User requester = new User();
+        requester.setId(userId);
+        requester.setOrganization(organization);
+
+        Classroom saved = new Classroom();
+        saved.setId(UUID.randomUUID());
+        saved.setOrganization(organization);
+        saved.setName("Clasa A");
+        saved.setDescription(null);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(organization));
+        doNothing().when(entitlementService).canCreateClassroom(orgId);
+        when(classroomRepository.existsByOrganizationIdAndNameIgnoreCase(orgId, "Clasa A"))
+                .thenReturn(false);
+        when(classroomRepository.save(any(Classroom.class))).thenReturn(saved);
+
+        CreateClassroomRequest request = new CreateClassroomRequest("Clasa A", null);
+        ClassroomResponse response = classroomService.createClassroom(request, userId);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getName()).isEqualTo("Clasa A");
+        verify(entitlementService).canCreateClassroom(orgId);
+        verify(classroomRepository).save(any(Classroom.class));
+    }
+
+    @Test
+    void createClassroom_whenAtLimit_throwsClassroomLimitExceededException() {
+        UUID userId = UUID.randomUUID();
+        UUID orgId  = UUID.randomUUID();
+
+        Organization organization = new Organization();
+        organization.setId(orgId);
+
+        User requester = new User();
+        requester.setId(userId);
+        requester.setOrganization(organization);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(orgId)).thenReturn(Optional.of(organization));
+        doThrow(new ClassroomLimitExceededException(orgId, 5))
+                .when(entitlementService).canCreateClassroom(orgId);
+
+        CreateClassroomRequest request = new CreateClassroomRequest("Clasa B", null);
+
+        assertThatThrownBy(() -> classroomService.createClassroom(request, userId))
+                .isInstanceOf(ClassroomLimitExceededException.class)
+                .hasMessageContaining("5");
+
+        verify(entitlementService).canCreateClassroom(orgId);
+        verify(classroomRepository, never()).save(any());
     }
 }

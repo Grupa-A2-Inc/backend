@@ -8,6 +8,7 @@ CREATE TABLE subscription_plans (
     has_premium_features BOOLEAN NOT NULL DEFAULT FALSE,
     price_monthly NUMERIC(10, 2),
     currency VARCHAR(3),
+    stripe_price_id VARCHAR(255),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_subscription_plans_code_not_blank CHECK (btrim(code) <> ''),
@@ -33,9 +34,10 @@ INSERT INTO subscription_plans (
     max_courses,
     has_premium_features,
     price_monthly,
-    currency
+    currency,
+    stripe_price_id
 ) VALUES
-    ('FREE', 'Free', 31, 1, 3, FALSE, 0.00, 'EUR'),
-    ('STARTER', 'Starter', 100, 5, 20, FALSE, 29.99, 'EUR'),
-    ('SCHOOL', 'School', 500, 20, 100, TRUE, 99.99, 'EUR'),
-    ('ENTERPRISE', 'Enterprise', 5000, 200, NULL, TRUE, 399.99, 'EUR');
+    ('FREE', 'Free', 31, 1, 3, FALSE, 0.00, 'EUR', NULL),
+    ('STARTER', 'Starter', 100, 5, 20, FALSE, 29.99, 'EUR', 'price_1TTTdwDbgsH75lpfdjGo1LLY'),
+    ('SCHOOL', 'School', 500, 20, 100, TRUE, 99.99, 'EUR', 'price_1TTTeMDbgsH75lpfNKwLA9qu'),
+    ('ENTERPRISE', 'Enterprise', 5000, 200, NULL, TRUE, 399.99, 'EUR', 'price_1TTTeoDbgsH75lpfnSMvRvob');

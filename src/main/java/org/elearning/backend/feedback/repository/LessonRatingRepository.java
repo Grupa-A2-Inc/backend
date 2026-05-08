@@ -1,6 +1,5 @@
 package org.elearning.backend.feedback.repository;
 
-import org.elearning.backend.feedback.dto.CommentDto;
 import org.elearning.backend.feedback.dto.LessonRatingStatsDto;
 import org.elearning.backend.feedback.model.LessonRating;
 import org.springframework.data.jpa.repository.JpaRepository;

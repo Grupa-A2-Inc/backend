@@ -8,6 +8,7 @@ import org.elearning.backend.organization.exception.OrganizationSubscriptionNotF
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.subscription.dto.request.CreateOrganizationSubscriptionRequest;
 import org.elearning.backend.subscription.dto.request.UpdateOrganizationSubscriptionRequest;
+import org.elearning.backend.subscription.dto.request.UpdateSubscriptionPlanRequest;
 import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionResponse;
 import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionStatusResponse;
 import org.elearning.backend.subscription.dto.response.SubscriptionPlanResponse;
@@ -82,6 +83,14 @@ public class OrganizationSubscriptionService {
         return toStatusResponse(subscription);
     }
 
+    @Transactional(readOnly = true)
+    public List<SubscriptionPlanResponse> getAllSubscriptionPlans() {
+        return subscriptionPlanRepository.findAllByOrderByDisplayNameAsc()
+                .stream()
+                .map(this::toSubscriptionPlanResponse)
+                .toList();
+    }
+
     public OrganizationSubscriptionResponse updateOrganizationSubscription(UUID id, UpdateOrganizationSubscriptionRequest request) {
         OrganizationSubscription subscription = organizationSubscriptionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Organization subscription not found: " + id));
@@ -125,26 +134,46 @@ public class OrganizationSubscriptionService {
     }
 
     private OrganizationSubscriptionStatusResponse toStatusResponse(OrganizationSubscription subscription) {
-        SubscriptionPlan plan = subscription.getSubscriptionPlan();
-
         return new OrganizationSubscriptionStatusResponse(
                 subscription.getOrganization().getId(),
                 subscription.getStatus(),
                 subscription.getCurrentPeriodStart(),
                 subscription.getCurrentPeriodEnd(),
-                new SubscriptionPlanResponse(
-                        plan.getId(),
-                        plan.getCode(),
-                        plan.getDisplayName(),
-                        plan.getMaxUsers(),
-                        plan.getMaxClassrooms(),
-                        plan.getMaxCourses(),
-                        plan.getHasPremiumFeatures(),
-                        plan.getPriceMonthly(),
-                        plan.getCurrency(),
-                        plan.getCreatedAt(),
-                        plan.getUpdatedAt()
-                )
+                toSubscriptionPlanResponse(subscription.getSubscriptionPlan())
         );
+    }
+
+    private SubscriptionPlanResponse toSubscriptionPlanResponse(SubscriptionPlan plan) {
+        return new SubscriptionPlanResponse(
+                plan.getId(),
+                plan.getCode(),
+                plan.getDisplayName(),
+                plan.getMaxUsers(),
+                plan.getMaxClassrooms(),
+                plan.getMaxCourses(),
+                plan.getHasPremiumFeatures(),
+                plan.getPriceMonthly(),
+                plan.getCurrency(),
+                plan.getCreatedAt(),
+                plan.getUpdatedAt()
+        );
+    }
+
+    // gaseste subscription ul activ al organizatiei, schimba planul cu cel nou si salveaza
+    @Transactional
+    public OrganizationSubscriptionResponse changePlan(UUID organizationId, UpdateSubscriptionPlanRequest request) {
+        OrganizationSubscription subscription = organizationSubscriptionRepository
+                .findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(organizationId, CURRENT_STATUSES)
+                .orElseThrow(() -> new OrganizationSubscriptionNotFoundException(
+                        "No active subscription found for organization: " + organizationId
+                ));
+
+        SubscriptionPlan newPlan = subscriptionPlanRepository.findById(request.getPlanId())
+                .orElseThrow(() -> new EntityNotFoundException("Subscription plan not found: " + request.getPlanId()));
+
+        subscription.setSubscriptionPlan(newPlan);
+
+        OrganizationSubscription saved = organizationSubscriptionRepository.save(subscription);
+        return toResponse(saved);
     }
 }

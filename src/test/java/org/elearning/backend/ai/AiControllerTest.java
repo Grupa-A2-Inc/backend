@@ -1,8 +1,11 @@
 package org.elearning.backend.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elearning.backend.ai.dto.CurriculumCatalogRequestDto;
+import org.elearning.backend.ai.dto.CurriculumCatalogResponseDto;
 import org.elearning.backend.ai.dto.InjectRequestDto;
 import org.elearning.backend.auth.service.EmailService;
+import org.elearning.backend.ai.service.AiGenerationService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -26,7 +29,11 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -43,6 +50,8 @@ class AiControllerTest {
     private ObjectMapper objectMapper;
     @MockitoBean
     private EmailService emailService;
+        @MockitoBean
+        private AiGenerationService aiGenerationService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -51,12 +60,18 @@ class AiControllerTest {
 
     private UUID teacherId;
     private String teacherToken;
+    private UUID studentId;
+    private String studentToken;
 
     @BeforeEach
     void setUp() {
         teacherId = UUID.randomUUID();
         insertUser(teacherId, RoleName.TEACHER);
         teacherToken = jwtUtil.generateAccessToken(teacherId, RoleName.TEACHER);
+        
+        studentId = UUID.randomUUID();
+        insertUser(studentId, RoleName.STUDENT);
+        studentToken = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
     }
 
     @AfterEach
@@ -69,6 +84,7 @@ class AiControllerTest {
         jdbcTemplate.execute("DELETE FROM chapters");
         jdbcTemplate.execute("DELETE FROM courses");
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", teacherId);
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", studentId);
     }
 
     // =========================================================================
@@ -413,6 +429,26 @@ class AiControllerTest {
 
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", otherTeacherId);
     }
+
+        @Test
+        void getCurriculumCatalog_shouldBindQueryParams() throws Exception {
+                CurriculumCatalogResponseDto response = new CurriculumCatalogResponseDto();
+                when(aiGenerationService.getCurriculumCatalog(any(CurriculumCatalogRequestDto.class))).thenReturn(response);
+
+                mockMvc.perform(get("/api/v1/ai/catalog/curriculum")
+                                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + studentToken)
+                                                .param("grade", "9")
+                                                .param("subjectId", "12")
+                                                .param("topicId", "34"))
+                                .andExpect(status().isOk());
+
+                verify(aiGenerationService).getCurriculumCatalog(org.mockito.ArgumentMatchers.argThat(request ->
+                                request != null
+                                                && Integer.valueOf(9).equals(request.getGrade())
+                                                && Integer.valueOf(12).equals(request.getSubjectId())
+                                                && Integer.valueOf(34).equals(request.getTopicId())
+                ));
+        }
 
     @ParameterizedTest
     @ValueSource(strings = {"FAILED", "PENDING", "FALLBACK"})

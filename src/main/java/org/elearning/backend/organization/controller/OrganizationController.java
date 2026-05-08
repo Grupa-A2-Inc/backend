@@ -6,14 +6,20 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
 import org.elearning.backend.organization.service.OrganizationService;
+import org.elearning.backend.subscription.dto.request.CheckoutRequest;
+import org.elearning.backend.subscription.dto.request.UpdateSubscriptionPlanRequest;
+import org.elearning.backend.subscription.dto.response.CheckoutSessionResponse;
+import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionResponse;
 import org.elearning.backend.subscription.dto.response.OrganizationSubscriptionStatusResponse;
 import org.elearning.backend.subscription.service.OrganizationSubscriptionService;
+import org.elearning.backend.subscription.service.StripeService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,16 +33,24 @@ import java.util.UUID;
 @Tag(name = "Organizations", description = "Endpoints for managing organizations")
 @RequestMapping("/api/v1/organizations")
 public class OrganizationController {
+    private static final String OK = "200";
+    private static final String CREATED = "201";
+    private static final String NO_CONTENT = "204";
+    private static final String BAD_REQUEST = "400";
+    private static final String UNAUTHORIZED = "401";
+    private static final String FORBIDDEN = "403";
+    private static final String NOT_FOUND = "404";
 
     private final OrganizationService organizationService;
     private final OrganizationSubscriptionService organizationSubscriptionService;
+    private final StripeService stripeService;
 
     @Operation(
             summary = "Create a new organization",
             description = "Creates a new organization"
     )
     @ApiResponse(
-            responseCode = "201",
+            responseCode = CREATED,
             description = "Organization created successfully",
             content = @Content(
                     mediaType = "application/json",
@@ -44,17 +58,17 @@ public class OrganizationController {
             )
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Bad request",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
@@ -66,10 +80,19 @@ public class OrganizationController {
 
     @Operation(
             summary = "Get all organizations",
-            description = "Returns the list of all organizations"
+            description = """
+                    Returns the list of all organizations.
+
+                    Query parameters:
+                    - `page` — zero-based page index; accepts integers `0` or greater; defaults to `0` when omitted or negative
+                    - `size` — number of items per page; accepts positive integers; defaults to `10` when omitted or invalid
+                    - `search` — optional case-insensitive text filter used to match organization names; accepts any text value
+                    - `sortBy` — field used for sorting; accepted values are `name` and `createdAt`
+                    - `sortDir` — sort direction; accepted values are `asc` and `desc`
+                    """
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Organizations retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
@@ -77,12 +100,12 @@ public class OrganizationController {
             )
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
@@ -103,7 +126,7 @@ public class OrganizationController {
             description = "Returns a single organization identified by its UUID"
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Organization retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
@@ -111,17 +134,17 @@ public class OrganizationController {
             )
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "404",
+            responseCode = NOT_FOUND,
             description = "Organization not found",
             content = @Content
     )
@@ -136,7 +159,7 @@ public class OrganizationController {
             description = "Returns the current subscription status and plan limits for the specified organization"
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Organization subscription retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
@@ -144,17 +167,17 @@ public class OrganizationController {
             )
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "404",
+            responseCode = NOT_FOUND,
             description = "Organization or subscription not found",
             content = @Content
     )
@@ -171,27 +194,27 @@ public class OrganizationController {
             description = "Updates the organization identified by the given UUID"
     )
     @ApiResponse(
-            responseCode = "204",
+            responseCode = NO_CONTENT,
             description = "Organization updated successfully",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Bad request",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "404",
+            responseCode = NOT_FOUND,
             description = "Organization not found",
             content = @Content
     )
@@ -208,22 +231,22 @@ public class OrganizationController {
             description = "Deletes the organization identified by the given UUID"
     )
     @ApiResponse(
-            responseCode = "204",
+            responseCode = NO_CONTENT,
             description = "Organization deleted successfully",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Unauthorized",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "403",
+            responseCode = FORBIDDEN,
             description = "Access denied",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "404",
+            responseCode = NOT_FOUND,
             description = "Organization not found",
             content = @Content
     )
@@ -232,5 +255,53 @@ public class OrganizationController {
     public ResponseEntity<Void> deleteOrganization(@PathVariable UUID id) {
         organizationService.deleteOrganization(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+            summary = "Create checkout session",
+            description = "Creates a Stripe checkout session for subscription activation"
+    )
+    @ApiResponse(
+            responseCode = OK,
+            description = "Checkout session created successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = CheckoutSessionResponse.class)
+            )
+    )
+    @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request data", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "Access denied", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Organization or plan not found", content = @Content)
+    @PreAuthorize("@accessService.canEditOrganization(authentication, #organizationId)")
+    @PostMapping("/{organizationId}/subscription/checkout")
+    public ResponseEntity<CheckoutSessionResponse> createCheckoutSession(
+            @P("organizationId") @PathVariable UUID organizationId,
+            @Valid @RequestBody CheckoutRequest request) {
+
+        return ResponseEntity.ok(stripeService.createCheckoutSession(organizationId, request));
+    }
+
+    @Operation(
+            summary = "Change subscription plan",
+            description = "Changes the active subscription plan for the specified organization"
+    )
+    @ApiResponse(
+            responseCode = OK,
+            description = "Subscription plan changed successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = OrganizationSubscriptionResponse.class)
+            )
+    )
+    @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request data", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "Access denied", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Organization or subscription not found", content = @Content)
+    @PreAuthorize("@accessService.canEditOrganization(authentication, #organizationId)")
+    @PatchMapping("/{organizationId}/subscription")
+    public ResponseEntity<OrganizationSubscriptionResponse> changeSubscriptionPlan(
+            @P("organizationId") @PathVariable UUID organizationId,
+            @Valid @RequestBody UpdateSubscriptionPlanRequest request) {
+
+        return ResponseEntity.ok(organizationSubscriptionService.changePlan(organizationId, request));
     }
 }

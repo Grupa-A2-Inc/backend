@@ -63,14 +63,14 @@ public class TestResultService {
 
         return answers.stream()
                 .map(answer -> {
-                    Integer questionId = answer.getQuestion().getId();
+                    int questionId = answer.getQuestion().getId();
 
                     // Get correct option IDs for this question (where isCorrect = true)
                     List<Integer> correctOptionIds = optionRepository
                             .findByQuestionIdAndIsCorrectTrue(questionId)
                             .stream()
                             .map(QuestionOption::getId)
-                            .collect(Collectors.toList());
+                            .toList();
 
                     // Build the DTO
                     return QuestionForAttemptReportDTO.builder()

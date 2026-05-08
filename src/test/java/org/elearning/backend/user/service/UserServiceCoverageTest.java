@@ -11,6 +11,7 @@ import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
 import org.elearning.backend.student.entity.Student;
+import org.elearning.backend.subscription.service.EntitlementService;
 import org.elearning.backend.user.dto.request.ChangePasswordRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.request.UpdateUserRequest;
@@ -41,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,6 +71,9 @@ class UserServiceCoverageTest {
 
     @Mock
     private AiStudentRegistrationService aiStudentRegistrationService;
+
+    @Mock
+    private EntitlementService entitlementService;
 
     @InjectMocks
     private UserService userService;
@@ -104,6 +109,7 @@ class UserServiceCoverageTest {
         CreateUserRequest request = createUserRequest(RoleName.TEACHER, organizationId);
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(roleRepository.findByName(RoleName.TEACHER)).thenReturn(Optional.of(new Role(RoleName.TEACHER)));
+        doNothing().when(entitlementService).canCreateUser(organizationId);
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.createUser(request))
@@ -145,6 +151,7 @@ class UserServiceCoverageTest {
         CreateUserRequest request = createUserRequest(RoleName.STUDENT, organizationId);
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(new Role(RoleName.STUDENT)));
+        doNothing().when(entitlementService).canCreateUser(organizationId);
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization(organizationId)));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);
@@ -336,6 +343,7 @@ class UserServiceCoverageTest {
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(roleRepository.findByName(roleName)).thenReturn(Optional.of(role));
+        doNothing().when(entitlementService).canCreateUser(organizationId);
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);

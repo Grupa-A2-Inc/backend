@@ -4,13 +4,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.feedback.dto.ErrorReportDto;
 import org.elearning.backend.feedback.dto.GetErrorReportDto;
 import org.elearning.backend.feedback.exception.DifferentIdException;
 import org.elearning.backend.feedback.model.ReportStatus;
 import org.elearning.backend.feedback.service.ErrorReportManagementService;
-import org.elearning.backend.feedback.service.QuestionErrorReportService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,15 +22,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "Error Report Management", description = "Management of question error reports submitted by students")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
-public class ErrorReportManagementController {
-    private static final String OK = "200";
-
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
-    private static final String CONFLICT = "409";
+public class ErrorReportManagementController extends GlobalHttpStatusCodes {
 
     private final ErrorReportManagementService errorReportManagementService;
 

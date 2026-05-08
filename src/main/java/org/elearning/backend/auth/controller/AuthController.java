@@ -36,6 +36,11 @@ import java.time.LocalDateTime;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
+    private static final String OK = "200";
+    private static final String NO_CONTENT = "204";
+    private static final String BAD_REQUEST = "400";
+    private static final String UNAUTHORIZED = "401";
+    private static final String CONFLICT = "409";
 
     private final AuthService authService;
     private final PasswordResetService resetService;
@@ -62,7 +67,7 @@ public class AuthController {
                     "through internal management flows should use the user-management endpoints instead."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Registration successful",
             content = @Content(
                     mediaType = "application/json",
@@ -70,12 +75,12 @@ public class AuthController {
             )
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Invalid request data",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "409",
+            responseCode = CONFLICT,
             description = "Conflict - account already exists or data violates business rules",
             content = @Content
     )
@@ -93,7 +98,7 @@ public class AuthController {
                     "does not affect login itself; it affects which protected endpoints can be used after authentication succeeds."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Login successful",
             content = @Content(
                     mediaType = "application/json",
@@ -101,12 +106,12 @@ public class AuthController {
             )
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Invalid request data",
             content = @Content
     )
     @ApiResponse(
-            responseCode = "401",
+            responseCode = UNAUTHORIZED,
             description = "Invalid credentials",
             content = @Content
     )
@@ -123,9 +128,9 @@ public class AuthController {
                     "This endpoint is separate from the forgot-password flow. In practice, it is commonly used after an ADMIN or an ORGANIZATION_ADMIN " +
                     "creates a managed account for someone else and the invited user needs to complete first-time access securely."
     )
-    @ApiResponse(responseCode = "200", description = "Account activated and password set successfully",
+    @ApiResponse(responseCode = OK, description = "Account activated and password set successfully",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ResetPasswordResponse.class)))
-    @ApiResponse(responseCode = "400", description = "Invalid or expired token, or passwords do not match", content = @Content)
+    @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid or expired token, or passwords do not match", content = @Content)
     @PostMapping("/set-password")
     public ResponseEntity<ResetPasswordResponse> setPassword(@Valid @RequestBody SetPasswordRequest request) {
         ResetPasswordResponse response = accountActivationService.setPassword(request);
@@ -139,7 +144,7 @@ public class AuthController {
                     "The endpoint is available to every account type and is independent from ADMIN or ORGANIZATION_ADMIN privileges."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Password reset request processed",
             content = @Content(
                     mediaType = "application/json",
@@ -147,7 +152,7 @@ public class AuthController {
             )
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Invalid request data",
             content = @Content
     )
@@ -163,7 +168,7 @@ public class AuthController {
                     "and has not expired. This endpoint is part of the self-service recovery flow and does not rely on ADMIN or ORGANIZATION_ADMIN privileges."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Password reset processed",
             content = @Content(
                     mediaType = "application/json",
@@ -171,7 +176,7 @@ public class AuthController {
             )
     )
     @ApiResponse(
-            responseCode = "400",
+            responseCode = BAD_REQUEST,
             description = "Invalid request data or reset token",
             content = @Content
     )
@@ -188,9 +193,9 @@ public class AuthController {
                     "This endpoint keeps existing role identity intact: if the user was authenticated as ADMIN or ORGANIZATION_ADMIN, the new access token " +
                     "will preserve that role and its authorization scope."
     )
-    @ApiResponse(responseCode = "200", description = "New access token issued and refresh token cookie sent",
+    @ApiResponse(responseCode = OK, description = "New access token issued and refresh token cookie sent",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = RefreshResponse.class)))
-    @ApiResponse(responseCode = "401", description = "Invalid, expired or revoked refresh token", content = @Content)
+    @ApiResponse(responseCode = UNAUTHORIZED, description = "Invalid, expired or revoked refresh token", content = @Content)
     @PostMapping("/refresh")
     public ResponseEntity<RefreshResponse> refresh(@CookieValue(name = "refresh_token", required = false) String rawRefreshToken) {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
@@ -221,11 +226,7 @@ public class AuthController {
                     "This endpoint does not distinguish between ADMIN, ORGANIZATION_ADMIN, or any other authenticated role; " +
                     "it simply terminates the current session material as safely as possible."
     )
-    @ApiResponse(
-            responseCode = "204",
-            description = "Logout successful",
-            content = @Content
-    )
+    @ApiResponse(responseCode = NO_CONTENT, description = "Logout successful", content = @Content)
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             @CookieValue(name = "refresh_token", required = false) String rawRefreshToken,

@@ -9,8 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.elearning.backend.ai.dto.*;
 import org.elearning.backend.ai.service.AiGenerationService;
 import org.elearning.backend.ai.service.AiQuestionInjectorService;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,17 +26,9 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
-public class AiController {
+public class AiController extends GlobalHttpStatusCodes {
     private final AiQuestionInjectorService aiQuestionInjectorService;
     private final AiGenerationService aiService;
-
-    private static final String OK = "200";
-    private static final String ACCEPTED = "202";
-    private static final String BAD_REQUEST = "400";
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
-    private static final String CONFLICT = "409";
-    private static final String UNPROCESSABLE_CONTENT = "422";
 
     /**
      * Injects AI-generated questions from the specified AI request into a test.
@@ -106,5 +100,21 @@ public class AiController {
         UUID userId = userDetails.getUserId();
         RoleName role = userDetails.getRoleName();
         return ResponseEntity.ok(aiService.getRequestStatus(requestId, userId, role));
+    }
+
+    @Operation(
+            summary = "Get curriculum catalog",
+            description = "Returns curriculum catalog filtered by optional query parameters: grade, subjectId and topicId."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = OK, description = "Catalog returned successfully"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid query parameters"),
+            @ApiResponse(responseCode = UNAUTHORIZED, description = "Unauthorized"),
+            @ApiResponse(responseCode = FORBIDDEN, description = "Access denied")
+    })
+    @PreAuthorize("hasRole('STUDENT')")
+    @GetMapping("/ai/catalog/curriculum")
+    public ResponseEntity<CurriculumCatalogResponseDto> getCurriculumCatalog(@ParameterObject CurriculumCatalogRequestDto requestDto) {
+        return ResponseEntity.ok(aiService.getCurriculumCatalog(requestDto));
     }
 }

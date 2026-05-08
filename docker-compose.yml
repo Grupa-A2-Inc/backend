@@ -39,7 +39,7 @@ services:
       - MAIL_USERNAME
       - MAIL_PASSWORD
       - MAIL_FROM
-      - APP_FRONTEND_URL=http://localhost:3000
+      - APP_FRONTEND_URL=https://frontend-teal-five-57.vercel.app
 
       - AI_API_BASE_URL
       - AI_API_KEY

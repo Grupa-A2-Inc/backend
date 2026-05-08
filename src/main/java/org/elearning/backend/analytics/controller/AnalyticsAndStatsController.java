@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 // SWAGGER ADDED
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.elearning.backend.analytics.dto.statistics.student.MySummaryDataDto;
 import org.elearning.backend.analytics.dto.statistics.teacher.ClassAverageDto;
 import org.elearning.backend.analytics.dto.statistics.student.MyTestStatsDto;
@@ -11,6 +12,7 @@ import org.elearning.backend.analytics.dto.statistics.teacher.StudentAverageDto;
 import org.elearning.backend.analytics.service.AnalyticsQueryService;
 import org.elearning.backend.analytics.service.StudentsStatsService;
 
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -29,25 +31,11 @@ import java.util.UUID;
 @Tag(name = "Analytics & Stats", description = "Course and test analytics for teachers and students")
 @RestController
 @RequestMapping("/api/v1")
-public class AnalyticsAndStatsController {
-
-    private static final String OK = "200";
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
+@RequiredArgsConstructor
+public class AnalyticsAndStatsController extends GlobalHttpStatusCodes {
 
     private final AnalyticsQueryService analyticsQueryService;
     private final StudentsStatsService studentsStatsService;
-
-    /**
-     * Create a new AnalyticsAndStatsController wired with the services required to serve analytics and student statistics endpoints.
-     *
-     * @param analyticsQueryService service providing analytics queries such as class averages and student averages
-     * @param studentsStatsService  service providing per-student statistics and summary data
-     */
-    public AnalyticsAndStatsController(AnalyticsQueryService analyticsQueryService, StudentsStatsService studentsStatsService) {
-        this.analyticsQueryService = analyticsQueryService;
-        this.studentsStatsService = studentsStatsService;
-    }
 
     /**
      * Retrieve class average statistics for a specific test.

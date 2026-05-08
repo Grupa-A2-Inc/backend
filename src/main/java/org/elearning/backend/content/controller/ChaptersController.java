@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.content.dto.ChapterDtoPost;
 import org.elearning.backend.content.dto.ChapterDtoResponse;
 import org.elearning.backend.content.model.Chapter;
@@ -20,7 +21,7 @@ import java.util.UUID;
 @Tag(name = "Chapters", description = "Chapter administration")
 @RestController
 @RequestMapping("/api/v1")
-public class ChaptersController {
+public class ChaptersController extends GlobalHttpStatusCodes {
     private final ChapterService chapterService;
 
     public ChaptersController(ChapterService chapterService) {
@@ -29,8 +30,8 @@ public class ChaptersController {
 
     @Operation(summary = "Create a new chapter", description = "Creates a new chapter inside a course given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Chapter successfully created"),
-            @ApiResponse(responseCode = "404", description = "Course not found")
+            @ApiResponse(responseCode = CREATED, description = "Chapter successfully created"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found")
     })
     @PostMapping("/courses/{courseId}/chapters")
     @PreAuthorize("@accessService.canCreateChapter(authentication,#id)")
@@ -42,8 +43,8 @@ public class ChaptersController {
 
     @Operation(summary = "Get all chapters", description = "Returns all chapters from a course given by its ID, ordered by order index")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Chapters successfully returned"),
-            @ApiResponse(responseCode = "404", description = "Course not found")
+            @ApiResponse(responseCode = OK, description = "Chapters successfully returned"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Course not found")
     })
     @GetMapping("/courses/{courseId}/chapters")
     @PreAuthorize("@accessService.canViewCourseChapters(authentication,#id)")
@@ -54,8 +55,8 @@ public class ChaptersController {
 
     @Operation(summary = "Delete a chapter", description = "Deletes a chapter given by its ID, repairing the order index of remaining chapters")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Chapter successfully deleted"),
-            @ApiResponse(responseCode = "404", description = "Chapter not found")
+            @ApiResponse(responseCode = NO_CONTENT, description = "Chapter successfully deleted"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Chapter not found")
     })
     @DeleteMapping("/chapters/{id}")
     @PreAuthorize("@accessService.canDeleteChapter(authentication,#id)")
@@ -66,9 +67,9 @@ public class ChaptersController {
 
     @Operation(summary = "Update chapter metadata", description = "Updates the title and/or order index of a chapter given by its ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Chapter successfully updated"),
-            @ApiResponse(responseCode = "400", description = "Order index out of range"),
-            @ApiResponse(responseCode = "404", description = "Chapter not found")
+            @ApiResponse(responseCode = OK, description = "Chapter successfully updated"),
+            @ApiResponse(responseCode = BAD_REQUEST, description = "Order index out of range"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Chapter not found")
     })
     @PatchMapping("/chapters/{id}")
     @PreAuthorize("@accessService.canEditChapter(authentication,#id)")

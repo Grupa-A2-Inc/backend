@@ -10,6 +10,7 @@ import org.elearning.backend.analytics.dto.alerts.ThresholdDTO;
 import org.elearning.backend.analytics.dto.statistics.teacher.FailureRateDTO;
 import org.elearning.backend.analytics.dto.statistics.teacher.TestFailureRateChartDTO;
 import org.elearning.backend.analytics.service.FailureRateService;
+import org.elearning.backend.common.GlobalHttpStatusCodes;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
@@ -23,24 +24,17 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-import static org.springframework.security.authorization.AuthorityReactiveAuthorizationManager.hasRole;
-
 // SWAGGER ADDED
 @Tag(name = "Failure Rate", description = "Test and lesson failure rate analytics and alerts")
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-public class FailureRateController {
-    private static final String OK = "200";
-
-    private static final String FORBIDDEN = "403";
-    private static final String NOT_FOUND = "404";
+public class FailureRateController extends GlobalHttpStatusCodes {
 
     private final FailureRateService failureRateService;
 
     /**
      * Retrieve failure-rate information for a specific test.
-     *
      * The response contains the test's failure rate, the configured alert threshold, and whether the threshold
      * currently triggers an alert for the professor identified by the provided authentication principal.
      *
@@ -81,7 +75,6 @@ public class FailureRateController {
 
     /**
      * Create or update an analytics alert for the specified test.
-     *
      * Creates or updates an alert that will be triggered when the test's failure rate exceeds the provided threshold.
      *
      * @param testId the UUID of the test to create or update the alert for
@@ -123,7 +116,6 @@ public class FailureRateController {
 
     /**
      * Retrieve failure-rate chart data for every test in the specified course.
-     *
      * The returned list contains a TestFailureRateChartDTO for each test, each providing daily failure rates suitable for trend visualization.
      *
      * @param courseId UUID of the course whose tests' failure-rate chart data will be returned
@@ -144,7 +136,6 @@ public class FailureRateController {
 
     /**
      * Obtain the UUID of the authenticated user.
-     *
      * If the principal is a CustomUserDetails, returns its userId; otherwise parses the principal's
      * username as a UUID.
      *

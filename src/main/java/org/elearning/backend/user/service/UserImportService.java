@@ -7,8 +7,6 @@ import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserImportResult;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,7 +16,6 @@ public class UserImportService {
 
     private final UserService userService;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public UserImportResult tryCreateSingleUser(CreateUserRequest request) {
         try {
             UserResponse createdUser = userService.createUser(request);
