@@ -6,6 +6,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.classroom.dto.request.AssignCoursesToClassroomRequest;
 import org.elearning.backend.classroom.dto.request.ModifyClassroomMembersRequest;
@@ -18,6 +20,7 @@ import org.elearning.backend.classroom.dto.response.ClassroomCourseResponse;
 import org.elearning.backend.classroom.dto.response.ClassroomResponse;
 import org.elearning.backend.classroom.service.ClassroomCourseService;
 import org.elearning.backend.classroom.service.ClassroomService;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +43,12 @@ import java.util.UUID;
 @RequestMapping("/api/v1/classrooms")
 @RequiredArgsConstructor
 public class ClassroomsController {
+    private static final String OK = "200";
+    private static final String CREATED = "201";
+    private static final String NO_CONTENT = "204";
+    private static final String BAD_REQUEST = "400";
+    private static final String FORBIDDEN = "403";
+    private static final String NOT_FOUND = "404";
 
     private final ClassroomService classroomService;
 
@@ -52,15 +61,15 @@ public class ClassroomsController {
                     "A platform ADMIN is a broader role elsewhere in the system, but this endpoint is documented around the organization-managed classroom workflow."
     )
     @ApiResponse(
-            responseCode = "201",
+            responseCode = CREATED,
             description = "Classroom created successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomResponse.class)
             )
     )
-    @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
-    @ApiResponse(responseCode = "403", description = "User is not allowed to create classrooms", content = @Content)
+    @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request data", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to create classrooms", content = @Content)
     @PostMapping
     @PreAuthorize("@accessService.canCreateClassroom(authentication)")
     public ResponseEntity<ClassroomResponse> createClassroom(
@@ -73,25 +82,77 @@ public class ClassroomsController {
 
     @Operation(
             summary = "List organization classrooms",
-            description = "Returns the classrooms that belong to the authenticated caller's organization. The result is organization-scoped rather than platform-wide. " +
-                    "This means an ORGANIZATION_ADMIN sees only the classrooms from the organization they administer, not classrooms from other organizations. " +
-                    "This endpoint is meant for administrative overviews inside one tenant boundary."
+            description = """
+                    Returns the classrooms that belong to the authenticated caller's organization. The result is organization-scoped rather than platform-wide.
+                    This means an ORGANIZATION_ADMIN sees only the classrooms from the organization they administer, not classrooms from other organizations.
+                    This endpoint is meant for administrative overviews inside one tenant boundary.
+
+                    Query parameters:
+                    - `page` — zero-based page index; accepts integers `0` or greater
+                    - `size` — number of items per page; accepts integers from `0` to `1000` at request-validation level, while the service defaults invalid values to `10`
+                    - `search` — optional case-insensitive text filter for classroom name; accepts any text value
+                    - `sortBy` — optional field used for sorting the classroom list; accepted values are `name` and `createdAt`
+                    - `sortDir` — optional sort direction; accepted values are `asc` and `desc`
+                    """
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Classrooms retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomResponse.class)
             )
     )
-    @ApiResponse(responseCode = "403", description = "User is not allowed to view classrooms", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to view classrooms", content = @Content)
     @GetMapping
     @PreAuthorize("@accessService.canCreateClassroom(authentication)")
-    public ResponseEntity<List<ClassroomResponse>> getMyOrganizationClassrooms(
-            @AuthenticationPrincipal CustomUserDetails currentUser) {
+    public ResponseEntity<PaginatedResponse<ClassroomResponse>> getMyOrganizationClassrooms(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestParam(required = false) @Min(0) Integer page,
+            @RequestParam(required = false) @Min(0) @Max(1000) Integer size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
 
-        return ResponseEntity.ok(classroomService.getMyOrganizationClassrooms(currentUser.getUserId()));
+        return ResponseEntity.ok(classroomService.getMyOrganizationClassrooms(
+                currentUser.getUserId(), page, size, search, sortBy, sortDir));
+    }
+
+    @Operation(
+            summary = "List my classrooms",
+            description = """
+                    Returns the classrooms the authenticated user belongs to, either as STUDENT or TEACHER.
+
+                    Query parameters:
+                    - `page` — zero-based page index; accepts integers `0` or greater
+                    - `size` — number of items per page; accepts positive integers and defaults to `10` when omitted or invalid
+                    - `search` — optional case-insensitive text filter for classroom name; accepts any text value
+                    - `sortBy` — optional field used for sorting the classroom list; accepted values are `name` and `createdAt`
+                    - `sortDir` — optional sort direction; accepted values are `asc` and `desc`
+                    """
+    )
+    @ApiResponse(
+            responseCode = OK,
+            description = "Classrooms retrieved successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ClassroomResponse.class)
+            )
+    )
+    @ApiResponse(responseCode = FORBIDDEN, description = "Not authenticated", content = @Content)
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    //@PreAuthorize("@accessService.extractCurrentUser(authentication) != null")
+    public ResponseEntity<PaginatedResponse<ClassroomResponse>> getMyClassrooms(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
+
+        return ResponseEntity.ok(classroomService.getMyClassrooms(
+                currentUser.getUserId(), page, size, search, sortBy, sortDir));
     }
 
     @Operation(
@@ -101,15 +162,15 @@ public class ClassroomsController {
                     "may manage only classrooms that belong to their own organization. Ordinary teachers and students do not automatically gain classroom-management access."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Classroom retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomResponse.class)
             )
     )
-    @ApiResponse(responseCode = "403", description = "User is not allowed to access this classroom", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom not found", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to access this classroom", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Classroom not found", content = @Content)
     @GetMapping("/{id}")
     @PreAuthorize("@accessService.canManageClassroom(authentication, #id)")
     public ResponseEntity<ClassroomResponse> getClassroomById(
@@ -126,16 +187,16 @@ public class ClassroomsController {
                     "Being a teacher or student in a classroom is not enough to use this endpoint."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Classroom updated successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomResponse.class)
             )
     )
-    @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
-    @ApiResponse(responseCode = "403", description = "User is not allowed to update this classroom", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom not found", content = @Content)
+    @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request data", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to update this classroom", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Classroom not found", content = @Content)
     @PatchMapping("/{id}")
     @PreAuthorize("@accessService.canManageClassroom(authentication, #id)")
     public ResponseEntity<ClassroomResponse> patchClassroom(
@@ -152,9 +213,9 @@ public class ClassroomsController {
                     "A platform ADMIN has global scope, while an ORGANIZATION_ADMIN is limited to classrooms within their own organization. " +
                     "Membership in the classroom alone does not authorize deletion."
     )
-    @ApiResponse(responseCode = "204", description = "Classroom deleted successfully", content = @Content)
-    @ApiResponse(responseCode = "403", description = "User is not allowed to delete this classroom", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom not found", content = @Content)
+    @ApiResponse(responseCode = NO_CONTENT, description = "Classroom deleted successfully", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to delete this classroom", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Classroom not found", content = @Content)
     @DeleteMapping("/{id}")
     @PreAuthorize("@accessService.canManageClassroom(authentication, #id)")
     public ResponseEntity<Void> deleteClassroom(
@@ -173,16 +234,16 @@ public class ClassroomsController {
                     "allowed to attach courses unless the course-assignment access rule explicitly permits it. The endpoint is designed to preserve teacher ownership of course content."
     )
     @ApiResponse(
-            responseCode = "201",
+            responseCode = CREATED,
             description = "Courses assigned successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomCourseResponse.class)
             )
     )
-    @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
-    @ApiResponse(responseCode = "403", description = "User is not allowed to manage this classroom", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom or course not found", content = @Content)
+    @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request data", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to manage this classroom", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Classroom or course not found", content = @Content)
     @PostMapping("/{classroomId}/courses")
     @PreAuthorize("@accessService.canAssignCoursesToClassroom(authentication, #classroomId, #request)")
     public ResponseEntity<List<ClassroomCourseResponse>> assignCourses(
@@ -198,26 +259,43 @@ public class ClassroomsController {
 
     @Operation(
             summary = "List courses in classroom",
-            description = "Returns the courses assigned to the specified classroom. Visibility to this list depends on the caller's relationship to the classroom rather than " +
-                    "a single admin-only rule. A platform ADMIN may access broadly, an ORGANIZATION_ADMIN may access according to organization-scoped classroom rules, " +
-                    "and teachers or students may gain access only through classroom membership or other access-service checks."
+            description = """
+                    Returns the courses assigned to the specified classroom. Visibility to this list depends on the caller's relationship to the classroom rather than
+                    a single admin-only rule. A platform ADMIN may access broadly, an ORGANIZATION_ADMIN may access according to organization-scoped classroom rules,
+                    and teachers or students may gain access only through classroom membership or other access-service checks.
+
+                    Query parameters:
+                    - `page` — zero-based page index; accepts integers `0` or greater
+                    - `size` — number of items per page; accepts integers from `0` to `1000` at request-validation level, while the service defaults invalid values to `10`
+                    - `search` — optional case-insensitive text filter applied to course titles; accepts any text value
+                    - `category` — optional course-category filter; accepts any existing course category string
+                    - `sortBy` — optional field used for sorting the classroom-course list; accepted values are `title` and `assignedAt`
+                    - `sortDir` — optional sort direction; accepted values are `asc` and `desc`
+                    """
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Courses retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomCourseDetailsResponse.class)
             )
     )
-    @ApiResponse(responseCode = "403", description = "User is not allowed to view classroom courses", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom not found", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to view classroom courses", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Classroom not found", content = @Content)
     @GetMapping("/{classroomId}/courses")
     @PreAuthorize("@accessService.canViewClassroomCourses(authentication, #classroomId)")
-    public ResponseEntity<List<ClassroomCourseDetailsResponse>> getClassroomCourses(
-            @P("classroomId") @PathVariable UUID classroomId) {
+    public ResponseEntity<PaginatedResponse<ClassroomCourseDetailsResponse>> getClassroomCourses(
+            @P("classroomId") @PathVariable UUID classroomId,
+            @RequestParam(required = false) @Min(0) Integer page,
+            @RequestParam(required = false) @Min(0) @Max(1000) Integer size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
 
-        return ResponseEntity.ok(classroomCourseService.getClassroomCourses(classroomId));
+        return ResponseEntity.ok(classroomCourseService.getClassroomCourses(
+                classroomId, page, size, search, category, sortBy, sortDir));
     }
 
     @Operation(
@@ -227,16 +305,16 @@ public class ClassroomsController {
                     "The endpoint does not exist to let teachers self-manage classroom rosters unless the access rules explicitly grant them classroom-management authority."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Members added successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomResponse.class)
             )
     )
-    @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
-    @ApiResponse(responseCode = "403", description = "User is not allowed to manage this classroom", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom or member not found", content = @Content)
+    @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request data", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to manage this classroom", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Classroom or member not found", content = @Content)
     @PostMapping("/{classroomId}/members")
     @PreAuthorize("@accessService.canManageClassroom(authentication, #classroomId)")
     public ResponseEntity<ClassroomResponse> addClassroomMembers(
@@ -256,16 +334,16 @@ public class ClassroomsController {
                     "A platform ADMIN acts across the system, while an ORGANIZATION_ADMIN is limited to their own organization. The endpoint enforces those boundaries through the access layer."
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Members removed successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomResponse.class)
             )
     )
-    @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
-    @ApiResponse(responseCode = "403", description = "User is not allowed to manage this classroom", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom or member not found", content = @Content)
+    @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request data", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to manage this classroom", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Classroom or member not found", content = @Content)
     @DeleteMapping("/{classroomId}/members")
     @PreAuthorize("@accessService.canManageClassroom(authentication, #classroomId)")
     public ResponseEntity<ClassroomResponse> deleteClassroomMembers(
@@ -281,26 +359,42 @@ public class ClassroomsController {
 
     @Operation(
             summary = "List classroom members",
-            description = "Returns the members of the specified classroom and optionally filters the result by membership type, such as TEACHER or STUDENT. " +
-                    "This endpoint is broader than classroom-management endpoints in some cases because access may also be granted to teachers who are actually assigned to the classroom. " +
-                    "The distinction remains important: ADMIN is platform-wide, ORGANIZATION_ADMIN is organization-wide, and teacher access is membership-based rather than administrative."
+            description = """
+                    Returns the members of the specified classroom and optionally filters the result by membership type, such as TEACHER or STUDENT.
+                    This endpoint is broader than classroom-management endpoints in some cases because access may also be granted to teachers who are actually assigned to the classroom.
+                    The distinction remains important: ADMIN is platform-wide, ORGANIZATION_ADMIN is organization-wide, and teacher access is membership-based rather than administrative.
+
+                    Query parameters:
+                    - `role` — optional membership-type filter; accepted values are `TEACHER` and `STUDENT`
+                    - `page` — zero-based page index; accepts integers `0` or greater
+                    - `size` — number of items per page; accepts integers from `0` to `1000` at request-validation level, while the service defaults invalid values to `10`
+                    - `search` — optional case-insensitive text filter applied to first name, last name, and email; accepts any text value
+                    - `sortBy` — optional field used for sorting the member list; accepted values are `firstName`, `lastName`, and `email`
+                    - `sortDir` — optional sort direction; accepted values are `asc` and `desc`
+                    """
     )
     @ApiResponse(
-            responseCode = "200",
+            responseCode = OK,
             description = "Classroom members retrieved successfully",
             content = @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = ClassroomMemberResponse.class)
             )
     )
-    @ApiResponse(responseCode = "403", description = "User is not allowed to view classroom members", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Classroom not found", content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN, description = "User is not allowed to view classroom members", content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND, description = "Classroom not found", content = @Content)
     @GetMapping("/{classroomId}/members")
     @PreAuthorize("@accessService.canListClassroomMembers(authentication, #classroomId)")
-    public ResponseEntity<List<ClassroomMemberResponse>> listClassroomMembers(
+    public ResponseEntity<PaginatedResponse<ClassroomMemberResponse>> listClassroomMembers(
             @P("classroomId") @PathVariable UUID classroomId,
-            @RequestParam(required = false) MembershipType role) {
+            @RequestParam(required = false) MembershipType role,
+            @RequestParam(required = false) @Min(0) Integer page,
+            @RequestParam(required = false) @Min(0) @Max(1000) Integer size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
 
-        return ResponseEntity.ok(classroomService.listClassroomMembers(classroomId, role));
+        return ResponseEntity.ok(classroomService.listClassroomMembers(
+                classroomId, role, page, size, search, sortBy, sortDir));
     }
 }

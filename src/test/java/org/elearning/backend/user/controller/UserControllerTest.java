@@ -12,6 +12,7 @@ import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserImportResult;
 import org.elearning.backend.user.dto.response.UserResponse;
 import org.elearning.backend.user.entity.UserStatus;
+import org.elearning.backend.user.service.CsvImportService;
 import org.elearning.backend.user.service.UserImportService;
 import org.elearning.backend.user.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.elearning.backend.common.dto.response.PaginatedResponse;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +40,9 @@ class UserControllerTest {
 
     @Mock
     private UserImportService userImportService;
+
+    @Mock
+    private CsvImportService csvImportService;
 
     @InjectMocks
     private UserController userController;
@@ -217,6 +222,44 @@ class UserControllerTest {
         assertEquals(1, response.getBody().getTotal());
         assertEquals(1, response.getBody().getSucceeded());
         assertEquals(0, response.getBody().getFailed());
+    }
+
+    @Test
+    void importUsersFromCsv_returns200Ok() {
+        UUID organizationId = UUID.randomUUID();
+        CustomUserDetails currentUser = mock(CustomUserDetails.class);
+        when(currentUser.getOrganizationId()).thenReturn(organizationId);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "users.csv",
+                "text/csv",
+                """
+                email,firstName,lastName,roleName
+                ion@scoala.ro,Ion,Pop,STUDENT
+                """.getBytes()
+        );
+
+        BulkImportResponse bulkResponse = new BulkImportResponse(List.of(
+                UserImportResult.succeeded(new UserResponse(
+                        UUID.randomUUID(),
+                        "ion@scoala.ro",
+                        "Ion",
+                        "Pop",
+                        RoleName.STUDENT,
+                        organizationId,
+                        UserStatus.PENDING
+                ))
+        ));
+
+        when(csvImportService.importFromCsv(file, organizationId)).thenReturn(bulkResponse);
+
+        ResponseEntity<BulkImportResponse> response = userController.importUsersFromCsv(file, currentUser);
+
+        verify(csvImportService).importFromCsv(file, organizationId);
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().getTotal());
     }
 
 

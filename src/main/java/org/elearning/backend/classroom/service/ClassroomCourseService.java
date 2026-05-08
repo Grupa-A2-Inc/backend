@@ -14,6 +14,7 @@ import org.elearning.backend.classroom.exception.CourseNotEligibleException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.repository.CourseRepository;
@@ -22,18 +23,22 @@ import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.exception.UserNotFoundException;
 import org.elearning.backend.user.repository.UserRepository;
-import org.springframework.aot.generate.AccessControl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class ClassroomCourseService {
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final String DEFAULT_SORT_FIELD = "assignedAt";
+    private static final String TITLE_SORT_FIELD = "title";
+    private static final String DESC_SORT_DIRECTION = "desc";
+    private static final String ASC_SORT_DIRECTION = "asc";
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(TITLE_SORT_FIELD, DEFAULT_SORT_FIELD);
+
     private final ClassroomRepository classroomRepository;
     private final ClassroomCourseRepository classroomCourseRepository;
     private final CourseRepository courseRepository;
@@ -97,22 +102,89 @@ public class ClassroomCourseService {
                 .toList();
     }
 
-    public List<ClassroomCourseDetailsResponse> getClassroomCourses(UUID classroomId) {
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ClassroomCourseDetailsResponse> getClassroomCourses(
+            UUID classroomId,
+            Integer page, Integer size,
+            String search, String category,
+            String sortBy, String sortDir) {
+
         if (!classroomRepository.existsById(classroomId)) {
             throw new ClassroomNotFoundException("Classroom not found: " + classroomId);
         }
 
-        return classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId)
-                .stream()
-                .map(cc -> {
-                    Course course = courseRepository.findById(cc.getCourseId())
-                            .orElseThrow(() -> new ClassroomBadRequestException(
-                                    "Course not found: " + cc.getCourseId()));
-                    return new AbstractMap.SimpleEntry<>(cc, course);
-                })
-                .filter(entry -> entry.getValue().getStatus() == CourseStatus.PUBLISHED)
+        int pageVal = normalizePage(page);
+        int sizeVal = normalizeSize(size);
+        String field = normalizeSortField(sortBy);
+        String dir = normalizeSortDirection(sortDir);
+
+        List<ClassroomCourse> all = classroomCourseRepository.findAllByClassroomIdOrderByAssignedAtAsc(classroomId);
+
+        List<ClassroomCourseDetailsResponse> filtered = all.stream()
+                .map(this::toPublishedCourseEntry)
+                .filter(Objects::nonNull)
+                .filter(entry -> matchesSearch(entry, search))
+                .filter(entry -> matchesCategory(entry, category))
+                .sorted(buildCourseComparator(field, dir))
                 .map(entry -> toCourseDetailsResponse(entry.getKey(), entry.getValue()))
                 .toList();
+
+        int total = filtered.size();
+        int fromIndex = Math.min(pageVal * sizeVal, total);
+        int toIndex   = Math.min(fromIndex + sizeVal, total);
+        List<ClassroomCourseDetailsResponse> content = filtered.subList(fromIndex, toIndex);
+
+        return new PaginatedResponse<>(content, pageVal, sizeVal, (long) total);
+    }
+
+    private Comparator<AbstractMap.SimpleEntry<ClassroomCourse, Course>> buildCourseComparator(String field, String dir) {
+        Comparator<AbstractMap.SimpleEntry<ClassroomCourse, Course>> comp = field.equals(TITLE_SORT_FIELD)
+                ? Comparator.comparing(e -> e.getValue().getTitle(), String.CASE_INSENSITIVE_ORDER)
+                : Comparator.comparing(e -> e.getKey().getAssignedAt());
+
+        return dir.equals(DESC_SORT_DIRECTION) ? comp.reversed() : comp;
+    }
+
+    private int normalizePage(Integer page) {
+        return page == null || page < 0 ? DEFAULT_PAGE : page;
+    }
+
+    private int normalizeSize(Integer size) {
+        return size == null || size <= 0 ? DEFAULT_PAGE_SIZE : size;
+    }
+
+    private String normalizeSortField(String sortBy) {
+        return sortBy != null && ALLOWED_SORT_FIELDS.contains(sortBy) ? sortBy : DEFAULT_SORT_FIELD;
+    }
+
+    private String normalizeSortDirection(String sortDir) {
+        return sortDir == null || sortDir.isBlank() ? ASC_SORT_DIRECTION : sortDir.toLowerCase(Locale.ROOT);
+    }
+
+    private AbstractMap.SimpleEntry<ClassroomCourse, Course> toPublishedCourseEntry(ClassroomCourse classroomCourse) {
+        Course course = courseRepository.findById(classroomCourse.getCourseId()).orElse(null);
+        if (course == null || course.getStatus() != CourseStatus.PUBLISHED) {
+            return null;
+        }
+
+        return new AbstractMap.SimpleEntry<>(classroomCourse, course);
+    }
+
+    private boolean matchesSearch(AbstractMap.SimpleEntry<ClassroomCourse, Course> entry, String search) {
+        if (search == null || search.isBlank()) {
+            return true;
+        }
+
+        String query = search.toLowerCase(Locale.ROOT).trim();
+        return entry.getValue().getTitle().toLowerCase(Locale.ROOT).contains(query);
+    }
+
+    private boolean matchesCategory(AbstractMap.SimpleEntry<ClassroomCourse, Course> entry, String category) {
+        if (category == null || category.isBlank()) {
+            return true;
+        }
+
+        return category.equalsIgnoreCase(entry.getValue().getCategory());
     }
 
     private void validateCourseEligibility(Course course, UUID organizationId) {

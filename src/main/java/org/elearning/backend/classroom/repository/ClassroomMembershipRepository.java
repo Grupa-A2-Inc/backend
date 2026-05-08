@@ -3,11 +3,12 @@ package org.elearning.backend.classroom.repository;
 import org.elearning.backend.classroom.entity.ClassroomMembership;
 import org.elearning.backend.classroom.entity.MembershipType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 import java.util.UUID;
 
-public interface ClassroomMembershipRepository extends JpaRepository<ClassroomMembership, UUID> {
+public interface ClassroomMembershipRepository extends JpaRepository<ClassroomMembership, UUID>, JpaSpecificationExecutor<ClassroomMembership> {
 
     // toti membrii unei clase
     List<ClassroomMembership> findAllByClassroomId(UUID classroomId);

@@ -17,40 +17,72 @@ import org.elearning.backend.classroom.exception.ClassroomNotFoundException;
 import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
+import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.enrollment.model.CourseEnrollment;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.subscription.service.EntitlementService;
 import org.elearning.backend.user.entity.User;
 import org.elearning.backend.user.exception.UserNotFoundException;
 import org.elearning.backend.user.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ClassroomService {
+    private static final String CLASSROOM_NOT_FOUND = "Classroom not found: ";
+    private static final String CLASSROOM_NAME_CONFLICT_TEMPLATE =
+            "Classroom with name '%s' already exists in this organization";
+    private static final String DEFAULT_CLASSROOM_SORT_FIELD = "name";
+    private static final String DEFAULT_MEMBER_SORT_FIELD = "firstName";
+    private static final String CREATED_AT_FIELD = "createdAt";
+    private static final String LAST_NAME_FIELD = "lastName";
+    private static final String EMAIL_FIELD = "email";
+    private static final String USER_SORT_PREFIX = "user.";
+    private static final String ASC_SORT_DIRECTION = "asc";
+    private static final String DESC_SORT_DIRECTION = "desc";
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final Set<String> CLASSROOM_ALLOWED_SORT_FIELDS = Set.of(
+            DEFAULT_CLASSROOM_SORT_FIELD,
+            CREATED_AT_FIELD
+    );
+    private static final Set<String> CLASSROOM_MEMBER_ALLOWED_SORT_FIELDS = Set.of(
+            DEFAULT_MEMBER_SORT_FIELD,
+            LAST_NAME_FIELD,
+            EMAIL_FIELD
+    );
 
     private final ClassroomRepository classroomRepository;
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
     private final ClassroomMembershipRepository classroomMembershipRepository;
-    private static final String CLASS_NOT_FOUND = "Classroom not found: ";
     private final ClassroomCourseRepository classroomCourseRepository;
     private final CourseEnrollmentRepository courseEnrollmentRepository;
+    private final EntitlementService entitlementService;
 
     @Transactional
     public ClassroomResponse createClassroom(CreateClassroomRequest request, UUID requesterUserId) {
         Organization organization = getRequesterOrganization(requesterUserId);
 
+        entitlementService.canCreateClassroom(organization.getId());
+
         if (classroomRepository.existsByOrganizationIdAndNameIgnoreCase(organization.getId(), request.getName())) {
             throw new ClassroomConflictException(
-                    "Classroom with name '" + request.getName() + "' already exists in this organization"
+                    CLASSROOM_NAME_CONFLICT_TEMPLATE.formatted(request.getName())
             );
         }
 
@@ -63,13 +95,39 @@ public class ClassroomService {
     }
 
     @Transactional(readOnly = true)
-    public List<ClassroomResponse> getMyOrganizationClassrooms(UUID requesterUserId) {
+    public PaginatedResponse<ClassroomResponse> getMyOrganizationClassrooms(
+            UUID requesterUserId,
+            Integer page, Integer size,
+            String search, String sortBy, String sortDir) {
+
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
 
-        return classroomRepository.findAllByOrganizationIdOrderByNameAsc(organizationId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        int pageVal = normalizePage(page);
+        int sizeVal = normalizeSize(size);
+        String field = normalizeSortField(sortBy, CLASSROOM_ALLOWED_SORT_FIELDS, DEFAULT_CLASSROOM_SORT_FIELD);
+        String dir = normalizeSortDirection(sortDir);
+
+        Sort sort = DESC_SORT_DIRECTION.equals(dir) ? Sort.by(field).descending() : Sort.by(field).ascending();
+        Pageable pageable = PageRequest.of(pageVal, sizeVal, sort);
+
+        Specification<Classroom> spec = Specification.where(
+                (root, query, cb) -> cb.equal(root.get("organization").get("id"), organizationId)
+        );
+
+        if (search != null && !search.isBlank()) {
+            String like = "%" + search.toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("name")), like));
+        }
+
+        Page<Classroom> resultPage = classroomRepository.findAll(spec, pageable);
+
+        return new PaginatedResponse<>(
+                resultPage.getContent().stream().map(this::toResponse).toList(),
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -77,9 +135,52 @@ public class ClassroomService {
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
 
         Classroom classroom = classroomRepository.findByIdAndOrganizationId(classroomId, organizationId)
-                .orElseThrow(() -> new ClassroomNotFoundException(CLASS_NOT_FOUND + classroomId));
+                .orElseThrow(() -> new ClassroomNotFoundException(CLASSROOM_NOT_FOUND + classroomId));
 
         return toResponse(classroom);
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ClassroomResponse> getMyClassrooms(
+            UUID userId,
+            Integer page, Integer size,
+            String search, String sortBy, String sortDir) {
+
+        userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User does not exist: " + userId));
+
+        int pageVal  = (page == null || page < 0)   ? 0  : page;
+        int sizeVal  = (size == null || size <= 0)   ? 10 : size;
+        String field = (sortBy != null && Set.of(DEFAULT_CLASSROOM_SORT_FIELD, CREATED_AT_FIELD).contains(sortBy))
+                ? sortBy
+                : DEFAULT_CLASSROOM_SORT_FIELD;
+        String dir   = (sortDir == null || sortDir.isBlank()) ? "asc" : sortDir.toLowerCase();
+
+        Sort sort = dir.equals("desc")
+                ? Sort.by("classroom." + field).descending()
+                : Sort.by("classroom." + field).ascending();
+        Pageable pageable = PageRequest.of(pageVal, sizeVal, sort);
+
+        Specification<ClassroomMembership> spec = Specification.where(
+                (root, query, cb) -> cb.equal(root.get("user").get("id"), userId)
+        );
+
+        if (search != null && !search.isBlank()) {
+            String like = "%" + search.toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("classroom").get("name")), like));
+        }
+
+        Page<ClassroomMembership> resultPage = classroomMembershipRepository.findAll(spec, pageable);
+
+        return new PaginatedResponse<>(
+                resultPage.getContent().stream()
+                        .map(m -> toResponse(m.getClassroom()))
+                        .toList(),
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements()
+        );
     }
 
     @Transactional
@@ -87,7 +188,7 @@ public class ClassroomService {
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
 
         Classroom classroom = classroomRepository.findByIdAndOrganizationId(classroomId, organizationId)
-                .orElseThrow(() -> new ClassroomNotFoundException(CLASS_NOT_FOUND + classroomId));
+                .orElseThrow(() -> new ClassroomNotFoundException(CLASSROOM_NOT_FOUND + classroomId));
 
         if (request.getName() != null && !request.getName().isBlank()) {
             boolean duplicateName = classroomRepository.existsByOrganizationIdAndNameIgnoreCase(organizationId, request.getName())
@@ -95,7 +196,7 @@ public class ClassroomService {
 
             if (duplicateName) {
                 throw new ClassroomConflictException(
-                        "Classroom with name '" + request.getName() + "' already exists in this organization"
+                        CLASSROOM_NAME_CONFLICT_TEMPLATE.formatted(request.getName())
                 );
             }
 
@@ -114,7 +215,7 @@ public class ClassroomService {
         UUID organizationId = getRequesterOrganization(requesterUserId).getId();
 
         Classroom classroom = classroomRepository.findByIdAndOrganizationId(classroomId, organizationId)
-                .orElseThrow(() -> new ClassroomNotFoundException(CLASS_NOT_FOUND + classroomId));
+                .orElseThrow(() -> new ClassroomNotFoundException(CLASSROOM_NOT_FOUND + classroomId));
 
         classroomRepository.delete(classroom);
     }
@@ -200,33 +301,81 @@ public class ClassroomService {
         return toResponse(classroom);
     }
 
-    public List<ClassroomMemberResponse> listClassroomMembers(UUID classroomId, MembershipType membershipType){
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ClassroomMemberResponse> listClassroomMembers(
+            UUID classroomId, MembershipType membershipType,
+            Integer page, Integer size,
+            String search, String sortBy, String sortDir) {
 
         classroomRepository.findById(classroomId)
                 .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found"));
 
-        List<ClassroomMembership> classroomMemberships;
-        if(membershipType == null){
-            classroomMemberships = classroomMembershipRepository.findAllByClassroomId(classroomId);
-        }
-        else{
-           classroomMemberships =  classroomMembershipRepository.findAllByClassroomIdAndMembershipType(classroomId, membershipType);
+        int pageVal = normalizePage(page);
+        int sizeVal = normalizeSize(size);
+        String field = normalizeSortField(sortBy, CLASSROOM_MEMBER_ALLOWED_SORT_FIELDS, DEFAULT_MEMBER_SORT_FIELD);
+        String dir = normalizeSortDirection(sortDir);
+
+        Sort sort = DESC_SORT_DIRECTION.equals(dir)
+                ? Sort.by(USER_SORT_PREFIX + field).descending()
+                : Sort.by(USER_SORT_PREFIX + field).ascending();
+        Pageable pageable = PageRequest.of(pageVal, sizeVal, sort);
+
+        Specification<ClassroomMembership> spec = Specification.where(
+                (root, query, cb) -> cb.equal(root.get("classroom").get("id"), classroomId)
+        );
+
+        if (membershipType != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("membershipType"), membershipType));
         }
 
-        return classroomMemberships.stream()
-                .map(membership -> new ClassroomMemberResponse(
-                        membership.getUser().getId(),
-                        membership.getUser().getEmail(),
-                        membership.getMembershipType()
-                ))
-                .toList();
+        if (search != null && !search.isBlank()) {
+            String like = "%" + search.toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("user").get(DEFAULT_MEMBER_SORT_FIELD)), like),
+                    cb.like(cb.lower(root.get("user").get(LAST_NAME_FIELD)), like),
+                    cb.like(cb.lower(root.get("user").get(EMAIL_FIELD)), like)
+            ));
+        }
 
+        Page<ClassroomMembership> resultPage = classroomMembershipRepository.findAll(spec, pageable);
+
+        return new PaginatedResponse<>(
+                resultPage.getContent().stream()
+                        .map(m -> new ClassroomMemberResponse(
+                                m.getUser().getId(),
+                                m.getUser().getEmail(),
+                                m.getMembershipType()
+                        ))
+                        .toList(),
+                resultPage.getNumber(),
+                resultPage.getSize(),
+                resultPage.getTotalElements()
+        );
     }
 
 
     private Classroom getClassroomOrThrow(UUID classroomId) {
         return classroomRepository.findById(classroomId)
                 .orElseThrow(() -> new ClassroomNotFoundException("Classroom not found."));
+    }
+
+    private int normalizePage(Integer page) {
+        return page == null || page < 0 ? DEFAULT_PAGE : page;
+    }
+
+    private int normalizeSize(Integer size) {
+        return size == null || size <= 0 ? DEFAULT_PAGE_SIZE : size;
+    }
+
+    private String normalizeSortField(String sortBy, Set<String> allowedFields, String defaultField) {
+        return sortBy != null && allowedFields.contains(sortBy) ? sortBy : defaultField;
+    }
+
+    private String normalizeSortDirection(String sortDir) {
+        return sortDir == null || sortDir.isBlank()
+                ? ASC_SORT_DIRECTION
+                : sortDir.toLowerCase(Locale.ROOT);
     }
 
     private List<User> getValidMembersForClassroom(Set<UUID> memberIds, Classroom classroom) {
