@@ -95,7 +95,7 @@ class ProgressControllerTest {
     }
 
     /**
-      * Helper to be able to choose the role type to insert according to the role of the user
+     * Helper to be able to choose the role type to insert according to the role of the user
      **/
     private String roleTypeFor(RoleName role) {
         return switch (role) {
@@ -216,31 +216,6 @@ class ProgressControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
-    @Test
-    void shouldGetStudentCoursesProgressForTeacher() {
-        UUID teacherId = insertUser(RoleName.TEACHER);
-        authorizeRequests(teacherId, RoleName.TEACHER);
-
-        ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/v1/students/" + studentId + "/courses-progress",
-                String.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).contains(courseId.toString());
-    }
-
-    @Test
-    void shouldGetMyCompletedCoursesForStudent() {
-        ResponseEntity<String> response = restTemplate.getForEntity(
-                "/api/v1/students/me/completed-courses",
-                String.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-    }
-
     // =========================================================================
     // TESTE PENTRU DEV 4: PROGRES PROFESOR SI PARINTE
     // =========================================================================
@@ -304,5 +279,58 @@ class ProgressControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains(courseId.toString());
+    }
+
+    // =========================================================================
+    // TESTE PENTRU GET /api/v1/students/me/completed-courses
+    // =========================================================================
+
+    /**
+     * GET /api/v1/students/me/completed-courses
+     * Test: The student sees their completed courses. (200 OK)
+     */
+    @Test
+    void shouldGetMyCompletedCourses() {
+        UUID lesson1 = insertLesson("Lectia 1", 1);
+        insertLesson("Lectia 2", 2);
+
+        insertLessonProgress(lesson1);
+
+        // Mark enrollment as completed
+        jdbcTemplate.update(
+                "UPDATE course_enrollments SET completed_at = NOW() WHERE id = ?",
+                enrollmentId
+        );
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/v1/students/me/completed-courses",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String body = response.getBody();
+        assertThat(body)
+                .isNotNull()
+                .contains("\"courseId\":\"" + courseId + "\"")
+                .contains("\"courseTitle\":\"Curs pentru Progres\"")
+                .contains("\"completedAt\":");
+    }
+
+    /**
+     * GET /api/v1/students/me/completed-courses
+     * Test: Returns empty list when student has no completed courses. (200 OK)
+     */
+    @Test
+    void shouldGetMyCompletedCourses_emptyList() {
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/v1/students/me/completed-courses",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String body = response.getBody();
+        assertThat(body)
+                .isNotNull()
+                .contains("[]");
     }
 }

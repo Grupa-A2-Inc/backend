@@ -231,6 +231,20 @@ class ErrorReportManagementControllerTest {
                 String.class
         );
 
+        ResponseEntity<String> page1Response = restTemplate.exchange(
+                REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?page=1&size=2",
+                HttpMethod.GET,
+                authenticatedRequest(null, teacherId, RoleName.TEACHER),
+                String.class
+        );
+
+        ResponseEntity<String> page2Response = restTemplate.exchange(
+                REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?page=2&size=2",
+                HttpMethod.GET,
+                authenticatedRequest(null, teacherId, RoleName.TEACHER),
+                String.class
+        );
+
         assertThat(page0Response.getStatusCode()).isEqualTo(HttpStatus.OK);
         String body0 = page0Response.getBody();
 
@@ -239,26 +253,12 @@ class ErrorReportManagementControllerTest {
                 "\"number\":0",
                 "\"size\":2");
 
-        ResponseEntity<String> page1Response = restTemplate.exchange(
-                REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?page=1&size=2",
-                HttpMethod.GET,
-                authenticatedRequest(null, teacherId, RoleName.TEACHER),
-                String.class
-        );
-
         assertThat(page1Response.getStatusCode()).isEqualTo(HttpStatus.OK);
         String body1 = page1Response.getBody();
 
         assertThat(body1).contains("\"totalElements\":3",
                 "\"totalPages\":2",
                 "\"number\":1");
-
-        ResponseEntity<String> page2Response = restTemplate.exchange(
-                REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?page=2&size=2",
-                HttpMethod.GET,
-                authenticatedRequest(null, teacherId, RoleName.TEACHER),
-                String.class
-        );
 
         assertThat(page2Response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(page2Response.getBody()).contains("\"content\":[]");
@@ -275,7 +275,6 @@ class ErrorReportManagementControllerTest {
                 authenticatedRequest(bodyWithDescription(validDescription()), studentId, RoleName.STUDENT),
                 String.class
         );
-
         ResponseEntity<String> matchingResponse = restTemplate.exchange(
                 REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?status=NEW",
                 HttpMethod.GET,
@@ -283,15 +282,15 @@ class ErrorReportManagementControllerTest {
                 String.class
         );
 
-        assertThat(matchingResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(matchingResponse.getBody()).contains("\"totalElements\":1");
-
         ResponseEntity<String> emptyResponse = restTemplate.exchange(
                 REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?status=RESOLVED",
                 HttpMethod.GET,
                 authenticatedRequest(null, teacherId, RoleName.TEACHER),
                 String.class
         );
+
+        assertThat(matchingResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(matchingResponse.getBody()).contains("\"totalElements\":1");
 
         assertThat(emptyResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(emptyResponse.getBody()).contains("\"totalElements\":0");
@@ -310,7 +309,6 @@ class ErrorReportManagementControllerTest {
                 authenticatedRequest(bodyWithDescription(validDescription()), studentId, RoleName.STUDENT),
                 String.class
         );
-
         ResponseEntity<String> matchResponse = restTemplate.exchange(
                 REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?courseId=" + setupCourse1.courseId(),
                 HttpMethod.GET,
@@ -318,15 +316,15 @@ class ErrorReportManagementControllerTest {
                 String.class
         );
 
-        assertThat(matchResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(matchResponse.getBody()).contains("\"totalElements\":1");
-
         ResponseEntity<String> emptyResponse = restTemplate.exchange(
                 REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?courseId=" + setupCourse2.courseId(),
                 HttpMethod.GET,
                 authenticatedRequest(null, teacherId, RoleName.TEACHER),
                 String.class
         );
+
+        assertThat(matchResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(matchResponse.getBody()).contains("\"totalElements\":1");
 
         assertThat(emptyResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(emptyResponse.getBody()).contains("\"totalElements\":0");
@@ -351,9 +349,23 @@ class ErrorReportManagementControllerTest {
                 authenticatedRequest(bodyWithDescription("Specific description for Course 2"), studentId, RoleName.STUDENT),
                 String.class
         );
-
         ResponseEntity<String> perfectMatchResponse = restTemplate.exchange(
                 REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?courseId=" + setupCourse1.courseId() + "&status=NEW",
+                HttpMethod.GET,
+                authenticatedRequest(null, teacherId, RoleName.TEACHER),
+                String.class
+        );
+
+        ResponseEntity<String> wrongStatusResponse = restTemplate.exchange(
+                REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?courseId=" + setupCourse1.courseId() + "&status=RESOLVED",
+                HttpMethod.GET,
+                authenticatedRequest(null, teacherId, RoleName.TEACHER),
+                String.class
+        );
+
+        UUID randomCourseId = UUID.randomUUID();
+        ResponseEntity<String> wrongCourseResponse = restTemplate.exchange(
+                REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?courseId=" + randomCourseId + "&status=NEW",
                 HttpMethod.GET,
                 authenticatedRequest(null, teacherId, RoleName.TEACHER),
                 String.class
@@ -363,23 +375,8 @@ class ErrorReportManagementControllerTest {
         assertThat(perfectMatchResponse.getBody()).contains("\"totalElements\":1");
         assertThat(perfectMatchResponse.getBody()).contains("Specific description for Course 1");
 
-        ResponseEntity<String> wrongStatusResponse = restTemplate.exchange(
-                REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?courseId=" + setupCourse1.courseId() + "&status=RESOLVED",
-                HttpMethod.GET,
-                authenticatedRequest(null, teacherId, RoleName.TEACHER),
-                String.class
-        );
-
         assertThat(wrongStatusResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(wrongStatusResponse.getBody()).contains("\"totalElements\":0");
-
-        UUID randomCourseId = UUID.randomUUID();
-        ResponseEntity<String> wrongCourseResponse = restTemplate.exchange(
-                REQUEST_MAPPING + "/professors/" + teacherId + "/error-reports?courseId=" + randomCourseId + "&status=NEW",
-                HttpMethod.GET,
-                authenticatedRequest(null, teacherId, RoleName.TEACHER),
-                String.class
-        );
 
         assertThat(wrongCourseResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(wrongCourseResponse.getBody()).contains("\"totalElements\":0");

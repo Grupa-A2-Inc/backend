@@ -1,5 +1,6 @@
 package org.elearning.backend.analytics;
 
+import org.elearning.backend.analytics.service.AnalyticsQueryService;
 import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -17,6 +19,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -31,6 +34,8 @@ class AnalyticsAndStatsControllerTest {
 
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private AnalyticsQueryService analyticsQueryService;
     @MockitoBean
     private EmailService emailService;
     @Autowired
@@ -260,6 +265,20 @@ class AnalyticsAndStatsControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    @Order(16)
+    @DisplayName("1.7 — class-average service -> throws WithoutAccessException when professor is not owner")
+    void classAverage_ServiceThrowsWithoutAccess_WhenProfessorDoesNotOwnTest() {
+        UUID otherTeacher = insertUser(RoleName.TEACHER);
+        try {
+            assertThatThrownBy(() -> analyticsQueryService.getClassAverage(testId, otherTeacher))
+                    .isInstanceOf(org.elearning.backend.analytics.exception.WithoutAccessException.class)
+                    .hasMessageContaining(otherTeacher.toString());
+        } finally {
+            jdbcTemplate.update("DELETE FROM users WHERE id = ?", otherTeacher);
+        }
+    }
+
     // =================================================================
     //  2. GET /courses/{courseId}/analytics/student-averages  (TEACHER)
     // =================================================================
@@ -319,6 +338,20 @@ class AnalyticsAndStatsControllerTest {
     void studentAverages_ReturnsUnauthorized_WhenNoToken() throws Exception {
         mockMvc.perform(get(BASE + "/courses/{courseId}/analytics/student-averages", courseId))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Order(26)
+    @DisplayName("2.7 — student-averages service -> throws WithoutAccessException when professor is not owner")
+    void studentAverages_ServiceThrowsWithoutAccess_WhenProfessorDoesNotOwnCourse() {
+        UUID otherTeacher = insertUser(RoleName.TEACHER);
+        try {
+            assertThatThrownBy(() -> analyticsQueryService.getStudentAverages(courseId, otherTeacher, PageRequest.of(0, 10)))
+                    .isInstanceOf(org.elearning.backend.analytics.exception.WithoutAccessException.class)
+                    .hasMessageContaining(otherTeacher.toString());
+        } finally {
+            jdbcTemplate.update("DELETE FROM users WHERE id = ?", otherTeacher);
+        }
     }
 
     @Test

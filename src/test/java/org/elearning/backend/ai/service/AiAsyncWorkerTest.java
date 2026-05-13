@@ -69,7 +69,7 @@ class AiAsyncWorkerTest {
     }
 
     @Test
-    void processAiGenerationInBackground_shouldMarkFallbackOnTimeout() throws Exception {
+    void processAiGenerationInBackground_shouldMarkFallbackOnTimeout() {
         UUID lessonId = UUID.randomUUID();
         AiQuestionRequest request = AiQuestionRequest.builder()
                 .id(UUID.randomUUID())
@@ -87,7 +87,7 @@ class AiAsyncWorkerTest {
     }
 
     @Test
-    void processAiGenerationInBackground_shouldMarkFailedOnApiException() throws Exception {
+    void processAiGenerationInBackground_shouldMarkFailedOnApiException() {
         UUID lessonId = UUID.randomUUID();
         AiQuestionRequest request = AiQuestionRequest.builder()
                 .id(UUID.randomUUID())
