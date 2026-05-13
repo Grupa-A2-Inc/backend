@@ -12,6 +12,10 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -29,21 +33,33 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Bean
+    @SuppressWarnings("java:S4502")
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .cors(cors -> {})
-                .csrf(AbstractHttpConfigurer::disable)
+                // CSRF is intentionally enforced only for cookie-authenticated endpoints.
+                // All other protected routes use explicit Bearer tokens with a stateless policy,
+                // while form login and HTTP Basic are disabled.
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                        .requireCsrfProtectionMatcher(new OrRequestMatcher(
+                                new AntPathRequestMatcher("/api/v1/auth/refresh", "POST"),
+                                new AntPathRequestMatcher("/api/v1/auth/logout", "POST")
+                        ))
+                )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/api/v1/auth/set-password", "/set-password", "/actuator/health", "/api/v1/payments/webhooks/stripe").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/api/v1/auth/set-password", "/set-password", "/actuator/health", "/api/v1/payments/webhooks/stripe", "/errors").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
+                .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
@@ -55,7 +71,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "https://frontend-teal-five-57.vercel.app",
                 "https://frontend-z1g5f.vercel.app",
-                "https://vibesvibesonlyvibes.vercel.app/"
+                "https://vibesvibesonlyvibes.vercel.app"
         ));
         configuration.setAllowCredentials(true); //flag ca sa poate primi/seta cookies
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
@@ -64,7 +80,8 @@ public class SecurityConfig {
                 "Content-Type",
                 "Accept",
                 "Origin",
-                "X-Requested-With"
+                "X-Requested-With",
+                "X-XSRF-TOKEN"
         ));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

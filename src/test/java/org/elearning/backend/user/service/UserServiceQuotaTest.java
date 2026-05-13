@@ -6,6 +6,7 @@ import org.elearning.backend.auth.service.ActivationTokenService;
 import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
+import org.elearning.backend.organization.service.OrganizationDeletionService;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.role.repository.RoleRepository;
@@ -44,6 +45,7 @@ class UserServiceQuotaTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private AiStudentRegistrationService aiStudentRegistrationService;
     @Mock private EntitlementService entitlementService;
+    @Mock private OrganizationDeletionService organizationDeletionService;
 
     private UserService userService;
     private UserImportService userImportService;
@@ -62,7 +64,8 @@ class UserServiceQuotaTest {
                 emailService,
                 passwordEncoder,
                 aiStudentRegistrationService,
-                entitlementService
+                entitlementService,
+                organizationDeletionService
         );
 
         userImportService = new UserImportService(userService);
@@ -90,7 +93,7 @@ class UserServiceQuotaTest {
         when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(studentRole));
         doNothing().when(entitlementService).canCreateUser(organizationId);
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
             u.setId(UUID.randomUUID());
             u.setRole(studentRole);
@@ -105,7 +108,7 @@ class UserServiceQuotaTest {
         assertThat(response).isNotNull();
         assertThat(response.getEmail()).isEqualTo("student@test.com");
         verify(entitlementService).canCreateUser(organizationId);
-        verify(userRepository).save(any(User.class));
+        verify(userRepository).saveAndFlush(any(User.class));
     }
 
     // --- createUser peste limită ---
@@ -123,7 +126,7 @@ class UserServiceQuotaTest {
                 .isInstanceOf(UserLimitExceededException.class)
                 .hasMessageContaining("10");
 
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
     }
 
     // --- createUser fără organizație — quota skip ---
@@ -134,7 +137,7 @@ class UserServiceQuotaTest {
 
         when(userRepository.existsByEmail("admin@test.com")).thenReturn(false);
         when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(studentRole));
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
             u.setId(UUID.randomUUID());
             u.setRole(studentRole);
@@ -164,7 +167,7 @@ class UserServiceQuotaTest {
         when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(studentRole));
         doNothing().when(entitlementService).canCreateUser(organizationId);
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
             u.setId(UUID.randomUUID());
             u.setRole(studentRole);
@@ -199,7 +202,7 @@ class UserServiceQuotaTest {
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
         when(activationTokenService.generateActivationToken(any())).thenReturn("token123");
         doNothing().when(emailService).sendActivationEmail(any(), any(), any());
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
             u.setId(UUID.randomUUID());
             u.setRole(studentRole);
@@ -256,7 +259,7 @@ class UserServiceQuotaTest {
         when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(studentRole));
         doNothing().when(entitlementService).canCreateUser(organizationId);
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
             u.setId(UUID.randomUUID());
             u.setRole(studentRole);
