@@ -6,6 +6,5 @@ import java.util.UUID;
 
 @Data
 public class AiGenerateResponse {
-    private UUID requestId;
     private List<AiQuestionDto> questions;
 }
