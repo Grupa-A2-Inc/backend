@@ -22,6 +22,7 @@ public class AiStudentRegistrationService {
 
     public void registerStudent(UUID studentId) {
         UUID requestId = UUID.randomUUID();
+        RuntimeException lastFailure = null;
 
         for (int attempt = INITIAL_REGISTRATION_ATTEMPT;
              attempt <= TOTAL_STUDENT_REGISTRATION_ATTEMPTS;
@@ -30,19 +31,20 @@ public class AiStudentRegistrationService {
                 aiApiClient.registerStudent(requestId, studentId);
                 return;
             } catch (AiApiException | AiTimeoutException ex) {
-                if (attempt == TOTAL_STUDENT_REGISTRATION_ATTEMPTS) {
-                    throw ex;
+                lastFailure = ex;
+                if (attempt < TOTAL_STUDENT_REGISTRATION_ATTEMPTS) {
+                    log.warn(
+                            "Student registration in AI failed for studentId={} requestId={} attempt={}/{}. Retrying. Cause={}",
+                            studentId,
+                            requestId,
+                            attempt,
+                            TOTAL_STUDENT_REGISTRATION_ATTEMPTS,
+                            ex.getMessage()
+                    );
                 }
-
-                log.warn(
-                        "Student registration in AI failed for studentId={} requestId={} attempt={}/{}. Retrying. Cause={}",
-                        studentId,
-                        requestId,
-                        attempt,
-                        TOTAL_STUDENT_REGISTRATION_ATTEMPTS,
-                        ex.getMessage()
-                );
             }
         }
+
+        throw lastFailure;
     }
 }

@@ -109,8 +109,8 @@ public class CertificateGeneratorService {
     private void loadFont() throws IOException {
 
         try (
-                InputStream quadrillionFont = getClass().getResourceAsStream(PATH_QUADRILLION_FONT);
-                InputStream jastykaFont = getClass().getResourceAsStream(PATH_JASTYKA_FONT)
+                InputStream quadrillionFont = openResource(PATH_QUADRILLION_FONT);
+                InputStream jastykaFont = openResource(PATH_JASTYKA_FONT)
         ) {
             if (quadrillionFont == null) {
                 throw new IllegalArgumentException("Font not found: " + PATH_QUADRILLION_FONT);
@@ -199,7 +199,7 @@ public class CertificateGeneratorService {
 
     private void generateImage(PdfContentByte canvas, float yPosition) throws IOException {
         try{
-            byte[] imageBytes = Objects.requireNonNull(CertificateGeneratorService.class.getResourceAsStream(PATH_SITE_LOGO)).readAllBytes();
+            byte[] imageBytes = Objects.requireNonNull(openResource(PATH_SITE_LOGO)).readAllBytes();
             Image icon = Image.getInstance(imageBytes);
             icon.setAbsolutePosition(CONTENT_X_CENTERED_IMAGE_POSITION, yPosition);
             icon.scaleToFit(CONTENT_IMAGE_WIDTH, CONTENT_IMAGE_HEIGHT);
@@ -303,7 +303,7 @@ public class CertificateGeneratorService {
         Document document = new Document(PageSize.A4);
         try(ByteArrayOutputStream generatedPdfBytes = new ByteArrayOutputStream()) {
 
-            final PdfWriter instance = PdfWriter.getInstance(document, generatedPdfBytes);
+            final PdfWriter instance = createPdfWriter(document, generatedPdfBytes);
             document.open();
             PdfContentByte canvas = instance.getDirectContent();
             generateLayout(canvas);
@@ -315,6 +315,14 @@ public class CertificateGeneratorService {
         } catch (DocumentException | IOException documentException) {
             throw new CertificateGenerationException(enrollmentId, documentException);
         }
+    }
+
+    protected InputStream openResource(String path) {
+        return getClass().getResourceAsStream(path);
+    }
+
+    protected PdfWriter createPdfWriter(Document document, ByteArrayOutputStream generatedPdfBytes) throws DocumentException {
+        return PdfWriter.getInstance(document, generatedPdfBytes);
     }
 
     public CertificateGeneratorService(CourseEnrollmentRepository courseEnrollmentRepository,

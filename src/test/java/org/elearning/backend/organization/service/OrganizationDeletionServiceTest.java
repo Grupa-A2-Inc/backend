@@ -186,6 +186,30 @@ class OrganizationDeletionServiceTest {
         verify(userRepository).delete(owner);
     }
 
+    @Test
+    void deleteOrganizationOwnedByAdmin_skipsCourseDeletionWhenNoCoursesExist() {
+        UUID ownerId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+
+        User owner = user(ownerId, RoleName.ORGANIZATION_ADMIN);
+        Organization organization = new Organization();
+        organization.setId(organizationId);
+        organization.setOwner(owner);
+        owner.setOrganization(organization);
+
+        when(organizationRepository.findFirstByOwnerId(ownerId)).thenReturn(Optional.of(organization));
+        when(userRepository.findByOrganizationId(organizationId)).thenReturn(List.of(owner));
+        when(courseRepository.findByCreatedByIn(any())).thenReturn(List.of());
+        when(testRepository.findByCreatedByIn(any())).thenReturn(List.of());
+
+        organizationDeletionService.deleteOrganizationOwnedByAdmin(ownerId);
+
+        verify(courseRepository, never()).deleteAll(any());
+        verify(testRepository, never()).findByLessonIdIn(any());
+        verify(organizationRepository).delete(organization);
+        verify(userRepository).delete(owner);
+    }
+
     private User user(UUID id, RoleName roleName) {
         User user = new User();
         user.setId(id);

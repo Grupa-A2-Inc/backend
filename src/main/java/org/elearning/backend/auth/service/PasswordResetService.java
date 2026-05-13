@@ -27,8 +27,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PasswordResetService {
 
-    private static final int PASSWORD_RESET_TOKEN_EXPIRATION_IN_MINUTES = 10;
+    private static final int PASSWORD_RESET_TOKEN_EXPIRATION_IN_MINUTES = 60;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final String GENERIC_FORGOT_PASSWORD_MESSAGE =
+            "If an account exists for this email, a password reset link has been sent.";
 
     private final EmailService emailService;
     private final UserRepository userRepository;
@@ -42,7 +44,7 @@ public class PasswordResetService {
 
         Optional<User> optionalUser = userRepository.findByEmail(userEmail);
         if (optionalUser.isEmpty()) {
-            return new ResetPasswordResponse("If an account exists for this email, a reset token has been sent.");
+            return new ResetPasswordResponse(GENERIC_FORGOT_PASSWORD_MESSAGE);
         }
 
         User user = optionalUser.get();
@@ -64,7 +66,7 @@ public class PasswordResetService {
 
         emailService.sendPasswordResetEmail(user.getEmail(), rawToken);
 
-        return new ResetPasswordResponse("If an account exists for this email, a reset token has been sent.");
+        return new ResetPasswordResponse(GENERIC_FORGOT_PASSWORD_MESSAGE);
     }
 
     @Transactional

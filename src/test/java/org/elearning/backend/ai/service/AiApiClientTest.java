@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.client.ClientHttpResponse;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -109,6 +110,21 @@ class AiApiClientTest {
     }
 
     @Test
+    void generateTest_shouldThrowWhenLessonContentNull() {
+        UUID lessonId = UUID.randomUUID();
+        Lesson lesson = new Lesson();
+        lesson.setId(lessonId);
+        lesson.setContentMarkdown(null);
+        when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.generateTest(lessonId, 5))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Lectia nu are continut");
+    }
+
+    @Test
     void generateTest_shouldThrowWhenPayloadSerializationFails() throws Exception {
         UUID lessonId = UUID.randomUUID();
         Lesson lesson = new Lesson();
@@ -141,6 +157,21 @@ class AiApiClientTest {
                 .isInstanceOf(AiApiException.class)
                 .hasMessageContaining("502 BAD_GATEWAY")
                 .hasMessageContaining("error code: 502");
+    }
+
+    @Test
+    void generateTest_shouldThrowTimeoutException_onConnectionFailure() {
+        UUID lessonId = UUID.randomUUID();
+        Lesson lesson = new Lesson();
+        lesson.setId(lessonId);
+        lesson.setContentMarkdown("Lesson content");
+        when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
+
+        AiApiClient client = new AiApiClient(RestClient.builder(), lessonRepository, objectMapper, "http://localhost:1", "secret", 100, 100, 100, 100);
+
+        assertThatThrownBy(() -> client.generateTest(lessonId, 5))
+                .isInstanceOf(org.elearning.backend.ai.exception.AiTimeoutException.class)
+                .hasMessageContaining("Timeout generare AI");
     }
 
     @Test
@@ -183,6 +214,16 @@ class AiApiClientTest {
         assertThatThrownBy(() -> client.requestAdaptiveExercises(lessonId, studentId, 1, 2, 3))
                 .isInstanceOf(AiApiException.class)
                 .hasMessageContaining("Serviciul AI indisponibil");
+    }
+
+    @Test
+    void requestAdaptiveExercises_shouldThrowTimeoutException_onConnectionFailure() {
+        UUID studentId = UUID.randomUUID();
+        AiApiClient client = new AiApiClient(RestClient.builder(), lessonRepository, objectMapper, "http://localhost:1", "secret", 100, 100, 100, 100);
+
+        assertThatThrownBy(() -> client.requestAdaptiveExercises(UUID.randomUUID(), studentId, 1, 2, 3))
+                .isInstanceOf(org.elearning.backend.ai.exception.AiTimeoutException.class)
+                .hasMessageContaining("Timeout AI Adaptive");
     }
 
     @Test
@@ -260,6 +301,15 @@ class AiApiClientTest {
     }
 
     @Test
+    void registerStudent_shouldThrowTimeoutException_onConnectionFailure() {
+        AiApiClient client = new AiApiClient(RestClient.builder(), lessonRepository, objectMapper, "http://localhost:1", "secret", 100, 100, 100, 100);
+
+        assertThatThrownBy(() -> client.registerStudent(UUID.randomUUID(), UUID.randomUUID()))
+                .isInstanceOf(org.elearning.backend.ai.exception.AiTimeoutException.class)
+                .hasMessageContaining("Timeout student registration AI");
+    }
+
+    @Test
     void getCurriculumCatalog_shouldReturnResponse() throws Exception {
         startServer(200, "application/json", "{\"subjects\":[{\"subjectId\":1,\"subjectName\":\"Math\"}],\"topics\":[{\"topicId\":2,\"subjectId\":1,\"subjectName\":\"Math\",\"grade\":9,\"topicName\":\"Algebra\"}]}", capture -> {
             assertThat(capture.path()).isEqualTo("/ai/api/v1/catalog/curriculum");
@@ -296,6 +346,44 @@ class AiApiClientTest {
         assertThatThrownBy(() -> client.getCurriculumCatalog(dto3))
                 .isInstanceOf(AiApiException.class)
                 .hasMessageContaining("AI API Error");
+    }
+
+    @Test
+    void getCurriculumCatalog_shouldOmitNullQueryParameters() throws Exception {
+        startServer(200, "application/json", "{\"subjects\":[],\"topics\":[]}", capture -> {
+            assertThat(capture.path()).isEqualTo("/ai/api/v1/catalog/curriculum");
+        });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+        CurriculumCatalogResponseDto response = client.getCurriculumCatalog(new CurriculumCatalogRequestDto(null, null, null));
+
+        assertThat(response.getSubjects()).isEmpty();
+        assertThat(response.getTopics()).isEmpty();
+    }
+
+    @Test
+    void getCurriculumCatalog_shouldThrowTimeoutException_onConnectionFailure() {
+        AiApiClient client = new AiApiClient(RestClient.builder(), lessonRepository, objectMapper, "http://localhost:1", "secret", 100, 100, 100, 100);
+
+        assertThatThrownBy(() -> client.getCurriculumCatalog(new CurriculumCatalogRequestDto(9, 1, 2)))
+                .isInstanceOf(org.elearning.backend.ai.exception.AiTimeoutException.class)
+                .hasMessageContaining("Timeout AI");
+    }
+
+    @Test
+    void readErrorResponseBodyReturnsEmptyMarkerWhenBodyIsBlank() throws Exception {
+        ClientHttpResponse response = org.mockito.Mockito.mock(ClientHttpResponse.class);
+        when(response.getBody()).thenReturn(new java.io.ByteArrayInputStream("   ".getBytes(StandardCharsets.UTF_8)));
+
+        assertThat(AiApiClient.readErrorResponseBody(response)).isEqualTo("<empty>");
+    }
+
+    @Test
+    void readErrorResponseBodyReturnsUnreadableMarkerWhenBodyReadFails() throws Exception {
+        ClientHttpResponse response = org.mockito.Mockito.mock(ClientHttpResponse.class);
+        when(response.getBody()).thenThrow(new IOException("boom"));
+
+        assertThat(AiApiClient.readErrorResponseBody(response)).isEqualTo("<unreadable>");
     }
 
     private AiApiClient newClient(String apiKey, int generateTimeout, int feedbackTimeout, int adaptiveTimeout, int studentRegistrationTimeout) {
