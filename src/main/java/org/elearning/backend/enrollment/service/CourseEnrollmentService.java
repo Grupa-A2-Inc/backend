@@ -93,21 +93,6 @@ public class CourseEnrollmentService {
      * @param studentId the ID of the student
      * @return a list of EnrolledCourseDto containing details of the enrolled courses and progress
      */
-    public List<EnrolledCourseDto> getEnrolledCoursesForStudent(UUID studentId) {
-        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findAllByStudentId(studentId);
-        List<EnrolledCourseDto> enrolledCourseDtos = enrollmentMapper.toEnrolledCourseDtos(enrollments);
-
-        for(EnrolledCourseDto dto : enrolledCourseDtos) {
-            Course course = courseRepository.findById(dto.getCourseId())
-                    .orElseThrow(() -> new CourseNotFoundException(dto.getCourseId()));
-            dto.setCourseTitle(course.getTitle());
-            dto.setCourseCategory(course.getCategory());
-
-            dto.setProgressPercent(BigDecimal.valueOf(progressCalculatorService.calculateProgressPercent(dto.getUnrollmentId())));
-        }
-
-        return enrolledCourseDtos;
-    }
 
     public Page<EnrolledCourseDto> getEnrolledCoursesForStudent(UUID studentId, Pageable pageable) {
         Page<CourseEnrollment> enrollments = courseEnrollmentRepository.findAllByStudentId(studentId, pageable);

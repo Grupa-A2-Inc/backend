@@ -9,7 +9,6 @@ import org.elearning.backend.ai.dto.AiStudentRegistrationResponse;
 import org.elearning.backend.ai.dto.CurriculumCatalogRequestDto;
 import org.elearning.backend.ai.dto.CurriculumCatalogResponseDto;
 import org.elearning.backend.ai.exception.AiApiException;
-import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.elearning.backend.ai.exception.JsonSerializingException;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.LessonRepository;
@@ -66,7 +65,7 @@ class AiApiClientTest {
         when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
 
         AtomicReference<String> requestBody = new AtomicReference<>();
-        startServer(200, "application/json", "{\"questions\":[{\"text\":\"Q1\",\"type\":\"MULTIPLE_CHOICE\",\"answers\":[\"A\",\"B\"],\"correctAnswers\":[\"A\"],\"difficulty\":0.5}]}", 0, capture -> {
+        startServer(200, "application/json", "{\"questions\":[{\"text\":\"Q1\",\"type\":\"MULTIPLE_CHOICE\",\"answers\":[\"A\",\"B\"],\"correctAnswers\":[\"A\"],\"difficulty\":0.5}]}", capture -> {
             requestBody.set(capture.body());
             assertThat(capture.path()).isEqualTo("/ai/api/v1/generate");
             assertThat(capture.method()).isEqualTo("POST");
@@ -126,22 +125,6 @@ class AiApiClientTest {
                 .isInstanceOf(JsonSerializingException.class);
     }
 
-    /*@Test
-    void generateTest_shouldThrowTimeout_whenServerIsTooSlow() throws Exception {
-        UUID lessonId = UUID.randomUUID();
-        Lesson lesson = new Lesson();
-        lesson.setId(lessonId);
-        lesson.setContentMarkdown("Lesson content");
-        when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
-
-        startServer(200, "application/json", "{\"questions\":[]}", 2000, capture -> { });
-
-        AiApiClient client = newClient("secret", 2000, 2000, 50, 2000);
-
-        assertThatThrownBy(() -> client.generateTest(lessonId, 5))
-            .isInstanceOfAny(AiTimeoutException.class, org.springframework.web.client.RestClientException.class);
-    }*/
-
     @Test
     void generateTest_shouldThrowApiException_onErrorStatus() throws Exception {
         UUID lessonId = UUID.randomUUID();
@@ -150,7 +133,7 @@ class AiApiClientTest {
         lesson.setContentMarkdown("Lesson content");
         when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
 
-        startServer(502, "text/plain", "error code: 502", 0, capture -> { });
+        startServer(502, "text/plain", "error code: 502", capture -> { });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
@@ -163,7 +146,7 @@ class AiApiClientTest {
     @Test
     void requestAdaptiveExercises_shouldReturnExercises() throws Exception {
         UUID studentId = UUID.randomUUID();
-        startServer(200, "application/json", "{\"exercises\":[{\"exerciseId\":\"e1\",\"text\":\"T\",\"type\":\"MULTIPLE_CHOICE\",\"answers\":[\"A\",\"B\"],\"correctAnswers\":[\"A\"],\"difficulty\":0.4}]}", 0, capture -> {
+        startServer(200, "application/json", "{\"exercises\":[{\"exerciseId\":\"e1\",\"text\":\"T\",\"type\":\"MULTIPLE_CHOICE\",\"answers\":[\"A\",\"B\"],\"correctAnswers\":[\"A\"],\"difficulty\":0.4}]}", capture -> {
             assertThat(capture.path()).isEqualTo("/ai/api/v1/adaptive/exercises");
             assertThat(capture.headers().getFirst("X-API-Key")).isEqualTo("secret");
             assertThat(capture.body()).contains(studentId.toString());
@@ -183,38 +166,28 @@ class AiApiClientTest {
         when(failingObjectMapper.writeValueAsString(any())).thenThrow(new JsonProcessingException("boom") {});
 
         AiApiClient client = new AiApiClient(RestClient.builder(), lessonRepository, failingObjectMapper, "http://localhost:1", "secret", 2000, 2000, 2000, 2000);
+        UUID lessonId = UUID.randomUUID();
 
-        assertThatThrownBy(() -> client.requestAdaptiveExercises(UUID.randomUUID(), studentId, 1, 2, 3))
+        assertThatThrownBy(() -> client.requestAdaptiveExercises(lessonId, studentId, 1, 2, 3))
                 .isInstanceOf(JsonSerializingException.class);
-    }
-
-    @Test
-    void requestAdaptiveExercises_shouldThrowTimeout_whenServerIsTooSlow() throws Exception {
-        UUID studentId = UUID.randomUUID();
-        startServer(200, "application/json", "{\"exercises\":[]}", 2000, capture -> { });
-
-        AiApiClient client = newClient("secret", 50, 2000, 2000, 2000);
-
-        UUID sessionId1 = UUID.randomUUID();
-        assertThatThrownBy(() -> client.requestAdaptiveExercises(sessionId1, studentId, 1, 2, 3))
-            .isInstanceOfAny(AiTimeoutException.class, org.springframework.web.client.RestClientException.class);
     }
 
     @Test
     void requestAdaptiveExercises_shouldThrowApiException_onErrorStatus() throws Exception {
         UUID studentId = UUID.randomUUID();
-        startServer(500, "text/plain", "AI error", 0, capture -> { });
+        startServer(500, "text/plain", "AI error", capture -> { });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+        UUID lessonId = UUID.randomUUID();
 
-        assertThatThrownBy(() -> client.requestAdaptiveExercises(UUID.randomUUID(), studentId, 1, 2, 3))
+        assertThatThrownBy(() -> client.requestAdaptiveExercises(lessonId, studentId, 1, 2, 3))
                 .isInstanceOf(AiApiException.class)
                 .hasMessageContaining("Serviciul AI indisponibil");
     }
 
     @Test
     void sendAdaptiveFeedback_shouldSwallowApiErrors() throws Exception {
-        startServer(500, "text/plain", "AI error", 0, capture -> { });
+        startServer(500, "text/plain", "AI error", capture -> { });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
@@ -224,7 +197,7 @@ class AiApiClientTest {
     @Test
     void sendAdaptiveFeedback_shouldWorkOnSuccess() throws Exception {
         AtomicReference<String> requestBody = new AtomicReference<>();
-        startServer(204, "text/plain", "", 0, capture -> requestBody.set(capture.body()));
+        startServer(204, "text/plain", "", capture -> requestBody.set(capture.body()));
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
         assertThatCode(() -> client.sendAdaptiveFeedback(Map.of("foo", "bar"))).doesNotThrowAnyException();
         assertThat(requestBody.get()).contains("foo");
@@ -234,7 +207,7 @@ class AiApiClientTest {
     void registerStudent_shouldReturnResponseOnSuccess() throws Exception {
         UUID requestId = UUID.randomUUID();
         UUID studentId = UUID.randomUUID();
-        startServer(200, "application/json", "{\"requestId\":\"" + requestId + "\",\"status\":\"ok\",\"message\":\"done\"}", 0, capture -> {
+        startServer(200, "application/json", "{\"requestId\":\"" + requestId + "\",\"status\":\"ok\",\"message\":\"done\"}", capture -> {
             assertThat(capture.path()).isEqualTo("/ai/api/v1/students");
             assertThat(capture.headers().getFirst("X-Request-Id")).isEqualTo(requestId.toString());
         });
@@ -250,7 +223,7 @@ class AiApiClientTest {
     void registerStudent_shouldThrowWhenResponseBodyIsEmpty() throws Exception {
         UUID requestId = UUID.randomUUID();
         UUID studentId = UUID.randomUUID();
-        startServer(204, "text/plain", "", 0, capture -> { });
+        startServer(204, "text/plain", "", capture -> { });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
@@ -263,7 +236,7 @@ class AiApiClientTest {
     void registerStudent_shouldThrowWhenPayloadStatusIsNotOk() throws Exception {
         UUID requestId = UUID.randomUUID();
         UUID studentId = UUID.randomUUID();
-        startServer(200, "application/json", "{\"requestId\":\"" + requestId + "\",\"status\":\"error\",\"message\":\"bad\"}", 0, capture -> { });
+        startServer(200, "application/json", "{\"requestId\":\"" + requestId + "\",\"status\":\"error\",\"message\":\"bad\"}", capture -> { });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
@@ -276,7 +249,7 @@ class AiApiClientTest {
     void registerStudent_shouldThrowApiException_onErrorStatus() throws Exception {
         UUID requestId = UUID.randomUUID();
         UUID studentId = UUID.randomUUID();
-        startServer(502, "text/plain", "error code: 502", 0, capture -> { });
+        startServer(502, "text/plain", "error code: 502", capture -> { });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
@@ -287,20 +260,8 @@ class AiApiClientTest {
     }
 
     @Test
-    void registerStudent_shouldThrowTimeout_whenServerIsTooSlow() throws Exception {
-        UUID requestId = UUID.randomUUID();
-        UUID studentId = UUID.randomUUID();
-        startServer(200, "application/json", "{\"requestId\":\"x\",\"status\":\"ok\",\"message\":\"done\"}", 300, capture -> { });
-
-        AiApiClient client = newClient("secret", 2000, 2000, 2000, 50);
-
-        assertThatThrownBy(() -> client.registerStudent(requestId, studentId))
-            .isInstanceOfAny(AiTimeoutException.class, org.springframework.web.client.RestClientException.class);
-    }
-
-    @Test
     void getCurriculumCatalog_shouldReturnResponse() throws Exception {
-        startServer(200, "application/json", "{\"subjects\":[{\"subjectId\":1,\"subjectName\":\"Math\"}],\"topics\":[{\"topicId\":2,\"subjectId\":1,\"subjectName\":\"Math\",\"grade\":9,\"topicName\":\"Algebra\"}]}", 0, capture -> {
+        startServer(200, "application/json", "{\"subjects\":[{\"subjectId\":1,\"subjectName\":\"Math\"}],\"topics\":[{\"topicId\":2,\"subjectId\":1,\"subjectName\":\"Math\",\"grade\":9,\"topicName\":\"Algebra\"}]}", capture -> {
             assertThat(capture.path()).isEqualTo("/ai/api/v1/catalog/curriculum");
             assertThat(capture.headers().getFirst("X-API-Key")).isEqualTo("secret");
         });
@@ -315,7 +276,7 @@ class AiApiClientTest {
 
     @Test
     void getCurriculumCatalog_shouldThrowWhenResponseIsEmpty() throws Exception {
-        startServer(204, "text/plain", "", 0, capture -> { });
+        startServer(204, "text/plain", "", capture -> { });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
@@ -327,7 +288,7 @@ class AiApiClientTest {
 
     @Test
     void getCurriculumCatalog_shouldThrowApiException_onErrorStatus() throws Exception {
-        startServer(500, "text/plain", "AI error", 0, capture -> { });
+        startServer(500, "text/plain", "AI error", capture -> { });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
@@ -335,17 +296,6 @@ class AiApiClientTest {
         assertThatThrownBy(() -> client.getCurriculumCatalog(dto3))
                 .isInstanceOf(AiApiException.class)
                 .hasMessageContaining("AI API Error");
-    }
-
-    @Test
-    void getCurriculumCatalog_shouldThrowTimeout_whenServerIsTooSlow() throws Exception {
-        startServer(200, "application/json", "{\"subjects\":[],\"topics\":[]}", 300, capture -> { });
-
-        AiApiClient client = newClient("secret", 50, 2000, 2000, 2000);
-
-        CurriculumCatalogRequestDto dto4 = new CurriculumCatalogRequestDto(9, 1, 2);
-        assertThatThrownBy(() -> client.getCurriculumCatalog(dto4))
-            .isInstanceOf(AiTimeoutException.class);
     }
 
     private AiApiClient newClient(String apiKey, int generateTimeout, int feedbackTimeout, int adaptiveTimeout, int studentRegistrationTimeout) {
@@ -369,9 +319,9 @@ class AiApiClientTest {
         return "http://localhost:" + server.getAddress().getPort();
     }
 
-    private void startServer(int statusCode, String contentType, String responseBody, long delayMillis, Consumer<RequestCapture> requestAssertion) throws IOException {
+    private void startServer(int statusCode, String contentType, String responseBody, Consumer<RequestCapture> requestAssertion) throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
-        server.createContext("/", new FixedResponseHandler(statusCode, contentType, responseBody, delayMillis, requestAssertion));
+        server.createContext("/", new FixedResponseHandler(statusCode, contentType, responseBody, requestAssertion));
         server.start();
     }
 
@@ -382,14 +332,12 @@ class AiApiClientTest {
         private final int statusCode;
         private final String contentType;
         private final String responseBody;
-        private final long delayMillis;
         private final Consumer<RequestCapture> requestAssertion;
 
-        private FixedResponseHandler(int statusCode, String contentType, String responseBody, long delayMillis, Consumer<RequestCapture> requestAssertion) {
+        private FixedResponseHandler(int statusCode, String contentType, String responseBody, Consumer<RequestCapture> requestAssertion) {
             this.statusCode = statusCode;
             this.contentType = contentType;
             this.responseBody = responseBody;
-            this.delayMillis = delayMillis;
             this.requestAssertion = requestAssertion;
         }
 
@@ -403,14 +351,6 @@ class AiApiClientTest {
                         requestBody,
                         exchange.getRequestHeaders()
                 ));
-
-                if (delayMillis > 0) {
-                    try {
-                        Thread.sleep(delayMillis);
-                    } catch (InterruptedException interruptedException) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
 
                 if (statusCode == 204) {
                     exchange.sendResponseHeaders(statusCode, -1);

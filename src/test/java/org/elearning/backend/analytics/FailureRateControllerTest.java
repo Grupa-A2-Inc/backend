@@ -6,6 +6,9 @@ import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -16,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -474,5 +478,38 @@ class FailureRateControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains("failureRatePoints");
+    }
+
+    @ParameterizedTest(name = "threshold={0}, expectedTriggered={1}")
+    @MethodSource("alertTriggeredScenarios")
+    void shouldCalculateAlertTriggeredForDifferentThresholds(double threshold, boolean expectedTriggered) {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        UUID testId = insertTest(lessonId, authenticatedUserId);
+        insertAnalyticsAlert(testId, authenticatedUserId, threshold);
+
+        // Create 2 students - 1 failed, 1 passed = 50% failure rate
+        UUID student1 = insertStudent();
+        UUID student2 = insertStudent();
+        insertTestResult(testId, student1, false); // Failed
+        insertTestResult(testId, student2, true);  // Passed
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/tests/" + testId + "/analytics/failure-rate",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"failureRate\":50.0");
+        assertThat(response.getBody()).contains("\"alertTriggered\":" + expectedTriggered);
+    }
+
+    private static Stream<Arguments> alertTriggeredScenarios() {
+        return Stream.of(
+                Arguments.of(30.0, true),
+                Arguments.of(80.0, false),
+                Arguments.of(50.0, false)
+        );
     }
 }
