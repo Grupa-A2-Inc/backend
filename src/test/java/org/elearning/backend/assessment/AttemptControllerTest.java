@@ -1,6 +1,9 @@
 package org.elearning.backend.assessment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elearning.backend.analytics.model.AnalyticsAlert;
+import org.elearning.backend.analytics.repository.AnalyticsAlertRepository;
+import org.elearning.backend.analytics.service.AlertCheckService;
 import org.elearning.backend.assessment.dto.test_dto.SubmitAnswerDto;
 import org.elearning.backend.assessment.dto.test_dto.SubmitRequestDto;
 import org.elearning.backend.auth.service.AccountActivationService;
@@ -10,9 +13,12 @@ import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -27,6 +33,11 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -35,6 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@ExtendWith(OutputCaptureExtension.class)
 class AttemptControllerTest {
 
     @Autowired
@@ -48,6 +60,12 @@ class AttemptControllerTest {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+        @Autowired
+        private AlertCheckService alertCheckService;
+
+        @Autowired
+        private AnalyticsAlertRepository analyticsAlertRepository;
 
     @MockitoBean
     private AccountActivationService accountActivationService;
@@ -67,6 +85,7 @@ class AttemptControllerTest {
 
     @AfterEach
     void tearDown() {
+        jdbcTemplate.execute("DELETE FROM analytics_alerts");
         jdbcTemplate.execute("DELETE FROM attempt_answers");
         jdbcTemplate.execute("DELETE FROM test_results");
         jdbcTemplate.execute("DELETE FROM test_attempts");
@@ -213,6 +232,15 @@ class AttemptControllerTest {
         return enrollmentId;
     }
 
+        private AnalyticsAlert insertAnalyticsAlert(UUID testId, BigDecimal threshold) {
+                AnalyticsAlert alert = AnalyticsAlert.builder()
+                                .testId(testId)
+                                .professorId(UUID.randomUUID())
+                                .failureThreshold(threshold)
+                                .build();
+                return analyticsAlertRepository.save(alert);
+        }
+
     private TestContext insertAdditionalQuestion(UUID testId, String content) {
         Integer questionId = jdbcTemplate.queryForObject(
                 "INSERT INTO questions (test_id, question_type, content, difficulty, is_active) " +
@@ -273,6 +301,102 @@ class AttemptControllerTest {
         request.setAnswers(List.of());
         return request;
     }
+
+        // =========================================================================
+        // AlertCheckService integration coverage
+        // =========================================================================
+
+        @Test
+        void checkAlerts_shouldReturnWithoutSaving_whenNoActiveAlertExists() {
+                UUID testId = insertTestWithoutQuestions("PUBLISHED", 1800, false);
+
+                alertCheckService.checkAlerts(testId);
+
+                assertTrue(analyticsAlertRepository.findByTestIdAndIsActiveTrue(testId).isEmpty());
+        }
+
+        @Test
+        void checkAlerts_shouldPersistZeroFailureRate_whenNoAttemptsExist() {
+                UUID testId = insertTestWithoutQuestions("PUBLISHED", 1800, false);
+                insertAnalyticsAlert(testId, BigDecimal.valueOf(40));
+
+                alertCheckService.checkAlerts(testId);
+
+                AnalyticsAlert alert = analyticsAlertRepository.findByTestIdAndIsActiveTrue(testId)
+                                .orElseThrow();
+
+                assertEquals(0, alert.getCurrentFailureRate().compareTo(BigDecimal.ZERO));
+                assertEquals(null, alert.getTriggeredAt());
+        }
+
+        @Test
+        void submitAttempt_shouldTriggerAlert_whenFailureRateExceedsThreshold() throws Exception {
+                TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
+                insertAnalyticsAlert(context.testId(), BigDecimal.ZERO);
+                UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
+
+                SubmitAnswerDto answer = new SubmitAnswerDto();
+                answer.setQuestionId(context.questionId());
+                answer.setSelectedOptionIds(Collections.emptyList());
+                answer.setTimeSpent(BigDecimal.valueOf(30));
+
+                SubmitRequestDto request = new SubmitRequestDto();
+                request.setAnswers(List.of(answer));
+
+                mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
+                                                .with(csrf())
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.passed").value(false));
+
+                AnalyticsAlert alert = analyticsAlertRepository.findByTestIdAndIsActiveTrue(context.testId())
+                                .orElseThrow();
+
+                assertEquals(0, alert.getCurrentFailureRate().compareTo(BigDecimal.valueOf(100)));
+                assertNotNull(alert.getTriggeredAt());
+        }
+
+        @Test
+        void submitAttempt_shouldNotTriggerAlert_whenFailureRateEqualsThreshold() throws Exception {
+                TestContext context = insertTestWithQuestion("PUBLISHED", 1800);
+                insertAnalyticsAlert(context.testId(), BigDecimal.valueOf(100));
+                UUID attemptId = insertAttempt(context.testId(), studentId, 1, "IN_PROGRESS", "NOW()");
+
+                SubmitAnswerDto answer = new SubmitAnswerDto();
+                answer.setQuestionId(context.questionId());
+                answer.setSelectedOptionIds(Collections.emptyList());
+                answer.setTimeSpent(BigDecimal.valueOf(30));
+
+                SubmitRequestDto request = new SubmitRequestDto();
+                request.setAnswers(List.of(answer));
+
+                mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
+                                                .with(csrf())
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.passed").value(false));
+
+                AnalyticsAlert alert = analyticsAlertRepository.findByTestIdAndIsActiveTrue(context.testId())
+                                .orElseThrow();
+
+                assertEquals(0, alert.getCurrentFailureRate().compareTo(BigDecimal.valueOf(100)));
+                assertNull(alert.getTriggeredAt());
+        }
+
+        @Test
+        void checkAlerts_shouldLogAndSwallowException_whenAnalyticsTableUnavailable(CapturedOutput output) {
+                UUID testId = UUID.randomUUID();
+                jdbcTemplate.execute("ALTER TABLE analytics_alerts RENAME TO analytics_alerts_backup");
+                try {
+                        assertDoesNotThrow(() -> alertCheckService.checkAlerts(testId));
+                } finally {
+                        jdbcTemplate.execute("ALTER TABLE analytics_alerts_backup RENAME TO analytics_alerts");
+                }
+
+                assertThat(output.getOut()).contains("Failed to check alerts for testId");
+        }
 
     // =========================================================================
     // POST /api/v1/tests/{testId}/start

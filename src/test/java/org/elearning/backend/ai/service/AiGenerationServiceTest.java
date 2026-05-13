@@ -9,11 +9,10 @@ import org.elearning.backend.ai.exception.ValidationException;
 import org.elearning.backend.ai.model.AiQuestionRequest;
 import org.elearning.backend.ai.model.AiRequestStatus;
 import org.elearning.backend.ai.repository.AiQuestionRequestRepository;
-import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
+import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.role.entity.RoleName;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -29,7 +28,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,111 +54,169 @@ class AiGenerationServiceTest {
     @InjectMocks
     private AiGenerationService aiGenerationService;
 
-    private UUID lessonId;
-    private UUID userId;
-
-    @BeforeEach
-    void setUp() {
-        lessonId = UUID.randomUUID();
-        userId = UUID.randomUUID();
-    }
-
     @Test
-    void generateForLessonPersistsPendingRequestAndStartsWorkerForTeacher() {
+    void generateForLesson_shouldSaveRequestAndStartAsync_whenTeacherHasAccess() {
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID savedId = UUID.randomUUID();
+
         when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
         when(questionRequestRepository.save(any(AiQuestionRequest.class))).thenAnswer(invocation -> {
             AiQuestionRequest request = invocation.getArgument(0);
-            request.setId(UUID.randomUUID());
+            request.setId(savedId);
             return request;
         });
 
         UUID requestId = aiGenerationService.generateForLesson(lessonId, userId, RoleName.TEACHER, 5);
 
-        ArgumentCaptor<AiQuestionRequest> captor = ArgumentCaptor.forClass(AiQuestionRequest.class);
-        verify(questionRequestRepository).save(captor.capture());
-        verify(aiAsyncWorker).processAiGenerationInBackground(eq(5), eq(lessonId), eq(captor.getValue()));
-        assertThat(captor.getValue().getStatus()).isEqualTo(AiRequestStatus.PENDING);
-        assertThat(captor.getValue().getLessonId()).isEqualTo(lessonId);
-        assertThat(requestId).isNotNull();
+        assertThat(requestId).isEqualTo(savedId);
+        ArgumentCaptor<AiQuestionRequest> requestCaptor = ArgumentCaptor.forClass(AiQuestionRequest.class);
+        verify(questionRequestRepository).save(requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getStatus()).isEqualTo(AiRequestStatus.PENDING);
+        assertThat(requestCaptor.getValue().getLessonId()).isEqualTo(lessonId);
+        verify(aiAsyncWorker).processAiGenerationInBackground(5, lessonId, requestCaptor.getValue());
     }
 
     @Test
-    void generateForLessonThrowsWhenTeacherCannotAccessLesson() {
+    void generateForLesson_shouldRejectTeacherWithoutAccess() {
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
         when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(false);
 
         assertThatThrownBy(() -> aiGenerationService.generateForLesson(lessonId, userId, RoleName.TEACHER, 5))
                 .isInstanceOf(WithoutAccessException.class);
+
+        verify(questionRequestRepository, never()).save(any());
+        verify(aiAsyncWorker, never()).processAiGenerationInBackground(any(Integer.class), any(UUID.class), any());
     }
 
     @Test
-    void generateForLessonThrowsWhenStudentIsNotEnrolled() {
-        when(lessonRepository.isStudentEnrolledInLessonCourse(lessonId, userId)).thenReturn(false);
+    void generateForLesson_shouldSaveRequestWhenStudentHasAccess() {
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID savedId = UUID.randomUUID();
 
-        assertThatThrownBy(() -> aiGenerationService.generateForLesson(lessonId, userId, RoleName.STUDENT, 5))
-                .isInstanceOf(WithoutAccessException.class);
-    }
-
-    @Test
-    void getRequestStatusReturnsStatusDto() {
-        UUID requestId = UUID.randomUUID();
-        AiQuestionRequest request = new AiQuestionRequest();
-        request.setLessonId(lessonId);
-        request.setStatus(AiRequestStatus.SUCCESS);
-        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
         when(lessonRepository.isStudentEnrolledInLessonCourse(lessonId, userId)).thenReturn(true);
-
-        AiRequestStatusDto dto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.STUDENT);
-
-        assertThat(dto.getRequestId()).isEqualTo(requestId);
-        assertThat(dto.getStatus()).isEqualTo(AiRequestStatus.SUCCESS);
-    }
-
-    @Test
-    void getRequestStatusThrowsWhenRequestMissing() {
-        UUID requestId = UUID.randomUUID();
-        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> aiGenerationService.getRequestStatus(requestId, userId, RoleName.STUDENT))
-                .isInstanceOf(DoesNotExistException.class)
-                .hasMessage("Request not found");
-    }
-
-    @Test
-    void generateTestForLessonThrowsWhenCountMissing() {
-        AiGenerateRequestDto requestDto = new AiGenerateRequestDto();
-        ReflectionTestUtils.setField(requestDto, "count", null);
-
-        assertThatThrownBy(() -> aiGenerationService.generateTestForLesson(requestDto, lessonId, userId, RoleName.TEACHER))
-                .isInstanceOf(ValidationException.class)
-                .hasMessage(" count is required.");
-    }
-
-    @Test
-    void generateTestForLessonBuildsAcceptedResponse() {
-        AiGenerateRequestDto requestDto = new AiGenerateRequestDto();
-        ReflectionTestUtils.setField(requestDto, "count", 4);
-        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
         when(questionRequestRepository.save(any(AiQuestionRequest.class))).thenAnswer(invocation -> {
             AiQuestionRequest request = invocation.getArgument(0);
-            request.setId(UUID.randomUUID());
+            request.setId(savedId);
             return request;
         });
 
-        AiGenerateResponseDto response = aiGenerationService.generateTestForLesson(requestDto, lessonId, userId, RoleName.TEACHER);
+        UUID requestId = aiGenerationService.generateForLesson(lessonId, userId, RoleName.STUDENT, 3);
 
-        assertThat(response.getLessonId()).isEqualTo(lessonId);
-        assertThat(response.getStatus()).isEqualTo(AiRequestStatus.PENDING);
-        assertThat(response.getRequestId()).isNotNull();
+        assertThat(requestId).isEqualTo(savedId);
+        verify(lessonRepository).isStudentEnrolledInLessonCourse(lessonId, userId);
+        verify(aiAsyncWorker).processAiGenerationInBackground(eq(3), eq(lessonId), any(AiQuestionRequest.class));
     }
 
     @Test
-    void getCurriculumCatalogDelegatesToApiClient() {
-        CurriculumCatalogRequestDto requestDto = new CurriculumCatalogRequestDto(8, 2, 4);
+    void generateForLesson_shouldRejectStudentWithoutAccess() {
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        when(lessonRepository.isStudentEnrolledInLessonCourse(lessonId, userId)).thenReturn(false);
+
+        assertThatThrownBy(() -> aiGenerationService.generateForLesson(lessonId, userId, RoleName.STUDENT, 3))
+                .isInstanceOf(WithoutAccessException.class);
+
+        verify(questionRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void generateForLesson_shouldSkipAccessCheckForAdmin() {
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID savedId = UUID.randomUUID();
+
+        when(questionRequestRepository.save(any(AiQuestionRequest.class))).thenAnswer(invocation -> {
+            AiQuestionRequest request = invocation.getArgument(0);
+            request.setId(savedId);
+            return request;
+        });
+
+        UUID requestId = aiGenerationService.generateForLesson(lessonId, userId, RoleName.ADMIN, 2);
+
+        assertThat(requestId).isEqualTo(savedId);
+        verifyNoInteractions(lessonRepository);
+    }
+
+    @Test
+    void getRequestStatus_shouldReturnStatus_whenRequestExists() {
+        UUID requestId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AiQuestionRequest request = AiQuestionRequest.builder()
+                .id(requestId)
+                .lessonId(lessonId)
+                .status(AiRequestStatus.SUCCESS)
+                .build();
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+
+        AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
+
+        assertThat(statusDto.getRequestId()).isEqualTo(requestId);
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.SUCCESS);
+    }
+
+    @Test
+    void getRequestStatus_shouldThrowWhenRequestMissing() {
+        UUID requestId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> aiGenerationService.getRequestStatus(requestId, userId, RoleName.ADMIN))
+                .isInstanceOf(DoesNotExistException.class);
+    }
+
+    @Test
+    void generateTestForLesson_shouldRejectMissingCount() {
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        AiGenerateRequestDto requestDto = new AiGenerateRequestDto();
+        ReflectionTestUtils.setField(requestDto, "count", null);
+
+        assertThatThrownBy(() -> aiGenerationService.generateTestForLesson(requestDto, lessonId, userId, RoleName.ADMIN))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("count is required");
+    }
+
+    @Test
+    void generateTestForLesson_shouldReturnPendingResponse() {
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+
+        AiGenerateRequestDto requestDto = new AiGenerateRequestDto();
+        ReflectionTestUtils.setField(requestDto, "count", 7);
+
+        when(questionRequestRepository.save(any(AiQuestionRequest.class))).thenAnswer(invocation -> {
+            AiQuestionRequest request = invocation.getArgument(0);
+            request.setId(requestId);
+            return request;
+        });
+
+        AiGenerateResponseDto responseDto = aiGenerationService.generateTestForLesson(requestDto, lessonId, userId, RoleName.ADMIN);
+
+        assertThat(responseDto.getRequestId()).isEqualTo(requestId);
+        assertThat(responseDto.getLessonId()).isEqualTo(lessonId);
+        assertThat(responseDto.getStatus()).isEqualTo(AiRequestStatus.PENDING);
+    }
+
+    @Test
+    void getCurriculumCatalog_shouldDelegateToClient() {
+        CurriculumCatalogRequestDto requestDto = new CurriculumCatalogRequestDto(9, 2, 3);
         CurriculumCatalogResponseDto expected = new CurriculumCatalogResponseDto();
         when(aiApiClient.getCurriculumCatalog(requestDto)).thenReturn(expected);
 
         CurriculumCatalogResponseDto actual = aiGenerationService.getCurriculumCatalog(requestDto);
 
         assertThat(actual).isSameAs(expected);
+        verify(aiApiClient).getCurriculumCatalog(requestDto);
     }
 }
