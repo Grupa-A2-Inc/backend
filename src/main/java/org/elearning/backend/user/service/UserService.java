@@ -8,6 +8,7 @@ import org.elearning.backend.common.dto.response.PaginatedResponse;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
+import org.elearning.backend.organization.service.OrganizationDeletionService;
 import org.elearning.backend.parent.entity.Parent;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
@@ -30,10 +31,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -56,6 +60,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AiStudentRegistrationService aiStudentRegistrationService;
     private final EntitlementService entitlementService;
+    private final OrganizationDeletionService organizationDeletionService;
 
     private static final String USER_NO_EXIST = "User does not exist: ";
     private static final String DELIMITER = ",";
@@ -107,14 +112,19 @@ public class UserService {
             user.setOrganization(org);
         }
 
-        User saved = userRepository.save(user);
+        User saved;
+        try {
+            saved = userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new UserAlreadyExistsException("Email already exists: " + request.getEmail());
+        }
 
         if (request.getRoleName() == RoleName.STUDENT) {
             aiStudentRegistrationService.registerStudent(saved.getId());
         }
 
         String rawToken = activationTokenService.generateActivationToken(saved);
-        emailService.sendActivationEmail(saved.getEmail(), saved.getFirstName(), rawToken);
+        sendActivationEmailAfterCommit(saved, rawToken);
 
         return toResponse(saved);
     }
@@ -183,10 +193,17 @@ public class UserService {
     }
 
     public void deleteUser(UUID id) {
-        if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException(USER_NO_EXIST + id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + id));
+
+        if (user.getRole() != null
+                && user.getRole().getName() == RoleName.ORGANIZATION_ADMIN
+                && organizationRepository.findFirstByOwnerId(id).isPresent()) {
+            organizationDeletionService.deleteOrganizationOwnedByAdmin(id);
+            return;
         }
-        userRepository.deleteById(id);
+
+        userRepository.delete(user);
     }
 
     public void changePassword(UUID id, ChangePasswordRequest request) {
@@ -211,6 +228,20 @@ public class UserService {
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    private void sendActivationEmailAfterCommit(User user, String rawToken) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    emailService.sendActivationEmail(user.getEmail(), user.getFirstName(), rawToken);
+                }
+            });
+            return;
+        }
+
+        emailService.sendActivationEmail(user.getEmail(), user.getFirstName(), rawToken);
     }
 
     private UserResponse toResponse(User user) {

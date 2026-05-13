@@ -216,6 +216,31 @@ class ProgressControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    @Test
+    void shouldGetStudentCoursesProgressForTeacher() {
+        UUID teacherId = insertUser(RoleName.TEACHER);
+        authorizeRequests(teacherId, RoleName.TEACHER);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/v1/students/" + studentId + "/courses-progress",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains(courseId.toString());
+    }
+
+    @Test
+    void shouldGetMyCompletedCoursesForStudent() {
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "/api/v1/students/me/completed-courses",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+    }
+
     // =========================================================================
     // TESTE PENTRU DEV 4: PROGRES PROFESOR SI PARINTE
     // =========================================================================

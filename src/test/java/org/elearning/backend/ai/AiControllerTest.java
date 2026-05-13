@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.ai.dto.CurriculumCatalogRequestDto;
 import org.elearning.backend.ai.dto.CurriculumCatalogResponseDto;
 import org.elearning.backend.ai.dto.InjectRequestDto;
+import org.elearning.backend.ai.dto.AiRequestStatusDto;
+import org.elearning.backend.ai.model.AiRequestStatus;
 import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.ai.service.AiGenerationService;
 import org.elearning.backend.role.entity.RoleName;
@@ -319,6 +321,41 @@ class AiControllerTest {
                 .andExpect(jsonPath("$.testCreated").value(false))
                 .andExpect(jsonPath("$.testId").value(testId.toString()))
                 .andExpect(jsonPath("$.injectedCount").value(1));
+    }
+
+    @Test
+    void getRequestStatus_shouldReturnStatusFromService() throws Exception {
+        UUID requestId = UUID.randomUUID();
+        AiRequestStatusDto response = new AiRequestStatusDto();
+        response.setRequestId(requestId);
+        response.setStatus(AiRequestStatus.SUCCESS);
+        when(aiGenerationService.getRequestStatus(requestId, teacherId, RoleName.TEACHER)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/ai/requests/{requestId}/status", requestId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + teacherToken)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requestId").value(requestId.toString()))
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
+    }
+
+    @Test
+    void getCurriculumCatalog_shouldReturnCatalogForStudent() throws Exception {
+        CurriculumCatalogResponseDto response = new CurriculumCatalogResponseDto(
+                java.util.List.of(new CurriculumCatalogResponseDto.SubjectDto(2, "Math")),
+                java.util.List.of(new CurriculumCatalogResponseDto.TopicsDto(4, 2, "Math", 8, "Algebra"))
+        );
+        when(aiGenerationService.getCurriculumCatalog(any(CurriculumCatalogRequestDto.class))).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/ai/catalog/curriculum")
+                        .param("grade", "8")
+                        .param("subjectId", "2")
+                        .param("topicId", "4")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + studentToken)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.subjects[0].subjectName").value("Math"))
+                .andExpect(jsonPath("$.topics[0].topicName").value("Algebra"));
     }
 
     @Test

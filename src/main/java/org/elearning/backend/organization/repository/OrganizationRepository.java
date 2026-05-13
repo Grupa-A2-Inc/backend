@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public interface OrganizationRepository extends JpaRepository<Organization, UUID>, JpaSpecificationExecutor<Organization> {
     List<Organization> findByOwnerId(UUID ownerId);
+    Optional<Organization> findFirstByOwnerId(UUID ownerId);
     boolean existsByName(String name);
     Optional<Organization> findByName(String name);
 }

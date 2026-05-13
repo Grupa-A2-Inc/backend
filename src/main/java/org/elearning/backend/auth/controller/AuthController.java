@@ -1,6 +1,7 @@
 package org.elearning.backend.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -62,6 +63,8 @@ public class AuthController {
             summary = "Register a new account",
             description = "Creates a new account through the public registration flow and immediately starts an authenticated session for the new user. " +
                     "The endpoint returns the authentication payload in the response body and also sends a refresh token as an HttpOnly cookie. " +
+                    "It also initializes the CSRF flow by causing the backend to issue an XSRF-TOKEN cookie that browser clients must echo in the X-XSRF-TOKEN header " +
+                    "when later calling cookie-authenticated state-changing endpoints such as refresh and logout. " +
                     "For security reasons, the refresh token value is not exposed in the JSON body and the corresponding field in the response payload " +
                     "will always be null. This endpoint is not meant for privileged staff provisioning; accounts created by ADMIN or ORGANIZATION_ADMIN " +
                     "through internal management flows should use the user-management endpoints instead."
@@ -94,6 +97,8 @@ public class AuthController {
             summary = "Authenticate user",
             description = "Authenticates a user with email and password, returns a fresh access token in the response body, and sends a refresh token " +
                     "as an HttpOnly cookie. The refresh token field inside the JSON response is intentionally cleared and will always be null. " +
+                    "It also initializes the CSRF flow by causing the backend to issue an XSRF-TOKEN cookie that browser clients must echo in the X-XSRF-TOKEN header " +
+                    "when later calling cookie-authenticated state-changing endpoints such as refresh and logout. " +
                     "This endpoint is shared by every role in the system, including ADMIN and ORGANIZATION_ADMIN. The distinction between those roles " +
                     "does not affect login itself; it affects which protected endpoints can be used after authentication succeeds."
     )
@@ -190,14 +195,22 @@ public class AuthController {
             summary = "Refresh access token",
             description = "Validates the refresh token received through the HttpOnly cookie, rotates that refresh token, and issues a new access token. " +
                     "The caller receives the new access token in the response body and a replacement refresh token cookie in the response headers. " +
+                    "Because this endpoint authenticates through a browser cookie, it is also protected by CSRF: the client must send the XSRF-TOKEN cookie value " +
+                    "back in the X-XSRF-TOKEN request header and include credentials/cookies with the request. " +
                     "This endpoint keeps existing role identity intact: if the user was authenticated as ADMIN or ORGANIZATION_ADMIN, the new access token " +
                     "will preserve that role and its authorization scope."
     )
     @ApiResponse(responseCode = OK, description = "New access token issued and refresh token cookie sent",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = RefreshResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Missing or invalid CSRF token", content = @Content)
     @ApiResponse(responseCode = UNAUTHORIZED, description = "Invalid, expired or revoked refresh token", content = @Content)
     @PostMapping("/refresh")
-    public ResponseEntity<RefreshResponse> refresh(@CookieValue(name = "refresh_token", required = false) String rawRefreshToken) {
+    public ResponseEntity<RefreshResponse> refresh(
+            @Parameter(
+                    description = "Refresh token sent automatically by the browser as an HttpOnly cookie.",
+                    example = "refresh_token=<http-only-cookie-value>"
+            )
+            @CookieValue(name = "refresh_token", required = false) String rawRefreshToken) {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
             throw new InvalidCredentialsException("Refresh token missing");
         }
@@ -223,13 +236,24 @@ public class AuthController {
             summary = "Logout user",
             description = "Clears the refresh token cookie by returning the same cookie with an empty value and Max-Age=0." +
                     " Aditionally adds the current access token to a blacklist until expiration. " +
+                    "Because the endpoint can act on cookie-authenticated session state, browser clients must include credentials/cookies and must echo the XSRF-TOKEN cookie " +
+                    "in the X-XSRF-TOKEN request header. " +
                     "This endpoint does not distinguish between ADMIN, ORGANIZATION_ADMIN, or any other authenticated role; " +
                     "it simply terminates the current session material as safely as possible."
     )
     @ApiResponse(responseCode = NO_CONTENT, description = "Logout successful", content = @Content)
+    @ApiResponse(responseCode = "403", description = "Missing or invalid CSRF token", content = @Content)
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
+            @Parameter(
+                    description = "Refresh token sent automatically by the browser as an HttpOnly cookie.",
+                    example = "refresh_token=<http-only-cookie-value>"
+            )
             @CookieValue(name = "refresh_token", required = false) String rawRefreshToken,
+            @Parameter(
+                    description = "Bearer access token to blacklist on logout. Optional, but recommended when the caller also wants the current access token revoked.",
+                    example = "Bearer eyJhbGciOiJIUzI1NiJ9..."
+            )
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
 
         if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {

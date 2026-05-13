@@ -10,11 +10,13 @@ import org.elearning.backend.content.model.*;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 // JpaRepository da automat metodele: save(), findAll(), deleteById(), etc.
 public interface CourseRepository extends JpaRepository<Course, UUID> {
     List<Course> findByCreatedBy(UUID createdBy);
+    List<Course> findByCreatedByIn(Collection<UUID> createdBy);
     List<Course> findByStatusAndVisibility(CourseStatus status, CourseVisibility visibility);
 
     Page<Course> findByStatusAndVisibility(CourseStatus status, CourseVisibility visibility, Pageable pageable);

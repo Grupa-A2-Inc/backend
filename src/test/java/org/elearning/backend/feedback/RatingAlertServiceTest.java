@@ -21,6 +21,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -77,6 +79,37 @@ class RatingAlertServiceTest {
         ratingAlertService.checkLessonRating(lessonId);
 
         assertThat(output.getOut()).doesNotContain("[RATING ALERT]");
+    }
+
+    @Test
+    void shouldLogPrivateLessonWarningWhenAverageIsLow(CapturedOutput output) {
+        UUID lessonId = UUID.randomUUID();
+
+        LessonRatingStatsDto stats = new LessonRatingStatsDto(2.2, 3L);
+        LessonVisibilityAndOwnerDto visibilityDto = new LessonVisibilityAndOwnerDto(
+                CourseVisibility.PRIVATE,
+                UUID.randomUUID(),
+                "Private Lesson"
+        );
+
+        when(lessonRatingRepository.getAverageAndCountByLessonId(lessonId)).thenReturn(stats);
+        when(lessonRepository.getLessonVisibilityAndOwner(lessonId)).thenReturn(visibilityDto);
+
+        ratingAlertService.checkLessonRating(lessonId);
+
+        assertThat(output.getOut()).contains("Private Lesson");
+        assertThat(output.getOut()).contains("Profesor:");
+    }
+
+    @Test
+    void shouldNotQueryLessonWhenRatingIsNotLow() {
+        UUID lessonId = UUID.randomUUID();
+        when(lessonRatingRepository.getAverageAndCountByLessonId(lessonId))
+                .thenReturn(new LessonRatingStatsDto(4.5, 10L));
+
+        ratingAlertService.checkLessonRating(lessonId);
+
+        verify(lessonRepository, never()).getLessonVisibilityAndOwner(lessonId);
     }
 
     @Test
