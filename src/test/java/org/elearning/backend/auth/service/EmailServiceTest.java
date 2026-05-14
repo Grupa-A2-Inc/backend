@@ -26,6 +26,7 @@ class EmailServiceTest {
     @Test
     void sendPasswordResetEmail_sendsExpectedMessage() {
         ReflectionTestUtils.setField(emailService, "from", "noreply@example.com");
+        ReflectionTestUtils.setField(emailService, "frontendUrl", "https://frontend-teal-five-57.vercel.app");
 
         emailService.sendPasswordResetEmail("user@example.com", "raw-reset-token");
 
@@ -37,11 +38,10 @@ class EmailServiceTest {
         assertThat(message.getFrom()).isEqualTo("noreply@example.com");
         assertThat(message.getTo()).containsExactly("user@example.com");
         assertThat(message.getSubject()).isEqualTo("Reset password");
-        assertThat(message.getText()).isEqualTo("""
-                Use this reset token to change your password:
-                   raw-reset-token
-
-                This token expires in 10 minutes.""");
+        assertThat(message.getText()).contains("Click the link below to reset your password:");
+        assertThat(message.getText()).contains("https://frontend-teal-five-57.vercel.app/reset-password?token=raw-reset-token");
+        assertThat(message.getText()).contains("This link expires in 60 minutes.");
+        assertThat(message.getText()).contains("If you did not request a password reset, please ignore this email.");
     }
 
     @Test

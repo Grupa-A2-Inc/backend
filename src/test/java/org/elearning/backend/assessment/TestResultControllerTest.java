@@ -6,7 +6,12 @@ import org.elearning.backend.assessment.dto.attempt_dto.AttemptStatusDTO;
 import org.elearning.backend.assessment.model.AttemptStatus;
 import org.elearning.backend.assessment.service.TestResultService;
 import org.elearning.backend.auth.service.EmailService;
+import org.elearning.backend.role.entity.Role;
+import org.elearning.backend.role.entity.RoleName;
+import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.access.AccessService;
+import org.elearning.backend.user.entity.User;
+import org.elearning.backend.user.entity.UserStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +30,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -203,6 +209,34 @@ class TestResultControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.message").value("The attempt is still in progress"));
+
+        verify(testResultService).getTestResult(attemptId, studentId);
+    }
+
+    @Test
+    void getResult_shouldUseCustomUserDetailsPrincipalWhenPresent() throws Exception {
+        User user = new User();
+        user.setId(studentId);
+        user.setEmail("student@test.com");
+        user.setPasswordHash("hashed");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setRole(new Role(RoleName.STUDENT));
+        CustomUserDetails customUserDetails = new CustomUserDetails(user);
+
+        AttemptReportDTO mockReport = AttemptReportDTO.builder()
+                .attemptId(attemptId)
+                .score(BigDecimal.TEN)
+                .scorePercent(BigDecimal.TEN)
+                .passed(true)
+                .completedAt(LocalDateTime.now())
+                .question(List.of())
+                .build();
+        when(testResultService.getTestResult(attemptId, studentId)).thenReturn(mockReport);
+
+        mockMvc.perform(get("/api/v1/attempts/{attemptId}/result", attemptId)
+                        .with(user(customUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attemptId").value(attemptId.toString()));
 
         verify(testResultService).getTestResult(attemptId, studentId);
     }

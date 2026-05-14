@@ -196,6 +196,23 @@ class QuestionServiceTest {
         }
 
         @Test
+        void shouldCreateQuestion_whenMappedEntityHasNoOptions() {
+            QuestionRequestDto dto = requestDto(QuestionType.SINGLE_CHOICE, singleChoiceOptions());
+            Question entity = questionEntity(4, draftTest);
+            entity.setOptions(null);
+
+            when(testRepository.findById(testId)).thenReturn(Optional.of(draftTest));
+            when(questionMapper.toEntity(dto)).thenReturn(entity);
+            when(questionRepository.save(entity)).thenReturn(entity);
+            when(questionMapper.toResponseDto(entity)).thenReturn(responseDto(4));
+
+            QuestionResponseDto result = questionService.createQuestion(testId, dto, teacherId);
+
+            assertThat(result.getQuestionId()).isEqualTo(4L);
+            verify(questionRepository).save(entity);
+        }
+
+        @Test
         void shouldThrow_whenTestNotFound() {
             QuestionRequestDto dto = requestDto(QuestionType.SINGLE_CHOICE, singleChoiceOptions());
             when(testRepository.findById(testId)).thenReturn(Optional.empty());
@@ -353,6 +370,62 @@ class QuestionServiceTest {
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("'True' and 'False'");
         }
+
+        @Test
+        void shouldThrowValidation_whenQuestionTypeIsUnsupported() {
+            QuestionRequestDto dto = requestDto(null, trueFalseOptions(true));
+            when(testRepository.findById(testId)).thenReturn(Optional.of(draftTest));
+
+            ThrowingCallable call = () -> questionService.createQuestion(testId, dto, teacherId);
+
+            assertThatThrownBy(call)
+                    .isInstanceOf(ValidationException.class)
+                    .hasMessageContaining("not supported");
+        }
+
+        @Test
+        void shouldThrowValidation_whenTrueFalseHasOnlyFalseKeyword() {
+            QuestionRequestDto dto = requestDto(QuestionType.TRUE_FALSE,
+                    List.of(option("False", true), option("Maybe", false)));
+            when(testRepository.findById(testId)).thenReturn(Optional.of(draftTest));
+
+            ThrowingCallable call = () -> questionService.createQuestion(testId, dto, teacherId);
+
+            assertThatThrownBy(call)
+                    .isInstanceOf(ValidationException.class)
+                    .hasMessageContaining("'True' and 'False'");
+        }
+
+        @Test
+        void shouldThrowValidation_whenTrueFalseHasOnlyTrueKeyword() {
+            QuestionRequestDto dto = requestDto(QuestionType.TRUE_FALSE,
+                    List.of(option("True", true), option("Maybe", false)));
+            when(testRepository.findById(testId)).thenReturn(Optional.of(draftTest));
+
+            ThrowingCallable call = () -> questionService.createQuestion(testId, dto, teacherId);
+
+            assertThatThrownBy(call)
+                    .isInstanceOf(ValidationException.class)
+                    .hasMessageContaining("'True' and 'False'");
+        }
+    }
+
+    // =========================================================================
+    // getAllQuestionsForTest
+    // =========================================================================
+
+    @Test
+    void shouldReturnAllQuestionsForTest() {
+        Question q1 = questionEntity(1, draftTest);
+        Question q2 = questionEntity(2, draftTest);
+        when(questionRepository.findByTestId(testId)).thenReturn(List.of(q1, q2));
+        when(questionMapper.toResponseDto(q1)).thenReturn(responseDto(1));
+        when(questionMapper.toResponseDto(q2)).thenReturn(responseDto(2));
+
+        List<QuestionResponseDto> result = questionService.getAllQuestionsForTest(testId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(QuestionResponseDto::getQuestionId).containsExactly(1L, 2L);
     }
 
     // =========================================================================
@@ -468,6 +541,17 @@ class QuestionServiceTest {
         }
 
         @Test
+        void shouldDefaultSortByDisplayOrder_whenSortByIsEmpty() {
+            Sort expectedSort = Sort.by(Sort.Direction.ASC, "displayOrder");
+            when(questionRepository.findFilteredQuestions(eq(testId), isNull(), isNull(), eq(expectedSort)))
+                    .thenReturn(List.of());
+
+            questionService.getFilteredAndSortedQuestions(testId, null, null, "", "asc");
+
+            verify(questionRepository).findFilteredQuestions(testId, null, null, expectedSort);
+        }
+
+        @Test
         void shouldReturnEmptyList_whenNoQuestionsMatch() {
             when(questionRepository.findFilteredQuestions(any(), any(), any(), any()))
                     .thenReturn(List.of());
@@ -529,6 +613,26 @@ class QuestionServiceTest {
             assertThat(existing.getOptions()).doesNotContain(oldOpt);
             assertThat(existing.getOptions()).contains(newOpt);
             assertThat(newOpt.getQuestion()).isSameAs(existing);
+        }
+
+        @Test
+        void shouldUpdateQuestion_whenMappedQuestionHasNoOptions() {
+            QuestionRequestDto dto = requestDto(QuestionType.SINGLE_CHOICE, singleChoiceOptions());
+            Question existing = questionEntity(1, draftTest);
+            existing.getOptions().add(new QuestionOption());
+            Question mapped = new Question();
+            mapped.setOptions(null);
+
+            when(testRepository.findById(testId)).thenReturn(Optional.of(draftTest));
+            when(questionRepository.findById(1)).thenReturn(Optional.of(existing));
+            when(questionMapper.toEntity(dto)).thenReturn(mapped);
+            when(questionRepository.save(existing)).thenReturn(existing);
+            when(questionMapper.toResponseDto(existing)).thenReturn(responseDto(1));
+
+            QuestionResponseDto result = questionService.updateQuestion(testId, 1, dto, teacherId);
+
+            assertThat(result).isNotNull();
+            assertThat(existing.getOptions()).isEmpty();
         }
 
         @Test

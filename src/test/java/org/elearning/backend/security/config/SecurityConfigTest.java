@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockServletContext;
+import jakarta.servlet.http.Cookie;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
@@ -72,6 +74,35 @@ class SecurityConfigTest {
     }
 
     @Test
+    void refreshEndpoint_requiresCsrfToken() throws Exception {
+        try (AnnotationConfigWebApplicationContext context = createContext()) {
+            MockMvc mockMvc = buildMockMvc(context);
+
+            mockMvc.perform(post("/api/v1/auth/refresh"))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .cookie(new Cookie("refresh_token", "refresh-token"), new Cookie("XSRF-TOKEN", "csrf-token"))
+                            .header("X-XSRF-TOKEN", "csrf-token"))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    void loginEndpoint_doesNotRequireCsrfToken() throws Exception {
+        try (AnnotationConfigWebApplicationContext context = createContext()) {
+            MockMvc mockMvc = buildMockMvc(context);
+
+            var result = mockMvc.perform(post("/api/v1/auth/login"))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            String setCookieHeader = result.getResponse().getHeader("Set-Cookie");
+            assertThat(setCookieHeader).contains("XSRF-TOKEN=");
+        }
+    }
+
+    @Test
     void corsConfigurationSource_allowsConfiguredOriginsMethodsAndHeaders() {
         SecurityConfig securityConfig = new SecurityConfig(
                 new JwtAuthenticationFilter(
@@ -98,7 +129,8 @@ class SecurityConfigTest {
                 "Content-Type",
                 "Accept",
                 "Origin",
-                "X-Requested-With"
+                "X-Requested-With",
+                "X-XSRF-TOKEN"
         );
     }
 
@@ -159,6 +191,16 @@ class SecurityConfigTest {
         @GetMapping("/api/v1/auth/ping")
         public ResponseEntity<String> authPing() {
             return ResponseEntity.ok("auth-ok");
+        }
+
+        @org.springframework.web.bind.annotation.PostMapping("/api/v1/auth/login")
+        public ResponseEntity<String> authLogin() {
+            return ResponseEntity.ok("login-ok");
+        }
+
+        @org.springframework.web.bind.annotation.PostMapping("/api/v1/auth/refresh")
+        public ResponseEntity<String> authRefresh() {
+            return ResponseEntity.ok("refresh-ok");
         }
 
         @GetMapping("/api/v1/secure/ping")

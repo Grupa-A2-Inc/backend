@@ -6,6 +6,7 @@ import org.elearning.backend.auth.service.ActivationTokenService;
 import org.elearning.backend.auth.service.EmailService;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
+import org.elearning.backend.organization.service.OrganizationDeletionService;
 import org.elearning.backend.parent.entity.Parent;
 import org.elearning.backend.role.entity.Role;
 import org.elearning.backend.role.entity.RoleName;
@@ -31,7 +32,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Optional;
@@ -74,6 +78,9 @@ class UserServiceCoverageTest {
 
     @Mock
     private EntitlementService entitlementService;
+
+    @Mock
+    private OrganizationDeletionService organizationDeletionService;
 
     @InjectMocks
     private UserService userService;
@@ -131,7 +138,7 @@ class UserServiceCoverageTest {
         CreateUserRequest request = createUserRequest(RoleName.ADMIN, null);
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(roleRepository.findByName(RoleName.ADMIN)).thenReturn(Optional.of(new Role(RoleName.ADMIN)));
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);
             saved.setId(UUID.randomUUID());
             return saved;
@@ -153,7 +160,7 @@ class UserServiceCoverageTest {
         when(roleRepository.findByName(RoleName.STUDENT)).thenReturn(Optional.of(new Role(RoleName.STUDENT)));
         doNothing().when(entitlementService).canCreateUser(organizationId);
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization(organizationId)));
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);
             saved.setId(UUID.randomUUID());
             return saved;
@@ -169,6 +176,49 @@ class UserServiceCoverageTest {
         verify(aiStudentRegistrationService).registerStudent(any(UUID.class));
         verify(activationTokenService, never()).generateActivationToken(any(User.class));
         verify(emailService, never()).sendActivationEmail(any(), any(), any());
+    }
+
+    @Test
+    void createUser_whenSaveAndFlushHitsUniqueConstraint_translatesToUserAlreadyExists() {
+        CreateUserRequest request = createUserRequest(RoleName.ADMIN, null);
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
+        when(roleRepository.findByName(RoleName.ADMIN)).thenReturn(Optional.of(new Role(RoleName.ADMIN)));
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> userService.createUser(request))
+                .isInstanceOf(UserAlreadyExistsException.class)
+                .hasMessage("Email already exists: " + request.getEmail());
+
+        verify(activationTokenService, never()).generateActivationToken(any(User.class));
+        verify(emailService, never()).sendActivationEmail(any(), any(), any());
+    }
+
+    @Test
+    void createUser_withActiveTransactionSynchronization_sendsEmailOnlyAfterCommit() {
+        CreateUserRequest request = createUserRequest(RoleName.ADMIN, null);
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
+        when(roleRepository.findByName(RoleName.ADMIN)).thenReturn(Optional.of(new Role(RoleName.ADMIN)));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
+        when(activationTokenService.generateActivationToken(any(User.class))).thenReturn("activation-token");
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            userService.createUser(request);
+
+            verify(emailService, never()).sendActivationEmail(any(), any(), any());
+
+            for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
+                synchronization.afterCommit();
+            }
+
+            verify(emailService).sendActivationEmail(request.getEmail(), request.getFirstName(), "activation-token");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test
@@ -273,18 +323,68 @@ class UserServiceCoverageTest {
     @Test
     void deleteUser_deletesExistingAndHandlesMissing() {
         UUID userId = UUID.randomUUID();
-        when(userRepository.existsById(userId)).thenReturn(true);
+        User student = user(userId, RoleName.STUDENT, null);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(student));
 
         userService.deleteUser(userId);
 
-        verify(userRepository).deleteById(userId);
+        verify(userRepository).delete(student);
 
         UUID missingUserId = UUID.randomUUID();
-        when(userRepository.existsById(missingUserId)).thenReturn(false);
+        when(userRepository.findById(missingUserId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.deleteUser(missingUserId))
                 .isInstanceOf(UserNotFoundException.class)
                 .hasMessage("User does not exist: " + missingUserId);
+    }
+
+    @Test
+    void deleteUser_ownerOrganizationAdmin_delegatesOrganizationDeletion() {
+        UUID ownerId = UUID.randomUUID();
+        User owner = user(ownerId, RoleName.ORGANIZATION_ADMIN, null);
+        Organization organization = organization(UUID.randomUUID());
+        organization.setOwner(owner);
+
+        when(userRepository.findById(ownerId)).thenReturn(Optional.of(owner));
+        when(organizationRepository.findFirstByOwnerId(ownerId)).thenReturn(Optional.of(organization));
+
+        userService.deleteUser(ownerId);
+
+        verify(organizationDeletionService).deleteOrganizationOwnedByAdmin(ownerId);
+        verify(userRepository, never()).delete(owner);
+    }
+
+    @Test
+    void deleteUser_nonOwnerOrganizationAdmin_deletesOnlyUser() {
+        UUID adminId = UUID.randomUUID();
+        User admin = user(adminId, RoleName.ORGANIZATION_ADMIN, null);
+
+        when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
+        when(organizationRepository.findFirstByOwnerId(adminId)).thenReturn(Optional.empty());
+
+        userService.deleteUser(adminId);
+
+        verify(userRepository).delete(admin);
+        verify(organizationDeletionService, never()).deleteOrganizationOwnedByAdmin(adminId);
+    }
+
+    @Test
+    void deleteUser_withoutRole_deletesOnlyUser() {
+        UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("no-role@example.com");
+        user.setFirstName("No");
+        user.setLastName("Role");
+        user.setRole(null);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        userService.deleteUser(userId);
+
+        verify(userRepository).delete(user);
+        verify(organizationRepository, never()).findFirstByOwnerId(userId);
+        verify(organizationDeletionService, never()).deleteOrganizationOwnedByAdmin(any());
     }
 
     @Test
@@ -345,7 +445,7 @@ class UserServiceCoverageTest {
         when(roleRepository.findByName(roleName)).thenReturn(Optional.of(role));
         doNothing().when(entitlementService).canCreateUser(organizationId);
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);
             saved.setId(UUID.randomUUID());
             return saved;
@@ -355,7 +455,7 @@ class UserServiceCoverageTest {
         UserResponse response = userService.createUser(request);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
+        verify(userRepository).saveAndFlush(userCaptor.capture());
         User savedUser = userCaptor.getValue();
         assertThat(savedUser).isInstanceOf(expectedType);
         assertThat(savedUser.getPasswordHash()).isNull();

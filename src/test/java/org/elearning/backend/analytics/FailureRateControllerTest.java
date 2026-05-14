@@ -6,6 +6,9 @@ import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -16,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -337,6 +341,176 @@ class FailureRateControllerTest {
 
         assertThat(response.getStatusCode()).isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", otherTeacherId);
+    }
+
+    @Test
+    void shouldCalculateTestFailureRateWithAttemptsSuccessfully() {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        UUID testId = insertTest(lessonId, authenticatedUserId);
+        insertAnalyticsAlert(testId, authenticatedUserId, 50.0);
+
+        UUID studentId1 = insertStudent();
+        UUID studentId2 = insertStudent();
+        insertTestResult(testId, studentId1, false);
+        insertTestResult(testId, studentId2, true);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/tests/" + testId + "/analytics/failure-rate",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"failureRate\":50.0");
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenTestHasNoAnalyticsAlert() {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        UUID testId = insertTest(lessonId, authenticatedUserId);
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/tests/" + testId + "/analytics/failure-rate",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void shouldReturnForbiddenWhenGettingLessonFailureRateForOtherTeachersLesson() {
+        UUID otherTeacherId = insertAuthenticatedUser();
+        UUID courseId = insertCourse(otherTeacherId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        insertTest(lessonId, otherTeacherId);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/lessons/" + lessonId + "/analytics/failure-rate",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void shouldReturnForbiddenWhenStudentGetsAlerts() {
+        UUID studentId = insertStudent();
+        String studentToken = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
+
+        restTemplate.getRestTemplate().setInterceptors(List.of((request, body, execution) -> {
+            request.getHeaders().setBearerAuth(studentToken);
+            return execution.execute(request, body);
+        }));
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/professors/me/alerts",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isIn(HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void shouldGetCourseFailureRateChartDataWithPointsSuccessfully() {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        UUID testId = insertTest(lessonId, authenticatedUserId);
+
+        UUID studentId = insertStudent();
+        insertTestResult(testId, studentId, false);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/courses/" + courseId + "/analytics/chart-data",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).startsWith("[");
+        assertThat(response.getBody()).contains("failureRatePoints");
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenPostingAlertForNonExistentTest() {
+        String body = """
+                {
+                    "failureThreshold": 65.5
+                }
+                """;
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                REQUEST_MAPPING + "/tests/" + UUID.randomUUID() + "/analytics/alerts",
+                new HttpEntity<>(body, jsonHeaders()),
+                String.class
+        );
+        assertThat(response.getStatusCode()).isIn(HttpStatus.NOT_FOUND, HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenGettingChartDataForNonExistentCourse() {
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/courses/" + UUID.randomUUID() + "/analytics/chart-data",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isIn(HttpStatus.NOT_FOUND, HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void shouldGetCourseFailureRateChartDataWhenSomeLessonsHaveNoTests() {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId1 = insertLesson(chapterId);
+        insertTest(lessonId1, authenticatedUserId);
+        UUID lessonId2 = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO lessons (id, chapter_id, title, order_index) VALUES (?, ?, ?, ?)",
+                lessonId2, chapterId, "Lesson Without Test", 2
+        );
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/courses/" + courseId + "/analytics/chart-data",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("failureRatePoints");
+    }
+
+    @ParameterizedTest(name = "threshold={0}, expectedTriggered={1}")
+    @MethodSource("alertTriggeredScenarios")
+    void shouldCalculateAlertTriggeredForDifferentThresholds(double threshold, boolean expectedTriggered) {
+        UUID courseId = insertCourse(authenticatedUserId);
+        UUID chapterId = insertChapter(courseId);
+        UUID lessonId = insertLesson(chapterId);
+        UUID testId = insertTest(lessonId, authenticatedUserId);
+        insertAnalyticsAlert(testId, authenticatedUserId, threshold);
+
+        // Create 2 students - 1 failed, 1 passed = 50% failure rate
+        UUID student1 = insertStudent();
+        UUID student2 = insertStudent();
+        insertTestResult(testId, student1, false); // Failed
+        insertTestResult(testId, student2, true);  // Passed
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                REQUEST_MAPPING + "/tests/" + testId + "/analytics/failure-rate",
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"failureRate\":50.0");
+        assertThat(response.getBody()).contains("\"alertTriggered\":" + expectedTriggered);
+    }
+
+    private static Stream<Arguments> alertTriggeredScenarios() {
+        return Stream.of(
+                Arguments.of(30.0, true),
+                Arguments.of(80.0, false),
+                Arguments.of(50.0, false)
+        );
     }
 
     @Test

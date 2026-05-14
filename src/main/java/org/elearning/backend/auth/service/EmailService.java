@@ -21,14 +21,16 @@ public class EmailService {
     public void sendPasswordResetEmail(String email, String rawToken) {
 
         SimpleMailMessage msg = new SimpleMailMessage();
+        String resetLink = frontendUrl + "/reset-password?token=" + rawToken;
 
         msg.setFrom(from);
         msg.setTo(email);
         msg.setSubject("Reset password");
         msg.setText(
-                "Use this reset token to change your password:\n" + "   "
-                        + rawToken
-                        + "\n\nThis token expires in 10 minutes.");
+                "Click the link below to reset your password:\n\n" +
+                        "   " + resetLink +
+                        "\n\nThis link expires in 60 minutes.\n\n" +
+                        "If you did not request a password reset, please ignore this email.");
 
         javaMailSender.send(msg);
     }

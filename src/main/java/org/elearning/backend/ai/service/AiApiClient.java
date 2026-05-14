@@ -108,18 +108,32 @@ public class AiApiClient {
         Map<String, Object> payload = new HashMap<>();
         payload.put("content", content);
         payload.put("count", count);
-
+        
+        String requestBody;
+        try {
+            requestBody = objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException exception) {
+            throw new JsonSerializingException("Failed to serialize generate test request payload.");
+        }
+        
         try {
             return generateRestClient.post()
                     .uri(GENERATE_TEST_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(API_KEY_HEADER, apiKey)
-                    .body(payload)
+                    .body(requestBody)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, response) -> {
-                        log.error("Eroare de la API-ul AI (generate): Status {}", response.getStatusCode());
-                        throw new AiApiException("Eroare API AI: " + response.getStatusCode());
+                String responseBody = readErrorResponseBody(response);
+                log.error(
+                    "Eroare de la API-ul AI (generate): Status {} responseBody={}",
+                    response.getStatusCode(),
+                    responseBody
+                );
+                throw new AiApiException(
+                    "Eroare API AI: " + response.getStatusCode() + ", response body: " + responseBody
+                );
                     })
                     .body(AiGenerateResponse.class);
 
