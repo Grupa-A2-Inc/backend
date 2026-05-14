@@ -54,18 +54,15 @@ public class QuestionService {
                 .filter(OptionRequestDto::getIsCorrect)
                 .count();
 
-        switch (dto.getQuestionType()) {
-            case SINGLE_CHOICE:
-                validateSingleChoice(options.size(), correctCount);
-                break;
-            case MULTI_CHOICE:
-                validateMultipleChoice(options.size(), correctCount);
-                break;
-            case TRUE_FALSE:
-                validateTrueFalse(options, correctCount);
-                break;
-            default:
-                throw new ValidationException("Question not supported.");
+        QuestionType questionType = dto.getQuestionType();
+        if (questionType == QuestionType.SINGLE_CHOICE) {
+            validateSingleChoice(options.size(), correctCount);
+        } else if (questionType == QuestionType.MULTI_CHOICE) {
+            validateMultipleChoice(options.size(), correctCount);
+        } else if (questionType == QuestionType.TRUE_FALSE) {
+            validateTrueFalse(options, correctCount);
+        } else {
+            throw new ValidationException("Question not supported.");
         }
     }
 

@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -195,9 +196,22 @@ class AuthIntegrationTest {
         request.setLastName("Popescu");
 
         mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void register_invalidPhoneNumber_returns400() throws Exception {
+        RegisterRequest request = validRegisterRequest();
+        request.setPhoneNumber("Num&rD*Tel$fon");
+
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+
+        verify(authService, never()).register(any(RegisterRequest.class));
     }
 
     // LOGIN

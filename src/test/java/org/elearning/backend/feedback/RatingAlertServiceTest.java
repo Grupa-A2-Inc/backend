@@ -122,4 +122,39 @@ class RatingAlertServiceTest {
         assertThat(output.getOut()).contains("ERROR");
         assertThat(output.getOut()).contains("Eroare la verificarea ratingului");
     }
+
+    @Test
+    void shouldReturnImmediatelyWhenStatsAreNull() {
+        UUID lessonId = UUID.randomUUID();
+        when(lessonRatingRepository.getAverageAndCountByLessonId(lessonId)).thenReturn(null);
+
+        ratingAlertService.checkLessonRating(lessonId);
+
+        verify(lessonRepository, never()).getLessonVisibilityAndOwner(lessonId);
+    }
+
+    @Test
+    void shouldReturnImmediatelyWhenCountIsNull() {
+        UUID lessonId = UUID.randomUUID();
+        LessonRatingStatsDto stats = mock(LessonRatingStatsDto.class);
+        when(stats.getCount()).thenReturn(null);
+        when(lessonRatingRepository.getAverageAndCountByLessonId(lessonId)).thenReturn(stats);
+
+        ratingAlertService.checkLessonRating(lessonId);
+
+        verify(lessonRepository, never()).getLessonVisibilityAndOwner(lessonId);
+    }
+
+    @Test
+    void shouldNotQueryLessonWhenRatingIsNull() {
+        UUID lessonId = UUID.randomUUID();
+        LessonRatingStatsDto stats = mock(LessonRatingStatsDto.class);
+        when(stats.getCount()).thenReturn(5L);
+        when(stats.getRating()).thenReturn(null);
+        when(lessonRatingRepository.getAverageAndCountByLessonId(lessonId)).thenReturn(stats);
+
+        ratingAlertService.checkLessonRating(lessonId);
+
+        verify(lessonRepository, never()).getLessonVisibilityAndOwner(lessonId);
+    }
 }
