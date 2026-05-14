@@ -85,6 +85,7 @@ public class UserService {
             CREATED_AT_FIELD
     );
 
+
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -199,6 +200,7 @@ public class UserService {
         if (user.getRole() != null
                 && user.getRole().getName() == RoleName.ORGANIZATION_ADMIN
                 && organizationRepository.findFirstByOwnerId(id).isPresent()) {
+            organizationDeletionService.deleteOrganizationOwnedByAdmin(id);
             organizationDeletionService.deleteOrganizationOwnedByAdmin(id);
             return;
         }
