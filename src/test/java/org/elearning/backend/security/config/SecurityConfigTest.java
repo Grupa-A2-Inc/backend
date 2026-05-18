@@ -1,5 +1,6 @@
 package org.elearning.backend.security.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elearning.backend.auth.service.TokenBlackListService;
 import org.elearning.backend.security.auth.CustomUserDetailsService;
 import org.elearning.backend.security.handler.JwtAccessDeniedHandler;
@@ -15,20 +16,26 @@ import org.springframework.mock.web.MockServletContext;
 import jakarta.servlet.http.Cookie;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.filter.DelegatingFilterProxy;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import java.util.Map;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
@@ -99,6 +106,32 @@ class SecurityConfigTest {
 
             String setCookieHeader = result.getResponse().getHeader("Set-Cookie");
             assertThat(setCookieHeader).contains("XSRF-TOKEN=");
+        }
+    }
+
+    @Test
+    void csrfEndpoint_returnsRawTokenThatCanAuthorizeRefresh() throws Exception {
+        try (AnnotationConfigWebApplicationContext context = createContext()) {
+            MockMvc mockMvc = buildMockMvc(context);
+
+            var csrfResult = mockMvc.perform(get("/api/v1/auth/csrf"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Set-Cookie", containsString("XSRF-TOKEN=")))
+                    .andExpect(jsonPath("$.headerName").value("X-XSRF-TOKEN"))
+                    .andExpect(jsonPath("$.csrfToken").isNotEmpty())
+                    .andReturn();
+
+            String body = csrfResult.getResponse().getContentAsString();
+            String csrfToken = new ObjectMapper().readTree(body).get("csrfToken").asText();
+            Cookie csrfCookie = csrfResult.getResponse().getCookie("XSRF-TOKEN");
+
+            assertThat(csrfCookie).isNotNull();
+            assertThat(csrfCookie.getValue()).isEqualTo(csrfToken);
+
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .cookie(new Cookie("refresh_token", "refresh-token"), csrfCookie)
+                            .header("X-XSRF-TOKEN", csrfToken))
+                    .andExpect(status().isOk());
         }
     }
 
@@ -196,6 +229,15 @@ class SecurityConfigTest {
         @org.springframework.web.bind.annotation.PostMapping("/api/v1/auth/login")
         public ResponseEntity<String> authLogin() {
             return ResponseEntity.ok("login-ok");
+        }
+
+        @GetMapping("/api/v1/auth/csrf")
+        public ResponseEntity<Map<String, String>> csrf(
+                @RequestAttribute(CsrfTokenAttributes.RAW_CSRF_TOKEN) CsrfToken csrfToken) {
+            return ResponseEntity.ok(Map.of(
+                    "csrfToken", csrfToken.getToken(),
+                    "headerName", csrfToken.getHeaderName()
+            ));
         }
 
         @org.springframework.web.bind.annotation.PostMapping("/api/v1/auth/refresh")

@@ -201,7 +201,6 @@ public class UserService {
                 && user.getRole().getName() == RoleName.ORGANIZATION_ADMIN
                 && organizationRepository.findFirstByOwnerId(id).isPresent()) {
             organizationDeletionService.deleteOrganizationOwnedByAdmin(id);
-            organizationDeletionService.deleteOrganizationOwnedByAdmin(id);
             return;
         }
 
