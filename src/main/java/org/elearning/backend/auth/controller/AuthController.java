@@ -10,17 +10,21 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.auth.dto.request.*;
 import org.elearning.backend.auth.dto.response.AuthResponse;
+import org.elearning.backend.auth.dto.response.CsrfResponse;
 import org.elearning.backend.auth.dto.response.RefreshResponse;
 import org.elearning.backend.auth.dto.response.ResetPasswordResponse;
 import org.elearning.backend.auth.exception.InvalidCredentialsException;
 import org.elearning.backend.auth.service.*;
+import org.elearning.backend.security.config.CsrfTokenAttributes;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.elearning.backend.user.entity.User;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
@@ -124,6 +128,30 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return responseWithRefreshCookie(response);
+    }
+
+    @Operation(
+            summary = "Get CSRF token",
+            description = "Returns a CORS-readable copy of the CSRF token and its request header name. " +
+                    "Browser clients on a different origin should call this endpoint with credentials included, " +
+                    "store the returned token in memory, and send it in the X-XSRF-TOKEN header when calling " +
+                    "cookie-authenticated endpoints such as refresh and logout."
+    )
+    @ApiResponse(
+            responseCode = OK,
+            description = "CSRF token issued",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = CsrfResponse.class)
+            )
+    )
+    @GetMapping("/csrf")
+    public ResponseEntity<CsrfResponse> csrf(
+            @Parameter(hidden = true)
+            @RequestAttribute(CsrfTokenAttributes.RAW_CSRF_TOKEN) CsrfToken csrfToken) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new CsrfResponse(csrfToken.getToken(), csrfToken.getHeaderName()));
     }
 
     @Operation(

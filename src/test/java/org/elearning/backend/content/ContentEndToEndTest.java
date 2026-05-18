@@ -583,6 +583,7 @@ class ContentEndToEndTest {
         mockMvc.perform(authorized(get(REQUEST_MAPPING + "/courses/" + courseId + "/full-view")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(courseId.toString()))
+                .andExpect(jsonPath("$.category").value("Programming"))
                 .andExpect(jsonPath("$.chapters", hasSize(greaterThanOrEqualTo(1))))
                 .andExpect(jsonPath("$.chapters[0].lessons", hasSize(greaterThanOrEqualTo(1))))
                 .andExpect(jsonPath("$.chapters[0].lessons[0].lessonResources", hasSize(greaterThanOrEqualTo(1))));

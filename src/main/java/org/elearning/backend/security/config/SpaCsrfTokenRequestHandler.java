@@ -17,7 +17,8 @@ final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, Supplier<CsrfToken> csrfToken) {
         this.xor.handle(request, response, csrfToken);
-        csrfToken.get();
+        CsrfToken rawToken = csrfToken.get();
+        request.setAttribute(CsrfTokenAttributes.RAW_CSRF_TOKEN, rawToken);
     }
 
     @Override
