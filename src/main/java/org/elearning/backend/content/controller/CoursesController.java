@@ -192,7 +192,7 @@ public class CoursesController extends GlobalHttpStatusCodes {
     @Operation(
             summary = "Get full course view",
             description = """
-                    Returns a course with its complete structure: all chapters, lessons and resources.
+                    Returns a course with its complete structure: metadata such as category, all chapters, lessons and resources.
                     Also includes the associated test ID for each lesson (if one exists).
                     Only users with access to the course (enrolled students, the creator, or admins) can view this.
                     Returns 404 if the course does not exist.

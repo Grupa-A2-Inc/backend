@@ -20,6 +20,7 @@ public class ResponseCourseFullViewDto {
     private UUID id;
     private String title;
     private String description;
+    private String category;
     private CourseStatus status;
     private CourseVisibility visibility;
     private LocalDateTime createdAt;

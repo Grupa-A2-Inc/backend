@@ -2,6 +2,7 @@ package org.elearning.backend.auth.controller;
 
 import org.elearning.backend.auth.dto.request.*;
 import org.elearning.backend.auth.dto.response.AuthResponse;
+import org.elearning.backend.auth.dto.response.CsrfResponse;
 import org.elearning.backend.auth.dto.response.ResetPasswordResponse;
 import org.elearning.backend.auth.service.*;
 import org.elearning.backend.security.jwt.JwtUtil;
@@ -12,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.DefaultCsrfToken;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -104,6 +106,19 @@ class AuthControllerTest {
         ResponseEntity<Void> response = authController.logout(null, "Basic credentials");
 
         assertThat(response.getStatusCode().value()).isEqualTo(204);
+    }
+
+    @Test
+    void csrf_returnsTokenAndHeaderName() {
+        var csrfToken = new DefaultCsrfToken("X-XSRF-TOKEN", "_csrf", "csrf-token");
+
+        ResponseEntity<CsrfResponse> response = authController.csrf(csrfToken);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getHeaders().getCacheControl()).contains("no-store");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getCsrfToken()).isEqualTo("csrf-token");
+        assertThat(response.getBody().getHeaderName()).isEqualTo("X-XSRF-TOKEN");
     }
 
     @Test
