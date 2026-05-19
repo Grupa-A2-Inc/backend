@@ -1,15 +1,20 @@
 package org.elearning.backend.ai.service;
 
 import org.elearning.backend.ai.dto.AiGenerateRequestDto;
+import org.elearning.backend.ai.dto.AiGenerateJobResponse;
+import org.elearning.backend.ai.dto.AiGenerateJobStatusResponse;
 import org.elearning.backend.ai.dto.AiGenerateResponseDto;
+import org.elearning.backend.ai.dto.AiQuestionDto;
 import org.elearning.backend.ai.dto.AiRequestStatusDto;
 import org.elearning.backend.ai.dto.CurriculumCatalogRequestDto;
 import org.elearning.backend.ai.dto.CurriculumCatalogResponseDto;
+import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.ValidationException;
 import org.elearning.backend.ai.model.AiQuestionRequest;
 import org.elearning.backend.ai.model.AiRequestStatus;
 import org.elearning.backend.ai.repository.AiQuestionRequestRepository;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
+import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.role.entity.RoleName;
@@ -48,17 +53,17 @@ class AiGenerationServiceTest {
     @Mock
     private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
-    @Mock
-    private AiAsyncWorker aiAsyncWorker;
-
     @InjectMocks
     private AiGenerationService aiGenerationService;
 
     @Test
-    void generateForLesson_shouldSaveRequestAndStartAsync_whenTeacherHasAccess() {
+    void generateForLesson_shouldSaveRequestAndStartRemoteJob_whenTeacherHasAccess() {
         UUID lessonId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID savedId = UUID.randomUUID();
+        AiGenerateJobResponse remoteResponse = new AiGenerateJobResponse();
+        remoteResponse.setJobId("job-123");
+        remoteResponse.setStatus(AiRequestStatus.PENDING);
 
         when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
         when(questionRequestRepository.save(any(AiQuestionRequest.class))).thenAnswer(invocation -> {
@@ -66,15 +71,17 @@ class AiGenerationServiceTest {
             request.setId(savedId);
             return request;
         });
+        when(aiApiClient.startGenerateJob(lessonId, 5)).thenReturn(remoteResponse);
 
         UUID requestId = aiGenerationService.generateForLesson(lessonId, userId, RoleName.TEACHER, 5);
 
         assertThat(requestId).isEqualTo(savedId);
         ArgumentCaptor<AiQuestionRequest> requestCaptor = ArgumentCaptor.forClass(AiQuestionRequest.class);
-        verify(questionRequestRepository).save(requestCaptor.capture());
-        assertThat(requestCaptor.getValue().getStatus()).isEqualTo(AiRequestStatus.PENDING);
-        assertThat(requestCaptor.getValue().getLessonId()).isEqualTo(lessonId);
-        verify(aiAsyncWorker).processAiGenerationInBackground(5, lessonId, requestCaptor.getValue());
+        verify(questionRequestRepository, org.mockito.Mockito.times(2)).save(requestCaptor.capture());
+        assertThat(requestCaptor.getAllValues().get(0).getStatus()).isEqualTo(AiRequestStatus.PENDING);
+        assertThat(requestCaptor.getAllValues().get(0).getLessonId()).isEqualTo(lessonId);
+        assertThat(requestCaptor.getAllValues().get(1).getAiJobId()).isEqualTo("job-123");
+        assertThat(requestCaptor.getAllValues().get(1).getStatus()).isEqualTo(AiRequestStatus.PENDING);
     }
 
     @Test
@@ -88,7 +95,6 @@ class AiGenerationServiceTest {
                 .isInstanceOf(WithoutAccessException.class);
 
         verify(questionRequestRepository, never()).save(any());
-        verify(aiAsyncWorker, never()).processAiGenerationInBackground(any(Integer.class), any(UUID.class), any());
     }
 
     @Test
@@ -103,12 +109,16 @@ class AiGenerationServiceTest {
             request.setId(savedId);
             return request;
         });
+        AiGenerateJobResponse remoteResponse = new AiGenerateJobResponse();
+        remoteResponse.setJobId("job-456");
+        remoteResponse.setStatus(AiRequestStatus.RUNNING);
+        when(aiApiClient.startGenerateJob(lessonId, 3)).thenReturn(remoteResponse);
 
         UUID requestId = aiGenerationService.generateForLesson(lessonId, userId, RoleName.STUDENT, 3);
 
         assertThat(requestId).isEqualTo(savedId);
         verify(lessonRepository).isStudentEnrolledInLessonCourse(lessonId, userId);
-        verify(aiAsyncWorker).processAiGenerationInBackground(eq(3), eq(lessonId), any(AiQuestionRequest.class));
+        verify(aiApiClient).startGenerateJob(lessonId, 3);
     }
 
     @Test
@@ -135,6 +145,10 @@ class AiGenerationServiceTest {
             request.setId(savedId);
             return request;
         });
+        AiGenerateJobResponse remoteResponse = new AiGenerateJobResponse();
+        remoteResponse.setJobId("job-789");
+        remoteResponse.setStatus(AiRequestStatus.PENDING);
+        when(aiApiClient.startGenerateJob(lessonId, 2)).thenReturn(remoteResponse);
 
         UUID requestId = aiGenerationService.generateForLesson(lessonId, userId, RoleName.ADMIN, 2);
 
@@ -150,16 +164,21 @@ class AiGenerationServiceTest {
         AiQuestionRequest request = AiQuestionRequest.builder()
                 .id(requestId)
                 .lessonId(lessonId)
-                .status(AiRequestStatus.SUCCESS)
+                .status(AiRequestStatus.PENDING)
+                .aiJobId("job-100")
                 .build();
+        AiGenerateJobStatusResponse remoteStatus = new AiGenerateJobStatusResponse();
+        remoteStatus.setJobId("job-100");
+        remoteStatus.setStatus(AiRequestStatus.RUNNING);
 
         when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
         when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+        when(aiApiClient.getGenerateJobStatus("job-100")).thenReturn(remoteStatus);
 
         AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
 
         assertThat(statusDto.getRequestId()).isEqualTo(requestId);
-        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.SUCCESS);
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.RUNNING);
     }
 
     @Test
@@ -200,12 +219,73 @@ class AiGenerationServiceTest {
             request.setId(requestId);
             return request;
         });
+        AiGenerateJobResponse remoteResponse = new AiGenerateJobResponse();
+        remoteResponse.setJobId("job-200");
+        remoteResponse.setStatus(AiRequestStatus.PENDING);
+        when(aiApiClient.startGenerateJob(lessonId, 7)).thenReturn(remoteResponse);
 
         AiGenerateResponseDto responseDto = aiGenerationService.generateTestForLesson(requestDto, lessonId, userId, RoleName.ADMIN);
 
         assertThat(responseDto.getRequestId()).isEqualTo(requestId);
         assertThat(responseDto.getLessonId()).isEqualTo(lessonId);
         assertThat(responseDto.getStatus()).isEqualTo(AiRequestStatus.PENDING);
+    }
+
+    @Test
+    void getRequestStatus_shouldPersistQuestionsWhenRemoteJobIsDone() throws Exception {
+        UUID requestId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AiQuestionRequest request = AiQuestionRequest.builder()
+                .id(requestId)
+                .lessonId(lessonId)
+                .aiJobId("job-300")
+                .status(AiRequestStatus.RUNNING)
+                .build();
+        AiQuestionDto question = new AiQuestionDto();
+        question.setText("Q1");
+        question.setType(QuestionType.SINGLE_CHOICE);
+        question.setAnswers(java.util.List.of("A", "B"));
+        question.setCorrectAnswers(java.util.List.of("A"));
+        question.setDifficulty(0.5);
+        AiGenerateJobStatusResponse remoteStatus = new AiGenerateJobStatusResponse();
+        remoteStatus.setJobId("job-300");
+        remoteStatus.setStatus(AiRequestStatus.DONE);
+        remoteStatus.setQuestions(java.util.List.of(question));
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+        when(aiApiClient.getGenerateJobStatus("job-300")).thenReturn(remoteStatus);
+        when(objectMapper.writeValueAsString(remoteStatus.getQuestions())).thenReturn("[{\"text\":\"Q1\"}]");
+
+        AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
+
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.DONE);
+        assertThat(request.getGeneratedQuestions()).isEqualTo("[{\"text\":\"Q1\"}]");
+        assertThat(request.getResolvedAt()).isNotNull();
+    }
+
+    @Test
+    void generateForLesson_shouldMarkRequestFailedWhenStartJobFails() {
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID savedId = UUID.randomUUID();
+
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+        when(questionRequestRepository.save(any(AiQuestionRequest.class))).thenAnswer(invocation -> {
+            AiQuestionRequest request = invocation.getArgument(0);
+            request.setId(savedId);
+            return request;
+        });
+        when(aiApiClient.startGenerateJob(lessonId, 5)).thenThrow(new AiApiException("start failed"));
+
+        UUID requestId = aiGenerationService.generateForLesson(lessonId, userId, RoleName.TEACHER, 5);
+
+        assertThat(requestId).isEqualTo(savedId);
+        ArgumentCaptor<AiQuestionRequest> requestCaptor = ArgumentCaptor.forClass(AiQuestionRequest.class);
+        verify(questionRequestRepository, org.mockito.Mockito.times(2)).save(requestCaptor.capture());
+        assertThat(requestCaptor.getAllValues().get(1).getStatus()).isEqualTo(AiRequestStatus.FAILED);
+        assertThat(requestCaptor.getAllValues().get(1).getErrorMessage()).contains("start failed");
     }
 
     @Test

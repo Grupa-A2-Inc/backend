@@ -49,7 +49,7 @@ public class AiQuestionInjectorService {
      * @return an InjectionResultDto containing the test ID, whether a new test was created, the number of questions injected, the updated total number of questions in the test, and the lesson ID
      * @throws DoesNotExistException     if the AI question request, the associated lesson, or the specified test (when provided) does not exist
      * @throws WithoutAccessException   if the professorId does not match the course creator for the lesson
-     * @throws ResourceConflictException if the AI request status is not SUCCESS
+     * @throws ResourceConflictException if the AI request status is not DONE
      * @throws ValidationException      if generated questions cannot be parsed or any parsed question fails validation (e.g., empty text, insufficient options, incorrect correct-answer definitions)
      */
     @Transactional
@@ -65,7 +65,7 @@ public class AiQuestionInjectorService {
             throw new WithoutAccessException(professorId);
         }
 
-        if(aiQuestionRequest.getStatus() != AiRequestStatus.SUCCESS){
+        if(aiQuestionRequest.getStatus() != AiRequestStatus.DONE){
             throw new ResourceConflictException("AI Generation failed or is not completed yet. Create questions manually or retry later.");
         }
 

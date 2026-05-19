@@ -2,6 +2,7 @@ package org.elearning.backend.organization.service;
 
 import lombok.AllArgsConstructor;
 import org.elearning.backend.common.dto.response.PaginatedResponse;
+import org.elearning.backend.common.validation.PhoneNumberNormalizer;
 import org.elearning.backend.organization.dto.request.CreateOrganizationRequest;
 import org.elearning.backend.organization.dto.request.UpdateOrganizationRequest;
 import org.elearning.backend.organization.dto.response.OrganizationResponse;
@@ -42,7 +43,7 @@ public class OrganizationService {
         organization.setCity(request.getCity());
         organization.setOrganizationType(request.getOrganizationType());
         organization.setAddress(request.getAddress());
-        organization.setPhoneNumber(request.getPhoneNumber());
+        organization.setPhoneNumber(PhoneNumberNormalizer.normalize(request.getPhoneNumber()));
         organization.setOwner(owner);
 
         Organization saved = organizationRepository.save(organization);
@@ -72,7 +73,7 @@ public class OrganizationService {
         organization.setCity(request.getCity());
         organization.setOrganizationType(request.getOrganizationType());
         organization.setAddress(request.getAddress());
-        organization.setPhoneNumber(request.getPhoneNumber());
+        organization.setPhoneNumber(PhoneNumberNormalizer.normalize(request.getPhoneNumber()));
         organization.setUpdatedAt(LocalDateTime.now());
 
         Organization saved = organizationRepository.save(organization);

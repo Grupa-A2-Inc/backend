@@ -13,4 +13,5 @@ import java.util.UUID;
 public class AiRequestStatusDto {
     private UUID requestId;
     private AiRequestStatus status;
+    private String error;
 }

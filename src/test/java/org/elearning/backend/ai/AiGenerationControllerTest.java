@@ -1,11 +1,11 @@
 package org.elearning.backend.ai;
 
-import org.elearning.backend.ai.dto.AiGenerateResponse;
-import org.elearning.backend.ai.dto.AiQuestionDto;
+import org.elearning.backend.ai.dto.AiGenerateJobResponse;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.elearning.backend.ai.service.AiApiClient;
 import org.elearning.backend.auth.service.EmailService;
+import org.elearning.backend.ai.model.AiRequestStatus;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -23,8 +23,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
@@ -147,16 +145,10 @@ class AiGenerationControllerTest {
                 .with(csrf());
     }
 
-    private AiGenerateResponse mockAiResponseWithQuestions() {
-        AiGenerateResponse response = new AiGenerateResponse();
-        AiQuestionDto question = new AiQuestionDto();
-        response.setQuestions(List.of(question));
-        return response;
-    }
-
-    private AiGenerateResponse mockEmptyAiResponse() {
-        AiGenerateResponse response = new AiGenerateResponse();
-        response.setQuestions(Collections.emptyList());
+    private AiGenerateJobResponse mockJobResponse(AiRequestStatus status) {
+        AiGenerateJobResponse response = new AiGenerateJobResponse();
+        response.setJobId("job-123");
+        response.setStatus(status);
         return response;
     }
 
@@ -167,7 +159,7 @@ class AiGenerationControllerTest {
     @Test
     void generateForLesson_shouldReturn202_whenTeacherOwnsLesson() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockAiResponseWithQuestions());
+        when(aiApiClient.startGenerateJob(any(), anyInt())).thenReturn(mockJobResponse(AiRequestStatus.PENDING));
 
         mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())
@@ -180,7 +172,7 @@ class AiGenerationControllerTest {
     void generateForLesson_shouldReturn202_whenStudentIsEnrolled() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
         enrollStudent(ctx.courseId(), studentId);
-        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockEmptyAiResponse());
+        when(aiApiClient.startGenerateJob(any(), anyInt())).thenReturn(mockJobResponse(AiRequestStatus.RUNNING));
 
         mockMvc.perform(authorizedPostAs(studentToken, "/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())
@@ -233,7 +225,7 @@ class AiGenerationControllerTest {
     @Test
     void generateForLesson_shouldPersistRequestInDatabase_whenTeacherOwnsLesson() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockEmptyAiResponse());
+        when(aiApiClient.startGenerateJob(any(), anyInt())).thenReturn(mockJobResponse(AiRequestStatus.PENDING));
 
         mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted());
@@ -249,7 +241,7 @@ class AiGenerationControllerTest {
     @Test
     void generateForLesson_shouldReturn202WithCount_whenProvided() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockEmptyAiResponse());
+        when(aiApiClient.startGenerateJob(any(), anyInt())).thenReturn(mockJobResponse(AiRequestStatus.PENDING));
 
         mockMvc.perform(post("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + teacherToken)
@@ -265,7 +257,7 @@ class AiGenerationControllerTest {
     @Disabled("async - status se seteaza dupa response")
     void generateForLesson_shouldReturn202AndStatusSuccess_whenAiReturnsQuestions() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), anyInt())).thenReturn(mockAiResponseWithQuestions());
+        when(aiApiClient.startGenerateJob(any(), anyInt())).thenReturn(mockJobResponse(AiRequestStatus.DONE));
 
         mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())
@@ -276,14 +268,14 @@ class AiGenerationControllerTest {
                 String.class,
                 ctx.lessonId()
         );
-        org.junit.jupiter.api.Assertions.assertEquals("SUCCESS", savedStatus);
+        org.junit.jupiter.api.Assertions.assertEquals("DONE", savedStatus);
     }
 
     @Test
     @Disabled("async - status se seteaza dupa response")
     void generateForLesson_shouldReturn202AndStatusFallback_whenAiTimesOut() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), anyInt())).thenThrow(new AiTimeoutException("Timeout"));
+        when(aiApiClient.startGenerateJob(any(), anyInt())).thenThrow(new AiTimeoutException("Timeout"));
 
         mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())
@@ -294,14 +286,14 @@ class AiGenerationControllerTest {
                 String.class,
                 ctx.lessonId()
         );
-        org.junit.jupiter.api.Assertions.assertEquals("FALLBACK", savedStatus);
+        org.junit.jupiter.api.Assertions.assertEquals("FAILED", savedStatus);
     }
 
     @Test
     @Disabled("async - status se seteaza dupa response")
     void generateForLesson_shouldReturn202AndStatusFailed_whenAiApiThrows() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        when(aiApiClient.generateTest(any(), anyInt())).thenThrow(new AiApiException("AI error"));
+        when(aiApiClient.startGenerateJob(any(), anyInt())).thenThrow(new AiApiException("AI error"));
 
         mockMvc.perform(authorizedPost("/api/v1/lessons/{lessonId}/ai/generate-test", ctx.lessonId()))
                 .andExpect(status().isAccepted())

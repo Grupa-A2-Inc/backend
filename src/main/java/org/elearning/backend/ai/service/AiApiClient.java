@@ -35,7 +35,7 @@ public class AiApiClient {
     private static final String API_KEY_HEADER = "X-API-Key";
     private static final String AI_SUCCESS_STATUS = "ok";
 
-    private static final String GENERATE_TEST_URI = "/ai/api/v1/generate";
+    private static final String GENERATE_TEST_JOBS_URI = "/ai/api/v1/generate/jobs";
     private static final String ADAPTIVE_EXERCISES_URI = "/ai/api/v1/adaptive/exercises";
     private static final String ADAPTIVE_FEEDBACK_URI = "/ai/api/v1/adaptive/feedback";
     private static final String STUDENT_REGISTRATION_URI = "/ai/api/v1/students";
@@ -96,7 +96,7 @@ public class AiApiClient {
     // FLUX 1: Generare Test
     // ==========================================
 
-    public AiGenerateResponse generateTest(UUID lessonId, int count) {
+    public AiGenerateJobResponse startGenerateJob(UUID lessonId, int count) {
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new EntityNotFoundException("Lectia nu exista: " + lessonId));
 
@@ -117,29 +117,72 @@ public class AiApiClient {
         }
         
         try {
-            return generateRestClient.post()
-                    .uri(GENERATE_TEST_URI)
+            AiGenerateJobResponse jobResponse = generateRestClient.post()
+                    .uri(GENERATE_TEST_JOBS_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(API_KEY_HEADER, apiKey)
                     .body(requestBody)
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, (request, response) -> {
-                String responseBody = readErrorResponseBody(response);
+                    .onStatus(HttpStatusCode::isError, (request, clientResponse) -> {
+                String responseBody = readErrorResponseBody(clientResponse);
                 log.error(
                     "Eroare de la API-ul AI (generate): Status {} responseBody={}",
-                    response.getStatusCode(),
+                    clientResponse.getStatusCode(),
                     responseBody
                 );
                 throw new AiApiException(
-                    "Eroare API AI: " + response.getStatusCode() + ", response body: " + responseBody
+                    "Eroare API AI: " + clientResponse.getStatusCode() + ", response body: " + responseBody
                 );
                     })
-                    .body(AiGenerateResponse.class);
+                    .body(AiGenerateJobResponse.class);
+
+            if (jobResponse == null) {
+                throw new AiApiException("AI generate job start returned an empty response");
+            }
+            if (jobResponse.getJobId() == null || jobResponse.getJobId().isBlank() || jobResponse.getStatus() == null) {
+                throw new AiApiException("AI generate job start returned an invalid response");
+            }
+
+            return jobResponse;
 
         } catch (ResourceAccessException e) {
             log.error("Timeout la generare AI pentru lessonId: {}", lessonId);
             throw new AiTimeoutException("Timeout generare AI: " + e.getMessage());
+        }
+    }
+
+    public AiGenerateJobStatusResponse getGenerateJobStatus(String jobId) {
+        try {
+            AiGenerateJobStatusResponse response = generateRestClient.get()
+                    .uri(uriBuilder -> uriBuilder.path(GENERATE_TEST_JOBS_URI + "/{jobId}").build(jobId))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(API_KEY_HEADER, apiKey)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, clientResponse) -> {
+                        String responseBody = readErrorResponseBody(clientResponse);
+                        log.error("AI generate job status failed: status={} jobId={} responseBody={}",
+                                clientResponse.getStatusCode(), jobId, responseBody);
+                        throw new AiApiException(
+                                "AI generate job status failed with status: "
+                                        + clientResponse.getStatusCode()
+                                        + ", response body: "
+                                        + responseBody
+                        );
+                    })
+                    .body(AiGenerateJobStatusResponse.class);
+
+            if (response == null) {
+                throw new AiApiException("AI generate job status returned an empty response");
+            }
+            if (response.getJobId() == null || response.getJobId().isBlank() || response.getStatus() == null) {
+                throw new AiApiException("AI generate job status returned an invalid response");
+            }
+
+            return response;
+        } catch (ResourceAccessException e) {
+            log.error("Timeout la status AI pentru jobId: {}", jobId);
+            throw new AiTimeoutException("Timeout status AI: " + e.getMessage());
         }
     }
 
