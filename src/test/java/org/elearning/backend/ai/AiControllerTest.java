@@ -295,7 +295,7 @@ class AiControllerTest {
     @Test
     void injectQuestions_shouldReturn200_andCreateNewTest_whenNoTestIdProvided() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validGeneratedQuestionsJson());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", validGeneratedQuestionsJson());
 
         mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                         .content("{}"))
@@ -311,7 +311,7 @@ class AiControllerTest {
     void injectQuestions_shouldReturn200_andInjectIntoExistingTest_whenTestIdProvided() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
         UUID testId = insertTest(ctx.lessonId(), teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validGeneratedQuestionsJson());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", validGeneratedQuestionsJson());
 
         InjectRequestDto body = new InjectRequestDto(testId);
 
@@ -328,7 +328,7 @@ class AiControllerTest {
         UUID requestId = UUID.randomUUID();
         AiRequestStatusDto response = new AiRequestStatusDto();
         response.setRequestId(requestId);
-        response.setStatus(AiRequestStatus.SUCCESS);
+        response.setStatus(AiRequestStatus.DONE);
         when(aiGenerationService.getRequestStatus(requestId, teacherId, RoleName.TEACHER)).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/ai/requests/{requestId}/status", requestId)
@@ -336,7 +336,7 @@ class AiControllerTest {
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.requestId").value(requestId.toString()))
-                .andExpect(jsonPath("$.status").value("SUCCESS"));
+                .andExpect(jsonPath("$.status").value("DONE"));
     }
 
     @Test
@@ -361,7 +361,7 @@ class AiControllerTest {
     @Test
     void injectQuestions_shouldReturn200_andInjectMultipleQuestions() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", multipleQuestionsJson());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", multipleQuestionsJson());
 
         mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                         .content("{}"))
@@ -373,7 +373,7 @@ class AiControllerTest {
     @Test
     void injectQuestions_shouldPersistQuestionsInDatabase() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validGeneratedQuestionsJson());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", validGeneratedQuestionsJson());
 
         mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                         .content("{}"))
@@ -391,7 +391,7 @@ class AiControllerTest {
     @Test
     void injectQuestions_shouldUpdateAiRequestWithTestId_afterInjection() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validGeneratedQuestionsJson());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", validGeneratedQuestionsJson());
 
         mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                         .content("{}"))
@@ -407,7 +407,7 @@ class AiControllerTest {
     @Test
     void injectQuestions_shouldReturn200_withNullBody() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validGeneratedQuestionsJson());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", validGeneratedQuestionsJson());
 
         mockMvc.perform(post("/api/v1/ai/request/{requestId}/inject", requestId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + teacherToken)
@@ -430,7 +430,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn404_whenLessonDoesNotExistForAiRequest() throws Exception {
                 UUID missingLessonId = UUID.randomUUID();
-                UUID requestId = insertAiRequest(missingLessonId, "SUCCESS", validGeneratedQuestionsJson());
+                UUID requestId = insertAiRequest(missingLessonId, "DONE", validGeneratedQuestionsJson());
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                                 .content("{}"))
@@ -441,7 +441,7 @@ class AiControllerTest {
     @Test
     void injectQuestions_shouldReturn404_whenTestIdProvidedButDoesNotExist() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validGeneratedQuestionsJson());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", validGeneratedQuestionsJson());
         UUID missingTestId = UUID.randomUUID();
 
         InjectRequestDto body = new InjectRequestDto(missingTestId);
@@ -457,7 +457,7 @@ class AiControllerTest {
         UUID otherTeacherId = UUID.randomUUID();
         insertUser(otherTeacherId, RoleName.TEACHER);
         LessonContext ctx = insertLessonOwnedBy(otherTeacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validGeneratedQuestionsJson());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", validGeneratedQuestionsJson());
 
         mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                         .content("{}"))
@@ -488,7 +488,7 @@ class AiControllerTest {
         }
 
     @ParameterizedTest
-    @ValueSource(strings = {"FAILED", "PENDING", "FALLBACK"})
+    @ValueSource(strings = {"FAILED", "PENDING", "RUNNING"})
     void injectQuestions_shouldReturn409_whenAiStatusIsNotCompleted(String status) throws Exception {
 
         LessonContext ctx = insertLessonOwnedBy(teacherId);
@@ -504,7 +504,7 @@ class AiControllerTest {
     @Test
     void injectQuestions_shouldReturn422_whenQuestionTextIsEmpty() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_emptyText());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_emptyText());
 
         mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                         .content("{}"))
@@ -515,7 +515,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn422_whenQuestionTextIsNull() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_nullText());
+                UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_nullText());
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                                 .content("{}"))
@@ -526,7 +526,7 @@ class AiControllerTest {
     @Test
     void injectQuestions_shouldReturn422_whenNoCorrectAnswerDefined() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_noCorrectAnswer());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_noCorrectAnswer());
 
         mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                         .content("{}"))
@@ -537,7 +537,7 @@ class AiControllerTest {
     @Test
     void injectQuestions_shouldReturn422_whenSingleChoiceHasTwoCorrectAnswers() throws Exception {
         LessonContext ctx = insertLessonOwnedBy(teacherId);
-        UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_singleChoiceTwoCorrect());
+        UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_singleChoiceTwoCorrect());
 
         mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                         .content("{}"))
@@ -548,7 +548,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn422_whenQuestionHasLessThanTwoOptions() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_lessThanTwoOptions());
+                UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_lessThanTwoOptions());
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                                 .content("{}"))
@@ -559,7 +559,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn422_whenQuestionOptionsAreNull() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_nullOptions());
+                UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_nullOptions());
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                                 .content("{}"))
@@ -570,7 +570,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn422_whenTrueFalseHasWrongOptionCount() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_trueFalseWrongOptionCount());
+                UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_trueFalseWrongOptionCount());
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                                 .content("{}"))
@@ -581,7 +581,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn422_whenTrueFalseHasTwoCorrectAnswers() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_trueFalseTwoCorrectAnswers());
+                UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_trueFalseTwoCorrectAnswers());
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                                 .content("{}"))
@@ -592,7 +592,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn422_whenGeneratedQuestionsJsonCannotBeParsed() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", "not-json");
+                UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", "not-json");
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                                 .content("{}"))
@@ -603,7 +603,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn422_whenQuestionTypeIsNull() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_nullQuestionType());
+                UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_nullQuestionType());
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                                 .content("{}"))
@@ -614,7 +614,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn200_whenMultipleChoiceIsValid() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", validMultipleChoiceQuestionJson());
+                UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", validMultipleChoiceQuestionJson());
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                 .content("{}"))
@@ -626,7 +626,7 @@ class AiControllerTest {
         @Test
         void injectQuestions_shouldReturn422_whenCorrectAnswerIsNotInAnswers() throws Exception {
                 LessonContext ctx = insertLessonOwnedBy(teacherId);
-                UUID requestId = insertAiRequest(ctx.lessonId(), "SUCCESS", invalidQuestionsJson_correctAnswerNotInAnswers());
+                UUID requestId = insertAiRequest(ctx.lessonId(), "DONE", invalidQuestionsJson_correctAnswerNotInAnswers());
 
                 mockMvc.perform(authorizedPost("/api/v1/ai/request/{requestId}/inject", requestId)
                                 .content("{}"))

@@ -2,10 +2,10 @@ package org.elearning.backend.auth.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+import org.elearning.backend.common.validation.ValidPhoneNumber;
 
 @Getter
 @Setter
@@ -42,6 +42,6 @@ public class RegisterRequest {
 
     private String address;
 
-    @Pattern(regexp = "^\\d+$", message = "Phone number must contain only digits")
+    @ValidPhoneNumber(message = "Phone number format is invalid")
     private String phoneNumber;
 }

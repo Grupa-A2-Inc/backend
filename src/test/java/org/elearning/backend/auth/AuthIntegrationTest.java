@@ -214,6 +214,22 @@ class AuthIntegrationTest {
         verify(authService, never()).register(any(RegisterRequest.class));
     }
 
+    @Test
+    void register_internationalPhoneNumber_delegatesToAuthService() throws Exception {
+        RegisterRequest request = validRegisterRequest();
+        request.setPhoneNumber("+40722123456");
+
+        when(authService.register(any(RegisterRequest.class)))
+                .thenReturn(new AuthResponse("User registered successfully", "access-token", "refresh-token", null));
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        verify(authService).register(any(RegisterRequest.class));
+    }
+
     // LOGIN
 
     @Test

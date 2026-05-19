@@ -512,4 +512,5 @@ class FailureRateControllerTest {
                 Arguments.of(50.0, false)
         );
     }
+
 }

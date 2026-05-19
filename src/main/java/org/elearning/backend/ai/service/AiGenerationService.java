@@ -1,8 +1,11 @@
 package org.elearning.backend.ai.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.ai.dto.*;
+import org.elearning.backend.ai.exception.AiApiException;
+import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.elearning.backend.ai.exception.ValidationException;
 import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.ai.model.AiQuestionRequest;
@@ -13,6 +16,7 @@ import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.role.entity.RoleName;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -22,7 +26,6 @@ public class AiGenerationService {
     private final LessonRepository lessonRepository;
     private final AiApiClient aiApiClient;
     private final ObjectMapper objectMapper;
-    private final AiAsyncWorker aiAsyncWorker;
 
     /**
      * Creates an AI question-generation request for the specified lesson and enqueues asynchronous processing.
@@ -41,8 +44,14 @@ public class AiGenerationService {
         request.setLessonId(lessonId);
 
         request = questionRequestRepository.save(request);
-
-        aiAsyncWorker.processAiGenerationInBackground(count, lessonId, request);
+        try {
+            AiGenerateJobResponse response = aiApiClient.startGenerateJob(lessonId, count);
+            request.setAiJobId(response.getJobId());
+            request.setStatus(response.getStatus());
+        } catch (AiApiException | AiTimeoutException exception) {
+            markAsFailed(request, exception.getMessage());
+        }
+        questionRequestRepository.save(request);
 
         return request.getId();
     }
@@ -87,9 +96,15 @@ public class AiGenerationService {
         UUID lessonId = request.getLessonId();
         validateUserAccess(lessonId, userId, role);
 
+        if (!isTerminalStatus(request.getStatus()) && request.getAiJobId() != null) {
+            syncRequestWithAi(request);
+            questionRequestRepository.save(request);
+        }
+
         AiRequestStatusDto statusDto = new AiRequestStatusDto();
         statusDto.setRequestId(requestId);
         statusDto.setStatus(request.getStatus());
+        statusDto.setError(request.getErrorMessage());
 
         return statusDto;
     }
@@ -112,5 +127,43 @@ public class AiGenerationService {
 
     public CurriculumCatalogResponseDto getCurriculumCatalog(CurriculumCatalogRequestDto requestDto) {
         return aiApiClient.getCurriculumCatalog(requestDto);
+    }
+
+    private boolean isTerminalStatus(AiRequestStatus status) {
+        return status == AiRequestStatus.DONE || status == AiRequestStatus.FAILED;
+    }
+
+    private void syncRequestWithAi(AiQuestionRequest request) {
+        try {
+            AiGenerateJobStatusResponse response = aiApiClient.getGenerateJobStatus(request.getAiJobId());
+            request.setStatus(response.getStatus());
+
+            if (response.getStatus() == AiRequestStatus.DONE) {
+                if (response.getQuestions() == null) {
+                    markAsFailed(request, "LLM-ul a returnat un raspuns invalid.");
+                    return;
+                }
+                request.setGeneratedQuestions(objectMapper.writeValueAsString(response.getQuestions()));
+                request.setErrorMessage(null);
+                request.setResolvedAt(LocalDateTime.now());
+                return;
+            }
+
+            if (response.getStatus() == AiRequestStatus.FAILED) {
+                markAsFailed(request, response.getError());
+            }
+        } catch (AiApiException | AiTimeoutException exception) {
+            markAsFailed(request, exception.getMessage());
+        } catch (JsonProcessingException exception) {
+            markAsFailed(request, "LLM-ul a returnat un raspuns invalid.");
+        }
+    }
+
+    private void markAsFailed(AiQuestionRequest request, String errorMessage) {
+        request.setStatus(AiRequestStatus.FAILED);
+        request.setErrorMessage(errorMessage == null || errorMessage.isBlank()
+                ? "LLM-ul a returnat un raspuns invalid."
+                : errorMessage);
+        request.setResolvedAt(LocalDateTime.now());
     }
 }

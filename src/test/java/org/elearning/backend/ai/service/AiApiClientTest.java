@@ -4,12 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.elearning.backend.ai.dto.AiAdaptiveResponse;
-import org.elearning.backend.ai.dto.AiGenerateResponse;
+import org.elearning.backend.ai.dto.AiGenerateJobResponse;
+import org.elearning.backend.ai.dto.AiGenerateJobStatusResponse;
 import org.elearning.backend.ai.dto.AiStudentRegistrationResponse;
 import org.elearning.backend.ai.dto.CurriculumCatalogRequestDto;
 import org.elearning.backend.ai.dto.CurriculumCatalogResponseDto;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.JsonSerializingException;
+import org.elearning.backend.ai.model.AiRequestStatus;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.LessonRepository;
 import org.elearning.backend.assessment.model.QuestionType;
@@ -57,7 +59,7 @@ class AiApiClientTest {
     }
 
     @Test
-    void generateTest_shouldReturnQuestions_andMapMultipleChoiceAlias() throws Exception {
+    void startGenerateJob_shouldReturnJobData() throws Exception {
         UUID lessonId = UUID.randomUUID();
         Lesson lesson = new Lesson();
         lesson.setId(lessonId);
@@ -66,36 +68,36 @@ class AiApiClientTest {
         when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
 
         AtomicReference<String> requestBody = new AtomicReference<>();
-        startServer(200, "application/json", "{\"questions\":[{\"text\":\"Q1\",\"type\":\"MULTIPLE_CHOICE\",\"answers\":[\"A\",\"B\"],\"correctAnswers\":[\"A\"],\"difficulty\":0.5}]}", capture -> {
+        startServer(200, "application/json", "{\"jobId\":\"job-123\",\"status\":\"PENDING\"}", capture -> {
             requestBody.set(capture.body());
-            assertThat(capture.path()).isEqualTo("/ai/api/v1/generate");
+            assertThat(capture.path()).isEqualTo("/ai/api/v1/generate/jobs");
             assertThat(capture.method()).isEqualTo("POST");
             assertThat(capture.headers().getFirst("X-API-Key")).isEqualTo("secret");
         });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
-        AiGenerateResponse response = client.generateTest(lessonId, 5);
+        AiGenerateJobResponse response = client.startGenerateJob(lessonId, 5);
 
         assertThat(requestBody.get()).contains("Lesson content");
         assertThat(requestBody.get()).contains("5");
-        assertThat(response.getQuestions()).hasSize(1);
-        assertThat(response.getQuestions().get(0).getType()).isEqualTo(QuestionType.MULTI_CHOICE);
+        assertThat(response.getJobId()).isEqualTo("job-123");
+        assertThat(response.getStatus()).isEqualTo(AiRequestStatus.PENDING);
     }
 
     @Test
-    void generateTest_shouldThrowWhenLessonMissing() {
+    void startGenerateJob_shouldThrowWhenLessonMissing() {
         UUID lessonId = UUID.randomUUID();
         when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.empty());
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
-        assertThatThrownBy(() -> client.generateTest(lessonId, 5))
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining("Lectia nu exista");
     }
 
     @Test
-    void generateTest_shouldThrowWhenLessonContentBlank() {
+    void startGenerateJob_shouldThrowWhenLessonContentBlank() {
         UUID lessonId = UUID.randomUUID();
         Lesson lesson = new Lesson();
         lesson.setId(lessonId);
@@ -104,13 +106,13 @@ class AiApiClientTest {
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
-        assertThatThrownBy(() -> client.generateTest(lessonId, 5))
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Lectia nu are continut");
     }
 
     @Test
-    void generateTest_shouldThrowWhenLessonContentNull() {
+    void startGenerateJob_shouldThrowWhenLessonContentNull() {
         UUID lessonId = UUID.randomUUID();
         Lesson lesson = new Lesson();
         lesson.setId(lessonId);
@@ -119,13 +121,13 @@ class AiApiClientTest {
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
-        assertThatThrownBy(() -> client.generateTest(lessonId, 5))
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Lectia nu are continut");
     }
 
     @Test
-    void generateTest_shouldThrowWhenPayloadSerializationFails() throws Exception {
+    void startGenerateJob_shouldThrowWhenPayloadSerializationFails() throws Exception {
         UUID lessonId = UUID.randomUUID();
         Lesson lesson = new Lesson();
         lesson.setId(lessonId);
@@ -137,12 +139,12 @@ class AiApiClientTest {
 
         AiApiClient client = new AiApiClient(RestClient.builder(), lessonRepository, failingObjectMapper, "http://localhost:1", "secret", 2000, 2000, 2000, 2000);
 
-        assertThatThrownBy(() -> client.generateTest(lessonId, 5))
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
                 .isInstanceOf(JsonSerializingException.class);
     }
 
     @Test
-    void generateTest_shouldThrowApiException_onErrorStatus() throws Exception {
+    void startGenerateJob_shouldThrowApiException_onErrorStatus() throws Exception {
         UUID lessonId = UUID.randomUUID();
         Lesson lesson = new Lesson();
         lesson.setId(lessonId);
@@ -153,14 +155,14 @@ class AiApiClientTest {
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
-        assertThatThrownBy(() -> client.generateTest(lessonId, 5))
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
                 .isInstanceOf(AiApiException.class)
                 .hasMessageContaining("502 BAD_GATEWAY")
                 .hasMessageContaining("error code: 502");
     }
 
     @Test
-    void generateTest_shouldThrowTimeoutException_onConnectionFailure() {
+    void startGenerateJob_shouldThrowTimeoutException_onConnectionFailure() {
         UUID lessonId = UUID.randomUUID();
         Lesson lesson = new Lesson();
         lesson.setId(lessonId);
@@ -169,9 +171,39 @@ class AiApiClientTest {
 
         AiApiClient client = new AiApiClient(RestClient.builder(), lessonRepository, objectMapper, "http://localhost:1", "secret", 100, 100, 100, 100);
 
-        assertThatThrownBy(() -> client.generateTest(lessonId, 5))
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
                 .isInstanceOf(org.elearning.backend.ai.exception.AiTimeoutException.class)
                 .hasMessageContaining("Timeout generare AI");
+    }
+
+    @Test
+    void getGenerateJobStatus_shouldReturnQuestions() throws Exception {
+        startServer(200, "application/json", "{\"jobId\":\"job-123\",\"status\":\"DONE\",\"questions\":[{\"text\":\"Q1\",\"type\":\"MULTIPLE_CHOICE\",\"answers\":[\"A\",\"B\"],\"correctAnswers\":[\"A\"],\"difficulty\":0.5}]}", capture -> {
+            assertThat(capture.path()).isEqualTo("/ai/api/v1/generate/jobs/job-123");
+            assertThat(capture.method()).isEqualTo("GET");
+            assertThat(capture.headers().getFirst("X-API-Key")).isEqualTo("secret");
+        });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+        AiGenerateJobStatusResponse response = client.getGenerateJobStatus("job-123");
+
+        assertThat(response.getJobId()).isEqualTo("job-123");
+        assertThat(response.getStatus()).isEqualTo(AiRequestStatus.DONE);
+        assertThat(response.getQuestions()).hasSize(1);
+        assertThat(response.getQuestions().get(0).getType()).isEqualTo(QuestionType.MULTI_CHOICE);
+    }
+
+    @Test
+    void getGenerateJobStatus_shouldReturnFailedPayload() throws Exception {
+        startServer(200, "application/json", "{\"jobId\":\"job-123\",\"status\":\"FAILED\",\"error\":\"invalid\"}", capture -> {
+            assertThat(capture.path()).isEqualTo("/ai/api/v1/generate/jobs/job-123");
+        });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+        AiGenerateJobStatusResponse response = client.getGenerateJobStatus("job-123");
+
+        assertThat(response.getStatus()).isEqualTo(AiRequestStatus.FAILED);
+        assertThat(response.getError()).isEqualTo("invalid");
     }
 
     @Test

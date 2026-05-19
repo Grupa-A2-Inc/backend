@@ -95,6 +95,7 @@ class OrganizationServiceTest {
         User owner = createTestUser();
         CreateOrganizationRequest request = createOrganizationRequest(owner.getId());
         Organization saved = createTestOrganization(owner);
+        saved.setPhoneNumber("+40740000000");
 
         when(userRepository.findById(owner.getId())).thenReturn(Optional.of(owner));
         when(organizationRepository.save(any(Organization.class))).thenReturn(saved);
@@ -106,10 +107,27 @@ class OrganizationServiceTest {
         assertEquals("Cluj-Napoca", response.getCity());
         assertEquals("Scoala", response.getOrganizationType());
         assertEquals("Str. Principala 1", response.getAddress());
-        assertEquals("0740000000", response.getPhoneNumber());
+        assertEquals("+40740000000", response.getPhoneNumber());
         assertEquals(owner.getId(), response.getOwnerId());
         assertEquals("owner@scoala.ro", response.getOwnerEmail());
         verify(organizationSubscriptionProvisioningService).provisionFreeSubscription(saved);
+    }
+
+    @Test
+    void createOrganization_normalizesPhoneNumberBeforeSaving() {
+        User owner = createTestUser();
+        CreateOrganizationRequest request = createOrganizationRequest(owner.getId());
+        Organization saved = createTestOrganization(owner);
+        saved.setPhoneNumber("+40740000000");
+
+        when(userRepository.findById(owner.getId())).thenReturn(Optional.of(owner));
+        when(organizationRepository.save(any(Organization.class))).thenReturn(saved);
+
+        organizationService.createOrganization(request);
+
+        ArgumentCaptor<Organization> organizationCaptor = ArgumentCaptor.forClass(Organization.class);
+        verify(organizationRepository).save(organizationCaptor.capture());
+        assertEquals("+40740000000", organizationCaptor.getValue().getPhoneNumber());
     }
 
     @Test
@@ -221,6 +239,7 @@ class OrganizationServiceTest {
     void updateOrganization_success() {
         User owner = createTestUser();
         Organization org = createTestOrganization(owner);
+        org.setPhoneNumber("+40750000000");
 
         UpdateOrganizationRequest request = new UpdateOrganizationRequest(
                 "Scoala Nr. 1 Actualizata",
@@ -228,7 +247,7 @@ class OrganizationServiceTest {
                 "Bucuresti",
                 "Liceu",
                 "Str. Noua 5",
-                "0750000000"
+                "+40750000000"
         );
 
         when(organizationRepository.findById(org.getId())).thenReturn(Optional.of(org));
@@ -240,7 +259,7 @@ class OrganizationServiceTest {
         assertEquals("Bucuresti", response.getCity());
         assertEquals("Liceu", response.getOrganizationType());
         assertEquals("Str. Noua 5", response.getAddress());
-        assertEquals("0750000000", response.getPhoneNumber());
+        assertEquals("+40750000000", response.getPhoneNumber());
     }
 
     @Test
