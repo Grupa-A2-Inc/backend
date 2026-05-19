@@ -37,12 +37,23 @@ public class AiController extends GlobalHttpStatusCodes {
      * @param requestBody optional payload containing an optional `testIdOpt`; when absent, a new test will be created and questions will be injected into it
      * @return            an InjectionResultDto describing the outcome of the injection operation
      */
-    @Operation(summary = "Inject AI-generated questions into a test", description = "Processes the AI request and injects generated questions into the specified test. If no test ID is provided, a new test will be created.")
+    @Operation(
+            summary = "Inject AI-generated questions into a test",
+            description = """
+                    Injects the generated questions from a completed AI request into a test.
+                    
+                    Important for clients:
+                    - this endpoint must be called only after polling /api/v1/ai/requests/{requestId}/status returns DONE
+                    - the endpoint path is singular: /api/v1/ai/request/{requestId}/inject
+                    - if testIdOpt is missing or null, the backend creates a new DRAFT test automatically
+                    - if testIdOpt is provided, the generated questions are injected into that existing test
+                    """
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Questions injected successfully"),
             @ApiResponse(responseCode = FORBIDDEN, description = "Access denied"),
             @ApiResponse(responseCode = NOT_FOUND, description = "AI request or lesson or test not found"),
-            @ApiResponse(responseCode = CONFLICT, description = "AI Generation failed or is not completed yet"),
+            @ApiResponse(responseCode = CONFLICT, description = "AI generation is not DONE yet or has failed"),
             @ApiResponse(responseCode = UNPROCESSABLE_CONTENT, description = "Validation error in request or error at parsing generated questions")
     })
 
@@ -64,9 +75,23 @@ public class AiController extends GlobalHttpStatusCodes {
      * @return an AiGenerateResponseDto containing the generated `requestId`, `status` set to `AiRequestStatus.PENDING`, and the associated `lessonId`
      */
     // SWAGGER ADDED
-    @Operation(summary = "Generate AI test for a lesson", description = "Initiates an AI generation request for the specified lesson and returns the created request metadata.")
+    @Operation(
+            summary = "Start AI question generation for a lesson",
+            description = """
+                    Starts the asynchronous AI generation flow for a lesson and immediately returns a local requestId.
+                    
+                    Frontend flow:
+                    1. call POST /api/v1/lessons/{lessonId}/ai/generate-test
+                    2. poll GET /api/v1/ai/requests/{requestId}/status every 3-5 seconds
+                    3. when status becomes DONE, call POST /api/v1/ai/request/{requestId}/inject
+                    
+                    Notes:
+                    - the frontend should call the backend only, not the AI microservice directly
+                    - this endpoint returns 202 Accepted and does not wait for the AI generation to finish
+                    """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = ACCEPTED, description = "AI generation request accepted"),
+            @ApiResponse(responseCode = ACCEPTED, description = "AI generation request accepted; use the returned requestId for polling"),
             @ApiResponse(responseCode = BAD_REQUEST, description = "Invalid request parameters"),
             @ApiResponse(responseCode = FORBIDDEN, description = "Access denied"),
             @ApiResponse(responseCode = NOT_FOUND, description = "Lesson not found"),
@@ -88,7 +113,23 @@ public class AiController extends GlobalHttpStatusCodes {
      * @return the AiRequestStatusDto containing the request's current status and related metadata
      */
     // SWAGGER ADDED
-    @Operation(summary = "Get AI generation request status", description = "Retrieves the current status of an AI generation request by its ID for the authenticated user.")
+    @Operation(
+            summary = "Poll AI generation request status",
+            description = """
+                    Returns the current status of an AI generation request identified by the local requestId.
+                    
+                    Recommended client behavior:
+                    - poll every 3-5 seconds
+                    - stop when status becomes DONE or FAILED
+                    - apply a client-side timeout, for example 5 minutes
+                    
+                    Returned statuses:
+                    - PENDING: request exists but remote generation is not yet running
+                    - RUNNING: AI generation is in progress
+                    - DONE: generated questions are stored locally and can be injected into a test
+                    - FAILED: generation failed; inspect the optional error field
+                    """
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = OK, description = "Status retrieved successfully"),
             @ApiResponse(responseCode = NOT_FOUND, description = "AI generation request not found"),
