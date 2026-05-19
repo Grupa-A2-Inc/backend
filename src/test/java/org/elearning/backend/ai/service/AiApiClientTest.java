@@ -177,6 +177,70 @@ class AiApiClientTest {
     }
 
     @Test
+    void startGenerateJob_shouldThrowWhenResponseBodyIsEmpty() throws Exception {
+        UUID lessonId = UUID.randomUUID();
+        Lesson lesson = new Lesson();
+        lesson.setId(lessonId);
+        lesson.setContentMarkdown("Lesson content");
+        when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
+        startServer(204, "text/plain", "", capture -> { });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
+                .isInstanceOf(AiApiException.class)
+                .hasMessageContaining("empty response");
+    }
+
+    @Test
+    void startGenerateJob_shouldThrowWhenResponseBodyIsInvalid() throws Exception {
+        UUID lessonId = UUID.randomUUID();
+        Lesson lesson = new Lesson();
+        lesson.setId(lessonId);
+        lesson.setContentMarkdown("Lesson content");
+        when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
+        startServer(200, "application/json", "{\"jobId\":\"\",\"status\":null}", capture -> { });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
+                .isInstanceOf(AiApiException.class)
+                .hasMessageContaining("invalid response");
+    }
+
+    @Test
+    void startGenerateJob_shouldThrowWhenResponseHasNullJobId() throws Exception {
+        UUID lessonId = UUID.randomUUID();
+        Lesson lesson = new Lesson();
+        lesson.setId(lessonId);
+        lesson.setContentMarkdown("Lesson content");
+        when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
+        startServer(200, "application/json", "{\"jobId\":null,\"status\":\"PENDING\"}", capture -> { });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
+                .isInstanceOf(AiApiException.class)
+                .hasMessageContaining("invalid response");
+    }
+
+    @Test
+    void startGenerateJob_shouldThrowWhenResponseHasNullStatus() throws Exception {
+        UUID lessonId = UUID.randomUUID();
+        Lesson lesson = new Lesson();
+        lesson.setId(lessonId);
+        lesson.setContentMarkdown("Lesson content");
+        when(lessonRepository.findById(lessonId)).thenReturn(java.util.Optional.of(lesson));
+        startServer(200, "application/json", "{\"jobId\":\"job-123\",\"status\":null}", capture -> { });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.startGenerateJob(lessonId, 5))
+                .isInstanceOf(AiApiException.class)
+                .hasMessageContaining("invalid response");
+    }
+
+    @Test
     void getGenerateJobStatus_shouldReturnQuestions() throws Exception {
         startServer(200, "application/json", "{\"jobId\":\"job-123\",\"status\":\"DONE\",\"questions\":[{\"text\":\"Q1\",\"type\":\"MULTIPLE_CHOICE\",\"answers\":[\"A\",\"B\"],\"correctAnswers\":[\"A\"],\"difficulty\":0.5}]}", capture -> {
             assertThat(capture.path()).isEqualTo("/ai/api/v1/generate/jobs/job-123");
@@ -204,6 +268,71 @@ class AiApiClientTest {
 
         assertThat(response.getStatus()).isEqualTo(AiRequestStatus.FAILED);
         assertThat(response.getError()).isEqualTo("invalid");
+    }
+
+    @Test
+    void getGenerateJobStatus_shouldThrowWhenResponseBodyIsEmpty() throws Exception {
+        startServer(204, "text/plain", "", capture -> { });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.getGenerateJobStatus("job-123"))
+                .isInstanceOf(AiApiException.class)
+                .hasMessageContaining("empty response");
+    }
+
+    @Test
+    void getGenerateJobStatus_shouldThrowWhenResponseBodyIsInvalid() throws Exception {
+        startServer(200, "application/json", "{\"jobId\":\"\",\"status\":null}", capture -> { });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.getGenerateJobStatus("job-123"))
+                .isInstanceOf(AiApiException.class)
+                .hasMessageContaining("invalid response");
+    }
+
+    @Test
+    void getGenerateJobStatus_shouldThrowWhenResponseHasNullJobId() throws Exception {
+        startServer(200, "application/json", "{\"jobId\":null,\"status\":\"PENDING\"}", capture -> { });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.getGenerateJobStatus("job-123"))
+                .isInstanceOf(AiApiException.class)
+                .hasMessageContaining("invalid response");
+    }
+
+    @Test
+    void getGenerateJobStatus_shouldThrowWhenResponseHasNullStatus() throws Exception {
+        startServer(200, "application/json", "{\"jobId\":\"job-123\",\"status\":null}", capture -> { });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.getGenerateJobStatus("job-123"))
+                .isInstanceOf(AiApiException.class)
+                .hasMessageContaining("invalid response");
+    }
+
+    @Test
+    void getGenerateJobStatus_shouldThrowApiException_onErrorStatus() throws Exception {
+        startServer(500, "text/plain", "AI error", capture -> { });
+
+        AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
+
+        assertThatThrownBy(() -> client.getGenerateJobStatus("job-123"))
+                .isInstanceOf(AiApiException.class)
+                .hasMessageContaining("500 INTERNAL_SERVER_ERROR")
+                .hasMessageContaining("AI error");
+    }
+
+    @Test
+    void getGenerateJobStatus_shouldThrowTimeoutException_onConnectionFailure() {
+        AiApiClient client = new AiApiClient(RestClient.builder(), lessonRepository, objectMapper, "http://localhost:1", "secret", 100, 100, 100, 100);
+
+        assertThatThrownBy(() -> client.getGenerateJobStatus("job-123"))
+                .isInstanceOf(org.elearning.backend.ai.exception.AiTimeoutException.class)
+                .hasMessageContaining("Timeout status AI");
     }
 
     @Test

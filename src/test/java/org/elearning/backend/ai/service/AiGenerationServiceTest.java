@@ -9,6 +9,7 @@ import org.elearning.backend.ai.dto.AiRequestStatusDto;
 import org.elearning.backend.ai.dto.CurriculumCatalogRequestDto;
 import org.elearning.backend.ai.dto.CurriculumCatalogResponseDto;
 import org.elearning.backend.ai.exception.AiApiException;
+import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.elearning.backend.ai.exception.ValidationException;
 import org.elearning.backend.ai.model.AiQuestionRequest;
 import org.elearning.backend.ai.model.AiRequestStatus;
@@ -32,7 +33,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -298,5 +298,182 @@ class AiGenerationServiceTest {
 
         assertThat(actual).isSameAs(expected);
         verify(aiApiClient).getCurriculumCatalog(requestDto);
+    }
+
+    @Test
+    void getRequestStatus_shouldReturnTerminalStatusWithoutPolling() {
+        UUID requestId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AiQuestionRequest request = AiQuestionRequest.builder()
+                .id(requestId)
+                .lessonId(lessonId)
+                .status(AiRequestStatus.DONE)
+                .build();
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+
+        AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
+
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.DONE);
+        verify(questionRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void getRequestStatus_shouldReturnPendingWithoutPollingWhenJobIdMissing() {
+        UUID requestId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AiQuestionRequest request = AiQuestionRequest.builder()
+                .id(requestId)
+                .lessonId(lessonId)
+                .status(AiRequestStatus.PENDING)
+                .aiJobId(null)
+                .build();
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+
+        AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
+
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.PENDING);
+        verify(aiApiClient, never()).getGenerateJobStatus(any());
+        verify(questionRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void getRequestStatus_shouldMarkFailedWhenDoneHasNoQuestions() {
+        UUID requestId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AiQuestionRequest request = AiQuestionRequest.builder()
+                .id(requestId)
+                .lessonId(lessonId)
+                .aiJobId("job-400")
+                .status(AiRequestStatus.RUNNING)
+                .build();
+        AiGenerateJobStatusResponse remoteStatus = new AiGenerateJobStatusResponse();
+        remoteStatus.setJobId("job-400");
+        remoteStatus.setStatus(AiRequestStatus.DONE);
+        remoteStatus.setQuestions(null);
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+        when(aiApiClient.getGenerateJobStatus("job-400")).thenReturn(remoteStatus);
+
+        AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
+
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.FAILED);
+        assertThat(statusDto.getError()).isEqualTo("LLM-ul a returnat un raspuns invalid.");
+        assertThat(request.getResolvedAt()).isNotNull();
+    }
+
+    @Test
+    void getRequestStatus_shouldMarkFailedWhenRemoteStatusFailedHasBlankError() {
+        UUID requestId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AiQuestionRequest request = AiQuestionRequest.builder()
+                .id(requestId)
+                .lessonId(lessonId)
+                .aiJobId("job-500")
+                .status(AiRequestStatus.RUNNING)
+                .build();
+        AiGenerateJobStatusResponse remoteStatus = new AiGenerateJobStatusResponse();
+        remoteStatus.setJobId("job-500");
+        remoteStatus.setStatus(AiRequestStatus.FAILED);
+        remoteStatus.setError("   ");
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+        when(aiApiClient.getGenerateJobStatus("job-500")).thenReturn(remoteStatus);
+
+        AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
+
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.FAILED);
+        assertThat(statusDto.getError()).isEqualTo("LLM-ul a returnat un raspuns invalid.");
+    }
+
+    @Test
+    void getRequestStatus_shouldMarkFailedWhenRemoteStatusFailedHasNullError() {
+        UUID requestId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AiQuestionRequest request = AiQuestionRequest.builder()
+                .id(requestId)
+                .lessonId(lessonId)
+                .aiJobId("job-550")
+                .status(AiRequestStatus.RUNNING)
+                .build();
+        AiGenerateJobStatusResponse remoteStatus = new AiGenerateJobStatusResponse();
+        remoteStatus.setJobId("job-550");
+        remoteStatus.setStatus(AiRequestStatus.FAILED);
+        remoteStatus.setError(null);
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+        when(aiApiClient.getGenerateJobStatus("job-550")).thenReturn(remoteStatus);
+
+        AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
+
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.FAILED);
+        assertThat(statusDto.getError()).isEqualTo("LLM-ul a returnat un raspuns invalid.");
+    }
+
+    @Test
+    void getRequestStatus_shouldMarkFailedWhenStatusPollingTimesOut() {
+        UUID requestId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AiQuestionRequest request = AiQuestionRequest.builder()
+                .id(requestId)
+                .lessonId(lessonId)
+                .aiJobId("job-600")
+                .status(AiRequestStatus.RUNNING)
+                .build();
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+        when(aiApiClient.getGenerateJobStatus("job-600")).thenThrow(new AiTimeoutException("timeout polling"));
+
+        AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
+
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.FAILED);
+        assertThat(statusDto.getError()).contains("timeout polling");
+    }
+
+    @Test
+    void getRequestStatus_shouldMarkFailedWhenQuestionSerializationFails() throws Exception {
+        UUID requestId = UUID.randomUUID();
+        UUID lessonId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AiQuestionRequest request = AiQuestionRequest.builder()
+                .id(requestId)
+                .lessonId(lessonId)
+                .aiJobId("job-700")
+                .status(AiRequestStatus.RUNNING)
+                .build();
+        AiQuestionDto question = new AiQuestionDto();
+        question.setText("Q1");
+        question.setType(QuestionType.SINGLE_CHOICE);
+        question.setAnswers(java.util.List.of("A", "B"));
+        question.setCorrectAnswers(java.util.List.of("A"));
+        question.setDifficulty(0.5);
+        AiGenerateJobStatusResponse remoteStatus = new AiGenerateJobStatusResponse();
+        remoteStatus.setJobId("job-700");
+        remoteStatus.setStatus(AiRequestStatus.DONE);
+        remoteStatus.setQuestions(java.util.List.of(question));
+
+        when(questionRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(lessonRepository.isLessonOwnedByProfessor(lessonId, userId)).thenReturn(true);
+        when(aiApiClient.getGenerateJobStatus("job-700")).thenReturn(remoteStatus);
+        when(objectMapper.writeValueAsString(remoteStatus.getQuestions()))
+                .thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("boom") {});
+
+        AiRequestStatusDto statusDto = aiGenerationService.getRequestStatus(requestId, userId, RoleName.TEACHER);
+
+        assertThat(statusDto.getStatus()).isEqualTo(AiRequestStatus.FAILED);
+        assertThat(statusDto.getError()).isEqualTo("LLM-ul a returnat un raspuns invalid.");
     }
 }
