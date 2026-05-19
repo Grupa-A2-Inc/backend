@@ -28,6 +28,9 @@ public class AiQuestionRequest {
     @Column(name = "topic_id")
     private Integer topicId;
 
+    @Column(name = "ai_job_id", length = 100)
+    private String aiJobId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default

@@ -22,6 +22,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -128,6 +129,29 @@ class AuthServiceTest {
         authService.register(request);
 
         verify(passwordEncoder, times(1)).encode("parola123");
+    }
+
+    @Test
+    void register_normalizesPhoneNumberBeforeSavingOrganization() {
+        RegisterRequest request = validRegisterRequest();
+        request.setPhoneNumber("0722123456");
+
+        Role role = new Role(RoleName.ORGANIZATION_ADMIN);
+
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(roleRepository.findByName(any())).thenReturn(Optional.of(role));
+        when(passwordEncoder.encode("parola123")).thenReturn("hashed_parola");
+        when(organizationRepository.existsByName(any())).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> saveUserWithGeneratedId(invocation.getArgument(0)));
+        when(organizationRepository.save(any(Organization.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtUtil.generateAccessToken(any(UUID.class), eq(RoleName.ORGANIZATION_ADMIN))).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(any(UUID.class))).thenReturn("refresh-token");
+
+        authService.register(request);
+
+        ArgumentCaptor<Organization> organizationCaptor = ArgumentCaptor.forClass(Organization.class);
+        verify(organizationRepository).save(organizationCaptor.capture());
+        assertThat(organizationCaptor.getValue().getPhoneNumber()).isEqualTo("+40722123456");
     }
 
     // teste noi pentru organizatie

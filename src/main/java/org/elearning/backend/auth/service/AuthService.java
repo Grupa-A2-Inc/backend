@@ -7,6 +7,7 @@ import org.elearning.backend.auth.dto.request.RegisterRequest;
 import org.elearning.backend.auth.dto.response.AuthResponse;
 import org.elearning.backend.auth.dto.response.UserDataResponse;
 import org.elearning.backend.auth.exception.*;
+import org.elearning.backend.common.validation.PhoneNumberNormalizer;
 import org.elearning.backend.organization.entity.Organization;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.role.entity.Role;
@@ -77,7 +78,7 @@ public class AuthService {
         organization.setCity(request.getCity());
         organization.setOrganizationType(request.getOrganizationType());
         organization.setAddress(request.getAddress());
-        organization.setPhoneNumber(request.getPhoneNumber());
+        organization.setPhoneNumber(PhoneNumberNormalizer.normalize(request.getPhoneNumber()));
         organization.setOwner(savedUser);
         Organization savedOrganization = organizationRepository.save(organization);
         organizationSubscriptionProvisioningService.provisionFreeSubscription(savedOrganization);

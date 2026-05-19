@@ -65,7 +65,7 @@ class AiQuestionInjectorServiceTest {
         AiQuestionRequest request = AiQuestionRequest.builder()
                 .id(requestId)
                 .lessonId(lessonId)
-                .status(AiRequestStatus.SUCCESS)
+                .status(AiRequestStatus.DONE)
                 .generatedQuestions(objectMapper.writeValueAsString(List.of(aiQuestion)))
                 .build();
 

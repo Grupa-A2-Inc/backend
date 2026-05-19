@@ -74,7 +74,7 @@ public class OrganizationController {
     )
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<OrganizationResponse> createOrganization(@RequestBody CreateOrganizationRequest request) {
+    public ResponseEntity<OrganizationResponse> createOrganization(@Valid @RequestBody CreateOrganizationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(organizationService.createOrganization(request));
     }
 
@@ -221,7 +221,7 @@ public class OrganizationController {
     @PreAuthorize("@accessService.canEditOrganization(authentication, #id)")
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateOrganization(@P("id") @PathVariable UUID id,
-                                                   @RequestBody UpdateOrganizationRequest request) {
+                                                   @Valid @RequestBody UpdateOrganizationRequest request) {
         organizationService.updateOrganization(id, request);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
