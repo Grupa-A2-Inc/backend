@@ -1,10 +1,13 @@
 package org.elearning.backend.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elearning.backend.ai.dto.AiAdaptiveJobResponse;
+import org.elearning.backend.ai.dto.AiAdaptiveJobStatusResponse;
 import org.elearning.backend.ai.dto.AdaptiveStartRequestDto;
 import org.elearning.backend.ai.dto.AiAdaptiveExerciseDto;
 import org.elearning.backend.ai.dto.AiAdaptiveResponse;
 import org.elearning.backend.ai.exception.AiApiException;
+import org.elearning.backend.ai.model.AiRequestStatus;
 import org.elearning.backend.ai.service.AdaptiveSessionService;
 import org.elearning.backend.ai.service.AiApiClient;
 import org.elearning.backend.ai.dto.AdaptiveSubmitRequestDto;
@@ -33,8 +36,11 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -76,6 +82,7 @@ class AdaptiveControllerTest {
 
     @AfterEach
     void tearDown() {
+        jdbcTemplate.execute("DELETE FROM adaptive_exercise_jobs");
         jdbcTemplate.execute("DELETE FROM adaptive_session_answers");
         jdbcTemplate.execute("DELETE FROM adaptive_session_exercises");
         jdbcTemplate.execute("DELETE FROM adaptive_sessions");
@@ -135,6 +142,12 @@ class AdaptiveControllerTest {
                 .with(csrf());
     }
 
+    private MockHttpServletRequestBuilder authorizedGet(String urlTemplate, Object... uriVars) {
+        return get(urlTemplate, uriVars)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + studentToken)
+                .contentType(MediaType.APPLICATION_JSON);
+    }
+
     private AdaptiveSubmitRequestDto buildRequest(String exerciseId, List<String> givenAnswers) {
         AdaptiveSubmitRequestDto.AnswerDto answer = new AdaptiveSubmitRequestDto.AnswerDto();
         answer.setExerciseId(exerciseId);
@@ -150,6 +163,96 @@ class AdaptiveControllerTest {
         AdaptiveSubmitRequestDto request = new AdaptiveSubmitRequestDto();
         request.setAnswers(List.of());
         return request;
+    }
+
+    // =========================================================================
+    // POST /api/v1/adaptive/jobs
+    // GET  /api/v1/adaptive/jobs/{jobId}
+    // =========================================================================
+
+    @Test
+    void createAdaptiveJob_shouldReturn202AndPersistJob() throws Exception {
+        AiAdaptiveJobResponse response = new AiAdaptiveJobResponse();
+        response.setJobId("adaptive-job-123");
+        response.setStatus(AiRequestStatus.PENDING);
+        when(aiApiClient.startAdaptiveJob(any(), anyInt(), anyInt(), anyInt())).thenReturn(response);
+
+        mockMvc.perform(authorizedPost("/api/v1/adaptive/jobs")
+                        .content("{\"subjectId\":1,\"topicId\":2,\"count\":4}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.jobId").exists())
+                .andExpect(jsonPath("$.status").value("PENDING"));
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM adaptive_exercise_jobs WHERE student_id = ?",
+                Integer.class,
+                studentId
+        );
+        assertEquals(1, count);
+    }
+
+    @Test
+    void getAdaptiveJobStatus_shouldReturnRunningWhenRemoteJobStillRunning() throws Exception {
+        AiAdaptiveJobResponse createResponse = new AiAdaptiveJobResponse();
+        createResponse.setJobId("adaptive-job-124");
+        createResponse.setStatus(AiRequestStatus.PENDING);
+        when(aiApiClient.startAdaptiveJob(any(), anyInt(), anyInt(), anyInt())).thenReturn(createResponse);
+
+        String createResponseBody = mockMvc.perform(authorizedPost("/api/v1/adaptive/jobs")
+                        .content("{\"subjectId\":1,\"topicId\":2,\"count\":4}"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String jobId = objectMapper.readTree(createResponseBody).get("jobId").asText();
+
+        AiAdaptiveJobStatusResponse statusResponse = new AiAdaptiveJobStatusResponse();
+        statusResponse.setJobId("adaptive-job-124");
+        statusResponse.setStatus(AiRequestStatus.RUNNING);
+        when(aiApiClient.getAdaptiveJobStatus("adaptive-job-124")).thenReturn(statusResponse);
+
+        mockMvc.perform(authorizedGet("/api/v1/adaptive/jobs/{jobId}", jobId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.jobId").value(jobId))
+                .andExpect(jsonPath("$.status").value("RUNNING"))
+                .andExpect(jsonPath("$.session").value(nullValue()));
+    }
+
+    @Test
+    void getAdaptiveJobStatus_shouldReturnSessionWhenRemoteJobIsDone() throws Exception {
+        AiAdaptiveJobResponse createResponse = new AiAdaptiveJobResponse();
+        createResponse.setJobId("adaptive-job-125");
+        createResponse.setStatus(AiRequestStatus.PENDING);
+        when(aiApiClient.startAdaptiveJob(any(), anyInt(), anyInt(), anyInt())).thenReturn(createResponse);
+
+        String createResponseBody = mockMvc.perform(authorizedPost("/api/v1/adaptive/jobs")
+                        .content("{\"subjectId\":1,\"topicId\":2,\"count\":1}"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String jobId = objectMapper.readTree(createResponseBody).get("jobId").asText();
+
+        AiAdaptiveExerciseDto exercise = new AiAdaptiveExerciseDto();
+        exercise.setExerciseId("ex-1");
+        exercise.setText("Question");
+        exercise.setType(QuestionType.SINGLE_CHOICE);
+        exercise.setAnswers(List.of("A", "B"));
+        exercise.setCorrectAnswers(List.of("A"));
+        exercise.setDifficulty(0.5);
+
+        AiAdaptiveJobStatusResponse statusResponse = new AiAdaptiveJobStatusResponse();
+        statusResponse.setJobId("adaptive-job-125");
+        statusResponse.setStatus(AiRequestStatus.DONE);
+        statusResponse.setExercises(List.of(exercise));
+        when(aiApiClient.getAdaptiveJobStatus("adaptive-job-125")).thenReturn(statusResponse);
+
+        mockMvc.perform(authorizedGet("/api/v1/adaptive/jobs/{jobId}", jobId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.jobId").value(jobId))
+                .andExpect(jsonPath("$.status").value("DONE"))
+                .andExpect(jsonPath("$.session.sessionId").exists())
+                .andExpect(jsonPath("$.session.exercises[0].exerciseId").value("ex-1"));
     }
 
     // =========================================================================

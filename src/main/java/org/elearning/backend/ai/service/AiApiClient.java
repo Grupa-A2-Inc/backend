@@ -37,6 +37,7 @@ public class AiApiClient {
 
     private static final String GENERATE_TEST_JOBS_URI = "/ai/api/v1/generate/jobs";
     private static final String ADAPTIVE_EXERCISES_URI = "/ai/api/v1/adaptive/exercises";
+    private static final String ADAPTIVE_EXERCISES_JOBS_URI = "/ai/api/v1/adaptive/exercises/jobs";
     private static final String ADAPTIVE_FEEDBACK_URI = "/ai/api/v1/adaptive/feedback";
     private static final String STUDENT_REGISTRATION_URI = "/ai/api/v1/students";
     private static final String CURRICULUM_CATALOG_URI = "/ai/api/v1/catalog/curriculum";
@@ -232,6 +233,90 @@ public class AiApiClient {
         } catch (ResourceAccessException e) {
             log.error("Timeout la AI Adaptive pentru studentId: {}", studentId);
             throw new AiTimeoutException("Timeout AI Adaptive: " + e.getMessage());
+        }
+    }
+
+    public AiAdaptiveJobResponse startAdaptiveJob(UUID studentId, int subjectId, int topicId, int count) {
+        AiAdaptiveExercisesRequest payload = new AiAdaptiveExercisesRequest(
+                studentId.toString(),
+                subjectId,
+                topicId,
+                count
+        );
+        String requestBody;
+
+        try {
+            requestBody = objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException exception) {
+            throw new JsonSerializingException("Failed to serialize adaptive job request payload.");
+        }
+
+        try {
+            AiAdaptiveJobResponse response = adaptiveRestClient.post()
+                    .uri(ADAPTIVE_EXERCISES_JOBS_URI)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(API_KEY_HEADER, apiKey)
+                    .body(requestBody)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, clientResponse) -> {
+                        String responseBody = readErrorResponseBody(clientResponse);
+                        log.error("AI adaptive job start failed: status={} studentId={} responseBody={}",
+                                clientResponse.getStatusCode(), studentId, responseBody);
+                        throw new AiApiException(
+                                "AI adaptive job start failed with status: "
+                                        + clientResponse.getStatusCode()
+                                        + ", response body: "
+                                        + responseBody
+                        );
+                    })
+                    .body(AiAdaptiveJobResponse.class);
+
+            if (response == null) {
+                throw new AiApiException("AI adaptive job start returned an empty response");
+            }
+            if (response.getJobId() == null || response.getJobId().isBlank() || response.getStatus() == null) {
+                throw new AiApiException("AI adaptive job start returned an invalid response");
+            }
+
+            return response;
+        } catch (ResourceAccessException exception) {
+            log.error("Timeout la start adaptive job pentru studentId: {}", studentId);
+            throw new AiTimeoutException("Timeout adaptive job start: " + exception.getMessage());
+        }
+    }
+
+    public AiAdaptiveJobStatusResponse getAdaptiveJobStatus(String jobId) {
+        try {
+            AiAdaptiveJobStatusResponse response = adaptiveRestClient.get()
+                    .uri(uriBuilder -> uriBuilder.path(ADAPTIVE_EXERCISES_JOBS_URI + "/{jobId}").build(jobId))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header(API_KEY_HEADER, apiKey)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, clientResponse) -> {
+                        String responseBody = readErrorResponseBody(clientResponse);
+                        log.error("AI adaptive job status failed: status={} jobId={} responseBody={}",
+                                clientResponse.getStatusCode(), jobId, responseBody);
+                        throw new AiApiException(
+                                "AI adaptive job status failed with status: "
+                                        + clientResponse.getStatusCode()
+                                        + ", response body: "
+                                        + responseBody
+                        );
+                    })
+                    .body(AiAdaptiveJobStatusResponse.class);
+
+            if (response == null) {
+                throw new AiApiException("AI adaptive job status returned an empty response");
+            }
+            if (response.getJobId() == null || response.getJobId().isBlank() || response.getStatus() == null) {
+                throw new AiApiException("AI adaptive job status returned an invalid response");
+            }
+
+            return response;
+        } catch (ResourceAccessException exception) {
+            log.error("Timeout la status adaptive job pentru jobId: {}", jobId);
+            throw new AiTimeoutException("Timeout adaptive job status: " + exception.getMessage());
         }
     }
 
