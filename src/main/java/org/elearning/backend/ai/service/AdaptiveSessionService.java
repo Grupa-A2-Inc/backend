@@ -11,9 +11,12 @@ import org.elearning.backend.ai.exception.AiTimeoutException;
 import org.elearning.backend.ai.exception.AdaptiveServiceUnavailableException;
 import org.elearning.backend.ai.exception.ResourceConflictException;
 import org.elearning.backend.ai.exception.ValidationException;
+import org.elearning.backend.ai.model.AdaptiveExerciseJob;
 import org.elearning.backend.ai.model.AdaptiveSession;
 import org.elearning.backend.ai.model.AdaptiveSessionAnswer;
 import org.elearning.backend.ai.model.AdaptiveSessionExercise;
+import org.elearning.backend.ai.model.AiRequestStatus;
+import org.elearning.backend.ai.repository.AdaptiveExerciseJobRepository;
 import org.elearning.backend.ai.repository.AdaptiveSessionAnswerRepository;
 import org.elearning.backend.ai.repository.AdaptiveSessionExerciseRepository;
 import org.elearning.backend.ai.repository.AdaptiveSessionRepository;
@@ -29,12 +32,61 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class AdaptiveSessionService {
+    private final AdaptiveExerciseJobRepository adaptiveExerciseJobRepository;
     private final AdaptiveSessionRepository adaptiveSessionRepository;
     private final AiApiClient aiApiClient;
     private final ObjectMapper objectMapper;
     private final AdaptiveSessionExerciseRepository exerciseRepository;
     private final AdaptiveSessionAnswerRepository adaptiveSessionAnswerRepository;
     private static final int SESSION_MINUTES = 30;
+
+    @Transactional
+    public AdaptiveJobResponseDto createAdaptiveJob(UUID studentId, Integer subjectId, Integer topicId, int count) {
+        AdaptiveExerciseJob job = AdaptiveExerciseJob.builder()
+                .studentId(studentId)
+                .subjectId(subjectId)
+                .topicId(topicId)
+                .questionCount(count)
+                .status(AiRequestStatus.PENDING)
+                .build();
+        job = adaptiveExerciseJobRepository.save(job);
+
+        try {
+            AiAdaptiveJobResponse response = aiApiClient.startAdaptiveJob(studentId, subjectId, topicId, count);
+            job.setAiJobId(response.getJobId());
+            job.setStatus(response.getStatus());
+        } catch (AiApiException | AiTimeoutException exception) {
+            markJobAsFailed(job, exception.getMessage());
+        }
+        adaptiveExerciseJobRepository.save(job);
+
+        AdaptiveJobResponseDto responseDto = new AdaptiveJobResponseDto();
+        responseDto.setJobId(job.getId());
+        responseDto.setStatus(job.getStatus());
+        return responseDto;
+    }
+
+    @Transactional
+    public AdaptiveJobStatusDto getAdaptiveJobStatus(UUID jobId, UUID studentId) {
+        AdaptiveExerciseJob job = adaptiveExerciseJobRepository.findByIdAndStudentId(jobId, studentId)
+                .orElseThrow(() -> new DoesNotExistException("Adaptive job not found"));
+
+        if (!isTerminalStatus(job.getStatus()) && job.getAiJobId() != null) {
+            syncJobWithAi(job);
+            adaptiveExerciseJobRepository.save(job);
+        }
+
+        AdaptiveJobStatusDto statusDto = new AdaptiveJobStatusDto();
+        statusDto.setJobId(job.getId());
+        statusDto.setStatus(job.getStatus());
+        statusDto.setError(job.getErrorMessage());
+
+        if (job.getStatus() == AiRequestStatus.DONE && job.getSessionId() != null) {
+            statusDto.setSession(buildAdaptiveStartDto(job.getSessionId()));
+        }
+
+        return statusDto;
+    }
 
     @Transactional
     public AdaptiveStartDto startSession(UUID studentId, Integer subjectId, Integer topicId, int count) {
@@ -46,12 +98,52 @@ public class AdaptiveSessionService {
             throw new AdaptiveServiceUnavailableException("Adaptive service is currently unavailable. Please try again later.");
         }
 
-        // Modulul AI nu are exercitii pentru acest subject/topic inca
         if (response.getExercises() == null || response.getExercises().isEmpty()) {
             log.warn("No exercises returned from AI for subjectId={}, topicId={}", subjectId, topicId);
             throw new AdaptiveServiceUnavailableException("No exercises available for the selected subject and topic. Please try again later or choose a different topic.");
         }
 
+        return createSessionFromExercises(studentId, subjectId, topicId, response.getExercises());
+    }
+
+    private void syncJobWithAi(AdaptiveExerciseJob job) {
+        try {
+            AiAdaptiveJobStatusResponse response = aiApiClient.getAdaptiveJobStatus(job.getAiJobId());
+            job.setStatus(response.getStatus());
+
+            if (response.getStatus() == AiRequestStatus.DONE) {
+                if (job.getSessionId() == null) {
+                    if (response.getExercises() == null || response.getExercises().isEmpty()) {
+                        markJobAsFailed(job, "Adaptive AI returned an invalid response.");
+                        return;
+                    }
+                    AdaptiveStartDto session = createSessionFromExercises(
+                            job.getStudentId(),
+                            job.getSubjectId(),
+                            job.getTopicId(),
+                            response.getExercises()
+                    );
+                    job.setSessionId(session.getSessionId());
+                }
+                job.setErrorMessage(null);
+                job.setResolvedAt(LocalDateTime.now());
+                return;
+            }
+
+            if (response.getStatus() == AiRequestStatus.FAILED) {
+                markJobAsFailed(job, response.getError());
+            }
+        } catch (AiApiException | AiTimeoutException exception) {
+            markJobAsFailed(job, exception.getMessage());
+        }
+    }
+
+    private AdaptiveStartDto createSessionFromExercises(
+            UUID studentId,
+            Integer subjectId,
+            Integer topicId,
+            List<AiAdaptiveExerciseDto> exercises
+    ) {
         AdaptiveSession session = AdaptiveSession.builder()
                 .studentId(studentId)
                 .subjectId(subjectId)
@@ -62,7 +154,7 @@ public class AdaptiveSessionService {
         UUID sessionId = session.getId();
         List<ClientExerciseDto> safeExercises = new ArrayList<>();
 
-        for (AiAdaptiveExerciseDto aiExercise : response.getExercises()) {
+        for (AiAdaptiveExerciseDto aiExercise : exercises) {
             try {
                 String answersJson = objectMapper.writeValueAsString(aiExercise.getAnswers());
                 String correctAnswersJson = objectMapper.writeValueAsString(aiExercise.getCorrectAnswers());
@@ -90,6 +182,43 @@ public class AdaptiveSessionService {
         }
 
         return new AdaptiveStartDto(sessionId, session.getExpiresAt(), safeExercises);
+    }
+
+    private AdaptiveStartDto buildAdaptiveStartDto(UUID sessionId) {
+        AdaptiveSession session = adaptiveSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new DoesNotExistException("Adaptive session not found"));
+
+        List<ClientExerciseDto> safeExercises = exerciseRepository.findAllBySessionId(sessionId).stream()
+                .map(this::toClientExercise)
+                .toList();
+
+        return new AdaptiveStartDto(session.getId(), session.getExpiresAt(), safeExercises);
+    }
+
+    private ClientExerciseDto toClientExercise(AdaptiveSessionExercise exercise) {
+        try {
+            List<String> answers = objectMapper.readValue(exercise.getAnswersRaw(), new TypeReference<List<String>>() {});
+            return new ClientExerciseDto(
+                    exercise.getMlExerciseId(),
+                    exercise.getExerciseText(),
+                    Enum.valueOf(org.elearning.backend.assessment.model.QuestionType.class, exercise.getExerciseType()),
+                    answers
+            );
+        } catch (Exception exception) {
+            throw new ValidationException("Failed to read exercise data for session " + exercise.getSessionId());
+        }
+    }
+
+    private boolean isTerminalStatus(AiRequestStatus status) {
+        return status == AiRequestStatus.DONE || status == AiRequestStatus.FAILED;
+    }
+
+    private void markJobAsFailed(AdaptiveExerciseJob job, String errorMessage) {
+        job.setStatus(AiRequestStatus.FAILED);
+        job.setErrorMessage(errorMessage == null || errorMessage.isBlank()
+                ? "Adaptive AI returned an invalid response."
+                : errorMessage);
+        job.setResolvedAt(LocalDateTime.now());
     }
 
     @Transactional(noRollbackFor = ResourceConflictException.class)
