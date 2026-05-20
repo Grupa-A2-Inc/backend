@@ -341,6 +341,27 @@ class UserServiceCoverageTest {
     }
 
     @Test
+    void updateUser_sameExistingEmailOnSameUser_isAllowed() {
+        UUID userId = UUID.randomUUID();
+        User user = user(userId, RoleName.TEACHER, null);
+        user.setEmail("same@example.com");
+
+        UpdateUserRequest request = UpdateUserRequest.builder()
+                .email("same@example.com")
+                .firstName("Same")
+                .lastName("User")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("same@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.saveAndFlush(user)).thenReturn(user);
+
+        UserResponse response = userService.updateUser(userId, request);
+
+        assertThat(response.getEmail()).isEqualTo("same@example.com");
+    }
+
+    @Test
     void updateUserStatus_updatesStatusAndHandlesMissingUser() {
         UUID userId = UUID.randomUUID();
         User user = user(userId, RoleName.STUDENT, null);

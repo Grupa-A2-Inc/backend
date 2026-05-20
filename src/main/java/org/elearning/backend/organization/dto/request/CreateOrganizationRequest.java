@@ -1,35 +1,25 @@
 package org.elearning.backend.organization.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import org.elearning.backend.common.validation.ValidPhoneNumber;
 
 import java.util.UUID;
 
 @Getter
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
-public class CreateOrganizationRequest {
-    @NotBlank(message = "Organization name is required")
-    private String name;
-
-    @NotBlank(message = "Country is required")
-    private String country;
-
-    @NotBlank(message = "City is required")
-    private String city;
-
-    @NotBlank(message = "Organization type is required")
-    private String organizationType;
-
-    private String address;
-
-    @ValidPhoneNumber(message = "Phone number format is invalid")
-    private String phoneNumber;
-
+public class CreateOrganizationRequest extends OrganizationRequestFields {
     private UUID ownerId;
+
+    public CreateOrganizationRequest(
+            String name,
+            String country,
+            String city,
+            String organizationType,
+            String address,
+            String phoneNumber,
+            UUID ownerId
+    ) {
+        super(name, country, city, organizationType, address, phoneNumber);
+        this.ownerId = ownerId;
+    }
 }

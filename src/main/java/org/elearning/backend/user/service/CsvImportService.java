@@ -2,7 +2,6 @@ package org.elearning.backend.user.service;
 
 import lombok.RequiredArgsConstructor;
 import org.elearning.backend.role.entity.RoleName;
-import org.elearning.backend.user.dto.request.CreateUserBulkRequest;
 import org.elearning.backend.user.dto.request.CreateUserRequest;
 import org.elearning.backend.user.dto.response.BulkImportResponse;
 import org.elearning.backend.user.dto.response.UserImportResult;

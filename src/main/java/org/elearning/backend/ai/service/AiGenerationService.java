@@ -22,6 +22,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AiGenerationService {
+    private static final String INVALID_LLM_RESPONSE_MESSAGE = "LLM-ul a returnat un raspuns invalid.";
+
     private final AiQuestionRequestRepository questionRequestRepository;
     private final LessonRepository lessonRepository;
     private final AiApiClient aiApiClient;
@@ -140,7 +142,7 @@ public class AiGenerationService {
 
             if (response.getStatus() == AiRequestStatus.DONE) {
                 if (response.getQuestions() == null) {
-                    markAsFailed(request, "LLM-ul a returnat un raspuns invalid.");
+                    markAsFailed(request, INVALID_LLM_RESPONSE_MESSAGE);
                     return;
                 }
                 request.setGeneratedQuestions(objectMapper.writeValueAsString(response.getQuestions()));
@@ -155,14 +157,14 @@ public class AiGenerationService {
         } catch (AiApiException | AiTimeoutException exception) {
             markAsFailed(request, exception.getMessage());
         } catch (JsonProcessingException exception) {
-            markAsFailed(request, "LLM-ul a returnat un raspuns invalid.");
+            markAsFailed(request, INVALID_LLM_RESPONSE_MESSAGE);
         }
     }
 
     private void markAsFailed(AiQuestionRequest request, String errorMessage) {
         request.setStatus(AiRequestStatus.FAILED);
         request.setErrorMessage(errorMessage == null || errorMessage.isBlank()
-                ? "LLM-ul a returnat un raspuns invalid."
+                ? INVALID_LLM_RESPONSE_MESSAGE
                 : errorMessage);
         request.setResolvedAt(LocalDateTime.now());
     }
