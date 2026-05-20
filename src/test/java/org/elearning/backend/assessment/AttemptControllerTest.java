@@ -133,7 +133,7 @@ class AttemptControllerTest {
         jdbcTemplate.update(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
                         "VALUES (?, ?, ?, CAST(? AS course_status), CAST(? AS course_visibility))",
-                courseId, "Course for attempt tests", UUID.randomUUID(), "DRAFT", "PRIVATE"
+                courseId, "Course for attempt tests", UUID.randomUUID(), "PUBLISHED", "PRIVATE"
         );
 
         jdbcTemplate.update(
@@ -192,7 +192,7 @@ class AttemptControllerTest {
         jdbcTemplate.update(
                 "INSERT INTO courses (id, title, created_by, status, visibility) " +
                         "VALUES (?, ?, ?, CAST(? AS course_status), CAST(? AS course_visibility))",
-                courseId, "Course for attempt tests", UUID.randomUUID(), "DRAFT", "PRIVATE"
+                courseId, "Course for attempt tests", UUID.randomUUID(), "PUBLISHED", "PRIVATE"
         );
 
         jdbcTemplate.update(

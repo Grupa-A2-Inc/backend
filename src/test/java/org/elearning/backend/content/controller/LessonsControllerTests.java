@@ -700,6 +700,7 @@ class LessonsControllerTests {
                 "SELECT course_id FROM chapters WHERE id = '" + chapterID + "'",
                 UUID.class
         );
+        jdbcTemplate.update("UPDATE courses SET status = 'PUBLISHED' WHERE id = ?", courseId);
 
         UUID enrollmentId = insertEnrollment(studentId, courseId);
         UUID lessonID = insertLesson("Lectia Student", 1, null);

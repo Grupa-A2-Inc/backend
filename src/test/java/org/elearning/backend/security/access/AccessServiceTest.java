@@ -7,6 +7,7 @@ import org.elearning.backend.classroom.repository.ClassroomMembershipRepository;
 import org.elearning.backend.classroom.repository.ClassroomRepository;
 import org.elearning.backend.content.model.Chapter;
 import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.model.Lesson;
 import org.elearning.backend.content.repository.CourseRepository;
 import org.elearning.backend.content.repository.LessonRepository;
@@ -321,6 +322,7 @@ class AccessServiceTest {
         Chapter chapter = new Chapter();
         Course course = new Course();
         course.setId(courseId);
+        course.setStatus(CourseStatus.PUBLISHED);
         chapter.setCourse(course);
         lesson.setChapter(chapter);
 
@@ -410,8 +412,6 @@ class AccessServiceTest {
         lesson.setChapter(chapter);
 
         when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
-        when(courseRepository.findById(courseId)).thenReturn(Optional.of(course));
-        when(courseEnrollmentRepository.existsByStudentIdAndCourseId(any(), eq(courseId))).thenReturn(false);
 
         assertThat(accessService.canMarkViewedLesson(
                 authenticationFor(makeUser(RoleName.STUDENT, UUID.randomUUID())),

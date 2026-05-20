@@ -217,6 +217,7 @@ public class ClassroomService {
         Classroom classroom = classroomRepository.findByIdAndOrganizationId(classroomId, organizationId)
                 .orElseThrow(() -> new ClassroomNotFoundException(CLASSROOM_NOT_FOUND + classroomId));
 
+        revokeStudentEnrollmentsForClassroom(classroom);
         classroomRepository.delete(classroom);
     }
 
@@ -296,6 +297,10 @@ public class ClassroomService {
                     member.getId(),
                     membershipType
             );
+
+            if (membershipType == MembershipType.STUDENT) {
+                revokeStudentEnrollmentsGrantedOnlyByClassroom(classroom, member.getId());
+            }
         }
 
         return toResponse(classroom);
@@ -425,6 +430,44 @@ public class ClassroomService {
                 enrollment.setStudentId(studentId);
                 courseEnrollmentRepository.save(enrollment);
             }
+        }
+    }
+
+    private void revokeStudentEnrollmentsForClassroom(Classroom classroom) {
+        List<ClassroomMembership> studentMemberships = classroomMembershipRepository
+                .findAllByClassroomIdAndMembershipType(classroom.getId(), MembershipType.STUDENT);
+
+        for (ClassroomMembership membership : studentMemberships) {
+            if (membership.getUser() != null && membership.getUser().getId() != null) {
+                classroomMembershipRepository.deleteByClassroomIdAndUserIdAndMembershipType(
+                        classroom.getId(),
+                        membership.getUser().getId(),
+                        MembershipType.STUDENT
+                );
+                revokeStudentEnrollmentsGrantedOnlyByClassroom(classroom, membership.getUser().getId());
+            }
+        }
+    }
+
+    private void revokeStudentEnrollmentsGrantedOnlyByClassroom(Classroom classroom, UUID studentId) {
+        List<ClassroomCourse> classroomCourses = classroomCourseRepository.findAllByClassroomId(classroom.getId());
+
+        for (ClassroomCourse classroomCourse : classroomCourses) {
+            UUID courseId = classroomCourse.getCourseId();
+
+            boolean stillHasCourseThroughAnotherClassroom =
+                    classroomCourseRepository.existsCourseAssignedToUserThroughAnyClassroom(
+                            studentId,
+                            MembershipType.STUDENT,
+                            courseId
+                    );
+
+            if (stillHasCourseThroughAnotherClassroom) {
+                continue;
+            }
+
+            courseEnrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)
+                    .ifPresent(courseEnrollmentRepository::delete);
         }
     }
 

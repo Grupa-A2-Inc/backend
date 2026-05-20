@@ -849,6 +849,67 @@ class ClassroomServiceTest {
     }
 
     @Test
+    void deleteClassroomMembers_shouldDeleteStudentEnrollmentWhenCourseWasGrantedOnlyByRemovedClassroom() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student = buildUser(studentId, orgId, RoleName.STUDENT);
+        ModifyClassroomMembersRequest request = new ModifyClassroomMembersRequest(Set.of(studentId));
+
+        ClassroomCourse classroomCourse = new ClassroomCourse();
+        classroomCourse.setClassroomId(classroomId);
+        classroomCourse.setCourseId(courseId);
+
+        CourseEnrollment enrollment = new CourseEnrollment();
+        enrollment.setCourseId(courseId);
+        enrollment.setStudentId(studentId);
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getMemberIds())).thenReturn(List.of(student));
+        when(classroomCourseRepository.findAllByClassroomId(classroomId)).thenReturn(List.of(classroomCourse));
+        when(classroomCourseRepository.existsCourseAssignedToUserThroughAnyClassroom(
+                studentId, MembershipType.STUDENT, courseId)).thenReturn(false);
+        when(courseEnrollmentRepository.findByStudentIdAndCourseId(studentId, courseId))
+                .thenReturn(Optional.of(enrollment));
+
+        classroomService.deleteClassroomMembers(classroomId, request, requesterId);
+
+        verify(courseEnrollmentRepository).delete(enrollment);
+    }
+
+    @Test
+    void deleteClassroomMembers_shouldKeepStudentEnrollmentWhenAnotherClassroomStillGrantsSameCourse() {
+        UUID classroomId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+
+        Classroom classroom = buildClassroom(classroomId, orgId);
+        User student = buildUser(studentId, orgId, RoleName.STUDENT);
+        ModifyClassroomMembersRequest request = new ModifyClassroomMembersRequest(Set.of(studentId));
+
+        ClassroomCourse classroomCourse = new ClassroomCourse();
+        classroomCourse.setClassroomId(classroomId);
+        classroomCourse.setCourseId(courseId);
+
+        when(classroomRepository.findById(classroomId)).thenReturn(Optional.of(classroom));
+        when(userRepository.findAllById(request.getMemberIds())).thenReturn(List.of(student));
+        when(classroomCourseRepository.findAllByClassroomId(classroomId)).thenReturn(List.of(classroomCourse));
+        when(classroomCourseRepository.existsCourseAssignedToUserThroughAnyClassroom(
+                studentId, MembershipType.STUDENT, courseId)).thenReturn(true);
+
+        classroomService.deleteClassroomMembers(classroomId, request, requesterId);
+
+        verify(courseEnrollmentRepository, never()).findByStudentIdAndCourseId(studentId, courseId);
+        verify(courseEnrollmentRepository, never()).delete(any(CourseEnrollment.class));
+    }
+
+    @Test
     void listClassroomMembers_shouldReturnAllMembers_whenMembershipTypeIsNull() {
         UUID classroomId = UUID.randomUUID();
         UUID orgId = UUID.randomUUID();
