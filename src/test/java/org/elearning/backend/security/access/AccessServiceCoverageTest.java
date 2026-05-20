@@ -547,6 +547,22 @@ class AccessServiceCoverageTest {
     }
 
     @Test
+    void canViewCourseFullView_returnsFalseForStudentWhenCourseIsDraftEvenIfEnrolled() {
+        UUID courseId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+
+        User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+        studentUser.setId(studentId);
+
+        Course draftCourse = course(courseId, UUID.randomUUID());
+        draftCourse.setStatus(org.elearning.backend.content.model.CourseStatus.DRAFT);
+
+        when(courseRepository.findById(courseId)).thenReturn(Optional.of(draftCourse));
+
+        assertThat(accessService.canViewCourseFullView(authenticationFor(studentUser), courseId)).isFalse();
+    }
+
+    @Test
     void coursePermissions_returnFalseWhenCourseIdIsNullForNonAdmin() {
         Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
 
@@ -1107,6 +1123,7 @@ class AccessServiceCoverageTest {
         Course course = new Course();
         course.setId(courseId);
         course.setCreatedBy(teacherId);
+        course.setStatus(org.elearning.backend.content.model.CourseStatus.PUBLISHED);
         return course;
     }
 

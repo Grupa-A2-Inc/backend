@@ -1,6 +1,7 @@
 package org.elearning.backend.enrollment;
 
 import org.elearning.backend.content.model.Course;
+import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.enrollment.dto.EnrolledCourseDto;
 import org.elearning.backend.enrollment.mapper.EnrollmentMapper;
 import org.elearning.backend.enrollment.model.CourseEnrollment;
@@ -72,7 +73,7 @@ class CourseEnrollmentServiceTest {
         PageRequest pageable = PageRequest.of(0, 10);
         Page<CourseEnrollment> page = new PageImpl<>(List.of(enrollment), pageable, 1);
 
-        when(courseEnrollmentRepository.findAllByStudentId(studentId, pageable)).thenReturn(page);
+        when(courseEnrollmentRepository.findAllByStudentIdAndCourseStatus(studentId, CourseStatus.PUBLISHED, pageable)).thenReturn(page);
         when(courseRepository.findAllById(List.of(courseId))).thenReturn(List.of(course));
         when(enrollmentMapper.toEnrolledCourseDto(enrollment)).thenReturn(dto);
         when(progressCalculatorService.calculateProgressPercent(enrollmentId)).thenReturn(75.0);
@@ -95,7 +96,7 @@ class CourseEnrollmentServiceTest {
         PageRequest pageable = PageRequest.of(0, 10);
         Page<CourseEnrollment> page = new PageImpl<>(List.of(enrollment), pageable, 1);
 
-        when(courseEnrollmentRepository.findAllByStudentId(studentId, pageable)).thenReturn(page);
+        when(courseEnrollmentRepository.findAllByStudentIdAndCourseStatus(studentId, CourseStatus.PUBLISHED, pageable)).thenReturn(page);
         when(courseRepository.findAllById(List.of(courseId))).thenReturn(List.of());
         when(enrollmentMapper.toEnrolledCourseDto(enrollment)).thenReturn(dto);
         when(progressCalculatorService.calculateProgressPercent(dto.getUnrollmentId())).thenReturn(0.0);
@@ -122,7 +123,7 @@ class CourseEnrollmentServiceTest {
         PageRequest pageable = PageRequest.of(0, 10);
         Page<CourseEnrollment> page = new PageImpl<>(List.of(enrollment), pageable, 1);
 
-        when(courseEnrollmentRepository.findAllByStudentId(studentId, pageable)).thenReturn(page);
+        when(courseEnrollmentRepository.findAllByStudentIdAndCourseStatus(studentId, CourseStatus.PUBLISHED, pageable)).thenReturn(page);
         when(courseRepository.findAllById(List.of(courseId))).thenReturn(List.of());
         when(enrollmentMapper.toEnrolledCourseDto(enrollment)).thenReturn(dto);
         when(progressCalculatorService.calculateProgressPercent(enrollmentId)).thenReturn(12.5);
@@ -134,5 +135,17 @@ class CourseEnrollmentServiceTest {
         assertThat(result.getContent().get(0).getCourseCategory()).isNull();
         assertThat(result.getContent().get(0).getProgressPercent()).isEqualByComparingTo(BigDecimal.valueOf(12.5));
         verify(enrollmentMapper).toEnrolledCourseDto(enrollment);
+    }
+
+    @Test
+    void getEnrolledCoursesForStudentUsesOnlyPublishedCourses() {
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(courseEnrollmentRepository.findAllByStudentIdAndCourseStatus(studentId, CourseStatus.PUBLISHED, pageable))
+                .thenReturn(Page.empty(pageable));
+
+        Page<EnrolledCourseDto> result = service.getEnrolledCoursesForStudent(studentId, pageable);
+
+        assertThat(result.getContent()).isEmpty();
+        verify(courseEnrollmentRepository).findAllByStudentIdAndCourseStatus(studentId, CourseStatus.PUBLISHED, pageable);
     }
 }

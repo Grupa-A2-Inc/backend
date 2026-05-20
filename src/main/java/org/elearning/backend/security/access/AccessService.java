@@ -737,6 +737,9 @@ public class AccessService {
             }
 
             if (isStudent(currentUser)) {
+                if (course.getStatus() != org.elearning.backend.content.model.CourseStatus.PUBLISHED) {
+                    return false;
+                }
                 return courseEnrollmentRepository.existsByStudentIdAndCourseId(currentUser.getUserId(), courseId);
             }
 

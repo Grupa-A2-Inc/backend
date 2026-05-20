@@ -254,8 +254,9 @@ class UserServiceCoverageTest {
                 .organizationId(organizationId)
                 .build();
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("updated@example.com")).thenReturn(Optional.empty());
         when(organizationRepository.findById(organizationId)).thenReturn(Optional.of(organization));
-        when(userRepository.save(user)).thenReturn(user);
+        when(userRepository.saveAndFlush(user)).thenReturn(user);
 
         UserResponse response = userService.updateUser(userId, request);
 
@@ -271,7 +272,8 @@ class UserServiceCoverageTest {
                 .lastName("Org")
                 .build();
         when(userRepository.findById(noOrgUserId)).thenReturn(Optional.of(noOrgUser));
-        when(userRepository.save(noOrgUser)).thenReturn(noOrgUser);
+        when(userRepository.findByEmail("no-org@example.com")).thenReturn(Optional.empty());
+        when(userRepository.saveAndFlush(noOrgUser)).thenReturn(noOrgUser);
 
         UserResponse noOrgResponse = userService.updateUser(noOrgUserId, noOrgRequest);
 
@@ -295,6 +297,47 @@ class UserServiceCoverageTest {
         assertThatThrownBy(() -> userService.updateUser(missingOrgUserId, missingOrgRequest))
                 .isInstanceOf(UserOrganizationNotFoundException.class)
                 .hasMessage("Organization not found: " + missingOrgId);
+    }
+
+    @Test
+    void updateUser_duplicateEmail_throwsUserAlreadyExistsException() {
+        UUID userId = UUID.randomUUID();
+        UUID otherUserId = UUID.randomUUID();
+        User user = user(userId, RoleName.TEACHER, null);
+        User otherUser = user(otherUserId, RoleName.STUDENT, null);
+        otherUser.setEmail("duplicate@example.com");
+
+        UpdateUserRequest request = UpdateUserRequest.builder()
+                .email("duplicate@example.com")
+                .firstName("Updated")
+                .lastName("Teacher")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("duplicate@example.com")).thenReturn(Optional.of(otherUser));
+
+        assertThatThrownBy(() -> userService.updateUser(userId, request))
+                .isInstanceOf(UserAlreadyExistsException.class)
+                .hasMessage("Email already exists: duplicate@example.com");
+    }
+
+    @Test
+    void updateUser_duplicateEmailFromDatabaseConstraint_throwsUserAlreadyExistsException() {
+        UUID userId = UUID.randomUUID();
+        User user = user(userId, RoleName.TEACHER, null);
+        UpdateUserRequest request = UpdateUserRequest.builder()
+                .email("duplicate@example.com")
+                .firstName("Updated")
+                .lastName("Teacher")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("duplicate@example.com")).thenReturn(Optional.empty());
+        when(userRepository.saveAndFlush(user)).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> userService.updateUser(userId, request))
+                .isInstanceOf(UserAlreadyExistsException.class)
+                .hasMessage("Email already exists: duplicate@example.com");
     }
 
     @Test
