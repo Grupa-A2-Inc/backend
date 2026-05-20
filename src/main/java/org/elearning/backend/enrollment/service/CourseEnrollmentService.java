@@ -95,7 +95,11 @@ public class CourseEnrollmentService {
      */
 
     public Page<EnrolledCourseDto> getEnrolledCoursesForStudent(UUID studentId, Pageable pageable) {
-        Page<CourseEnrollment> enrollments = courseEnrollmentRepository.findAllByStudentId(studentId, pageable);
+        Page<CourseEnrollment> enrollments = courseEnrollmentRepository.findAllByStudentIdAndCourseStatus(
+                studentId,
+                CourseStatus.PUBLISHED,
+                pageable
+        );
 
         List<UUID> courseIds = enrollments.getContent().stream()
                 .map(CourseEnrollment::getCourseId)

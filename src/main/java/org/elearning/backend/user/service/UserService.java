@@ -168,9 +168,18 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + id));
 
+        String requestedEmail = request.getEmail();
+        if (requestedEmail != null) {
+            userRepository.findByEmail(requestedEmail)
+                    .filter(existingUser -> !existingUser.getId().equals(id))
+                    .ifPresent(existingUser -> {
+                        throw new UserAlreadyExistsException("Email already exists: " + requestedEmail);
+                    });
+        }
+
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
+        user.setEmail(requestedEmail);
         user.setUpdatedAt(LocalDateTime.now());
 
         if (request.getOrganizationId() != null) {
@@ -179,7 +188,12 @@ public class UserService {
             user.setOrganization(org);
         }
 
-        User saved = userRepository.save(user);
+        User saved;
+        try {
+            saved = userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new UserAlreadyExistsException("Email already exists: " + requestedEmail);
+        }
         return toResponse(saved);
     }
 
