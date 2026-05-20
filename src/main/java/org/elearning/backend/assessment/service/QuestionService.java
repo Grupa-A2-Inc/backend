@@ -9,6 +9,7 @@ import org.elearning.backend.assessment.dto.question_dto.QuestionResponseDto;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.mapper.QuestionMapper;
 import org.elearning.backend.assessment.model.Question;
+import org.elearning.backend.assessment.model.QuestionSource;
 import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.repository.QuestionRepository;
@@ -38,6 +39,7 @@ public class QuestionService {
         Question question = questionMapper.toEntity(dto);
         question.setTest(test);
         question.setIsActive(true);
+        question.setSource(QuestionSource.MANUAL);
         if (question.getOptions() != null) {
             question.getOptions().forEach(option -> option.setQuestion(question));
         }
