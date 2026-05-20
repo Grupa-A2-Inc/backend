@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.elearning.backend.auth.service.TokenBlackListService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.security.auth.CustomUserDetailsService;
@@ -19,6 +20,7 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -38,15 +40,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        System.out.println("[JWT] " + request.getMethod() + " " + path);
-        System.out.println("[JWT] Authorization present: " + (header != null));
+        log.debug("JWT filter {} {}", request.getMethod(), path);
+        log.debug("Authorization present: {}", header != null);
 
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(LENGTH_OF_BEARER_WORD);
 
             try {
                 boolean revoked = tokenBlacklistService.isRevoked(token);
-                System.out.println("[JWT] token blacklisted? " + revoked);
+                log.debug("token blacklisted? {}", revoked);
 
                 if (revoked) {
                     SecurityContextHolder.clearContext();
@@ -55,10 +57,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
 
                 var userId = jwtUtil.extractId(token);
-                System.out.println("[JWT] extracted userId: " + userId);
+                log.debug("extracted userId: {}", userId);
 
                 CustomUserDetails userDetails = customUserDetailsService.loadUserById(userId);
-                System.out.println("[JWT] user enabled: " + userDetails.isEnabled());
+                log.debug("user enabled: {}", userDetails.isEnabled());
 
                 if (!userDetails.isEnabled()) {
                     SecurityContextHolder.clearContext();
@@ -71,9 +73,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                System.out.println("[JWT] authentication set");
+                log.debug("authentication set");
             } catch (RuntimeException e) {
-                System.out.println("[JWT] authentication failed: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                log.debug("authentication failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
                 SecurityContextHolder.clearContext();
             }
         }

@@ -3,9 +3,9 @@ package org.elearning.backend.assessment.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-// SWAGGER ADDED
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.elearning.backend.assessment.dto.question_dto.QuestionRequestDto;
 import org.elearning.backend.assessment.dto.question_dto.QuestionResponseDto;
 import org.elearning.backend.assessment.model.QuestionType;
@@ -24,7 +24,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-// SWAGGER ADDED
+@Slf4j
 @Tag(name = "Questions", description = "Test question management")
 @RestController
 @RequestMapping("/api/tests/{testId}/questions")
@@ -56,7 +56,7 @@ public class QuestionController extends GlobalHttpStatusCodes {
             @RequestBody QuestionRequestDto requestDto,
             @AuthenticationPrincipal UserDetails user
     ) {
-        System.out.println("[QUESTION] createQuestion reached for testId=" + testId);
+        log.debug("createQuestion reached for testId={}", testId);
         UUID professorId = extractUserId(user);
         QuestionResponseDto createdQuestion = questionService.createQuestion(testId, requestDto, professorId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdQuestion);

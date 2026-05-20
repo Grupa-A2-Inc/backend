@@ -165,11 +165,6 @@ class AdaptiveControllerTest {
         return request;
     }
 
-    // =========================================================================
-    // POST /api/v1/adaptive/jobs
-    // GET  /api/v1/adaptive/jobs/{jobId}
-    // =========================================================================
-
     @Test
     void createAdaptiveJob_shouldReturn202AndPersistJob() throws Exception {
         AiAdaptiveJobResponse response = new AiAdaptiveJobResponse();

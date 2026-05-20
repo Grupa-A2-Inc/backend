@@ -480,6 +480,120 @@ class ClassroomServiceTest {
     }
 
     @Test
+    void deleteClassroom_shouldDeleteStudentEnrollmentsGrantedOnlyByThatClassroom() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+        Classroom classroom = makeClassroom(organization, "Class A", null);
+        UUID studentId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+
+        User student = buildUser(studentId, organization.getId(), RoleName.STUDENT);
+        ClassroomMembership membership = buildMembership(classroom, student, MembershipType.STUDENT);
+        ClassroomCourse classroomCourse = new ClassroomCourse();
+        classroomCourse.setClassroomId(classroom.getId());
+        classroomCourse.setCourseId(courseId);
+        CourseEnrollment enrollment = new CourseEnrollment();
+        enrollment.setStudentId(studentId);
+        enrollment.setCourseId(courseId);
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findByIdAndOrganizationId(classroom.getId(), organization.getId()))
+                .thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(classroom.getId(), MembershipType.STUDENT))
+                .thenReturn(List.of(membership));
+        when(classroomCourseRepository.findAllByClassroomId(classroom.getId())).thenReturn(List.of(classroomCourse));
+        when(classroomCourseRepository.existsCourseAssignedToUserThroughAnyClassroom(studentId, MembershipType.STUDENT, courseId))
+                .thenReturn(false);
+        when(courseEnrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)).thenReturn(Optional.of(enrollment));
+
+        classroomService.deleteClassroom(classroom.getId(), requester.getId());
+
+        verify(classroomMembershipRepository).deleteByClassroomIdAndUserIdAndMembershipType(
+                classroom.getId(), studentId, MembershipType.STUDENT);
+        verify(courseEnrollmentRepository).delete(enrollment);
+        verify(classroomRepository).delete(classroom);
+    }
+
+    @Test
+    void deleteClassroom_shouldKeepEnrollmentWhenAnotherClassroomStillGrantsCourse() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+        Classroom classroom = makeClassroom(organization, "Class A", null);
+        UUID studentId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+
+        User student = buildUser(studentId, organization.getId(), RoleName.STUDENT);
+        ClassroomMembership membership = buildMembership(classroom, student, MembershipType.STUDENT);
+        ClassroomCourse classroomCourse = new ClassroomCourse();
+        classroomCourse.setClassroomId(classroom.getId());
+        classroomCourse.setCourseId(courseId);
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findByIdAndOrganizationId(classroom.getId(), organization.getId()))
+                .thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(classroom.getId(), MembershipType.STUDENT))
+                .thenReturn(List.of(membership));
+        when(classroomCourseRepository.findAllByClassroomId(classroom.getId())).thenReturn(List.of(classroomCourse));
+        when(classroomCourseRepository.existsCourseAssignedToUserThroughAnyClassroom(studentId, MembershipType.STUDENT, courseId))
+                .thenReturn(true);
+
+        classroomService.deleteClassroom(classroom.getId(), requester.getId());
+
+        verify(courseEnrollmentRepository, never()).findByStudentIdAndCourseId(studentId, courseId);
+        verify(courseEnrollmentRepository, never()).delete(any(CourseEnrollment.class));
+    }
+
+    @Test
+    void deleteClassroom_shouldIgnoreMembershipsWithoutUserIdDuringEnrollmentRevocation() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+        Classroom classroom = makeClassroom(organization, "Class A", null);
+
+        ClassroomMembership membership = new ClassroomMembership();
+        membership.setClassroom(classroom);
+        membership.setMembershipType(MembershipType.STUDENT);
+        membership.setUser(new User());
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findByIdAndOrganizationId(classroom.getId(), organization.getId()))
+                .thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(classroom.getId(), MembershipType.STUDENT))
+                .thenReturn(List.of(membership));
+
+        classroomService.deleteClassroom(classroom.getId(), requester.getId());
+
+        verify(classroomMembershipRepository, never()).deleteByClassroomIdAndUserIdAndMembershipType(any(), any(), any());
+        verify(courseEnrollmentRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteClassroom_shouldIgnoreMembershipsWithoutUserDuringEnrollmentRevocation() {
+        User requester = makeUserWithOrganization();
+        Organization organization = requester.getOrganization();
+        Classroom classroom = makeClassroom(organization, "Class A", null);
+
+        ClassroomMembership membership = new ClassroomMembership();
+        membership.setClassroom(classroom);
+        membership.setMembershipType(MembershipType.STUDENT);
+        membership.setUser(null);
+
+        when(userRepository.findById(requester.getId())).thenReturn(Optional.of(requester));
+        when(organizationRepository.findById(organization.getId())).thenReturn(Optional.of(organization));
+        when(classroomRepository.findByIdAndOrganizationId(classroom.getId(), organization.getId()))
+                .thenReturn(Optional.of(classroom));
+        when(classroomMembershipRepository.findAllByClassroomIdAndMembershipType(classroom.getId(), MembershipType.STUDENT))
+                .thenReturn(List.of(membership));
+
+        classroomService.deleteClassroom(classroom.getId(), requester.getId());
+
+        verify(classroomMembershipRepository, never()).deleteByClassroomIdAndUserIdAndMembershipType(any(), any(), any());
+        verify(courseEnrollmentRepository, never()).delete(any());
+    }
+
+    @Test
     void deleteClassroom_throwsWhenClassroomIsMissing() {
         User requester = makeUserWithOrganization();
         Organization organization = requester.getOrganization();
