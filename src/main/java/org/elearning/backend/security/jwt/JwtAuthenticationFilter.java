@@ -35,19 +35,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        String path = request.getServletPath();
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+
+        System.out.println("[JWT] " + request.getMethod() + " " + path);
+        System.out.println("[JWT] Authorization present: " + (header != null));
 
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(LENGTH_OF_BEARER_WORD);
 
             try {
-                if (tokenBlacklistService.isRevoked(token)) {
+                boolean revoked = tokenBlacklistService.isRevoked(token);
+                System.out.println("[JWT] token blacklisted? " + revoked);
+
+                if (revoked) {
                     SecurityContextHolder.clearContext();
                     filterChain.doFilter(request, response);
                     return;
                 }
 
-                CustomUserDetails userDetails = customUserDetailsService.loadUserById(jwtUtil.extractId(token));
+                var userId = jwtUtil.extractId(token);
+                System.out.println("[JWT] extracted userId: " + userId);
+
+                CustomUserDetails userDetails = customUserDetailsService.loadUserById(userId);
+                System.out.println("[JWT] user enabled: " + userDetails.isEnabled());
 
                 if (!userDetails.isEnabled()) {
                     SecurityContextHolder.clearContext();
@@ -60,7 +71,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                System.out.println("[JWT] authentication set");
             } catch (RuntimeException e) {
+                System.out.println("[JWT] authentication failed: " + e.getClass().getSimpleName() + " - " + e.getMessage());
                 SecurityContextHolder.clearContext();
             }
         }
