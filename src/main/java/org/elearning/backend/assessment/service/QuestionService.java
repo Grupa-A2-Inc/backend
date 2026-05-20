@@ -37,6 +37,7 @@ public class QuestionService {
         validateQuestionOptions(dto);
         Question question = questionMapper.toEntity(dto);
         question.setTest(test);
+        question.setIsActive(true);
         if (question.getOptions() != null) {
             question.getOptions().forEach(option -> option.setQuestion(question));
         }

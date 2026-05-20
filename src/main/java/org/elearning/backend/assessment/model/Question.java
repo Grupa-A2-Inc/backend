@@ -82,8 +82,8 @@ public class Question {
      * Boolean indicating whether the question is active or not.
      * This can be used to soft-delete questions or to temporarily disable them without removing them from the database.
      */
-    @Column(name = "is_active")
-    private Boolean isActive;
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 
     /**
      * Timestamp indicating when the question was created.

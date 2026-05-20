@@ -56,7 +56,6 @@ public class QuestionController extends GlobalHttpStatusCodes {
             @RequestBody QuestionRequestDto requestDto,
             @AuthenticationPrincipal UserDetails user
     ) {
-        System.out.println("[QUESTION] createQuestion reached for testId=" + testId);
         UUID professorId = extractUserId(user);
         QuestionResponseDto createdQuestion = questionService.createQuestion(testId, requestDto, professorId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdQuestion);
