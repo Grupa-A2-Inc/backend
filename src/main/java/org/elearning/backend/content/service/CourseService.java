@@ -212,7 +212,7 @@ public class CourseService {
         Map<UUID, UUID> lessonToTestMap = new java.util.HashMap<>();
 
         if (!lessonIds.isEmpty()) {
-            List<Object[]> testResults = testRepository.findTestIdsByLessonIds(lessonIds);
+            List<Object[]> testResults = testRepository.findPublishedTestIdsByLessonIds(lessonIds);
             for (Object[] row : testResults) {
                 UUID lessonId = (UUID) row[0];
                 UUID testId = (UUID) row[1];

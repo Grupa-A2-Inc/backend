@@ -30,7 +30,20 @@ import java.util.UUID;
 @Repository
 public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
 
+    boolean existsByTestId(UUID testId);
+
     List<TestResult> findByStudentIdAndTestIdOrderByAttemptStartedAtDesc(UUID studentId, UUID testId);
+
+    @Query("""
+        SELECT tr
+        FROM TestResult tr
+        JOIN tr.test t
+        WHERE tr.studentId = :studentId
+          AND t.lessonId = :lessonId
+        ORDER BY tr.attempt.startedAt DESC
+    """)
+    List<TestResult> findByStudentIdAndLessonIdOrderByAttemptStartedAtDesc(@Param("studentId") UUID studentId,
+                                                                           @Param("lessonId") UUID lessonId);
 
     Optional<TestResult> findTopByStudentIdAndTestIdAndAttemptStatusOrderByScorePercentDesc(UUID studentId, UUID testId, AttemptStatus status);
 
@@ -292,4 +305,3 @@ public interface TestResultRepository extends JpaRepository<TestResult, UUID> {
 
 
 }
-

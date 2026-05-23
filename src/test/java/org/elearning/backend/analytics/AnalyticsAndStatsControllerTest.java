@@ -152,9 +152,9 @@ class AnalyticsAndStatsControllerTest {
     private UUID insertTest(UUID lessonId, UUID createdBy) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS test_status))",
-                id, lessonId, createdBy, "Test 1", "desc", 600, false, "PUBLISHED"
+                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status, version) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS test_status), ?)",
+                id, lessonId, createdBy, "Test 1", "desc", 600, false, "PUBLISHED", 1
         );
         return id;
     }

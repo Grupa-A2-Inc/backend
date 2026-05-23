@@ -140,11 +140,26 @@ class TestResultServiceTest {
         when(answer.getQuestion()).thenReturn(question);
         when(question.getId()).thenReturn(1);
         when(question.getContent()).thenReturn("What is Java?");
+        when(question.getQuestionType()).thenReturn(QuestionType.SINGLE_CHOICE);
         when(answer.getSelectedOptionIds()).thenReturn(List.of(10, 11));
 
-        // Mock Correct Options
+        QuestionOption selectedOption = mock(QuestionOption.class);
+        when(selectedOption.getId()).thenReturn(10);
+        when(selectedOption.getText()).thenReturn("JVM language");
+        when(selectedOption.getDisplayOrder()).thenReturn(1);
+        when(selectedOption.getIsCorrect()).thenReturn(true);
+
+        QuestionOption otherSelectedOption = mock(QuestionOption.class);
+        when(otherSelectedOption.getId()).thenReturn(11);
+        when(otherSelectedOption.getText()).thenReturn("Database");
+        when(otherSelectedOption.getDisplayOrder()).thenReturn(2);
+        when(otherSelectedOption.getIsCorrect()).thenReturn(false);
+
         QuestionOption correctOption = mock(QuestionOption.class);
-        when(correctOption.getId()).thenReturn(10);
+        when(correctOption.getId()).thenReturn(12);
+        when(correctOption.getText()).thenReturn("Programming language");
+        when(correctOption.getDisplayOrder()).thenReturn(3);
+        when(correctOption.getIsCorrect()).thenReturn(true);
 
         // Setting up behaviors
         when(testAttemptRepository.findById(attemptId)).thenReturn(Optional.of(attempt));
@@ -152,7 +167,7 @@ class TestResultServiceTest {
         when(attemptMapper.toTestResultDTO(result)).thenReturn(resultDTO);
 
         when(answerRepository.findByAttemptId(attemptId)).thenReturn(List.of(answer));
-        when(optionRepository.findByQuestionIdAndIsCorrectTrue(1)).thenReturn(List.of(correctOption));
+        when(optionRepository.findByQuestionId(1)).thenReturn(List.of(selectedOption, otherSelectedOption, correctOption));
 
         when(attemptReportMapper.toAttemptReportDTO(eq(resultDTO), anyList())).thenReturn(expectedReport);
 
@@ -170,8 +185,19 @@ class TestResultServiceTest {
         assertEquals(1, builtQuestions.size());
         assertEquals(1, builtQuestions.get(0).getQuestionId());
         assertEquals("What is Java?", builtQuestions.get(0).getContent());
+        assertEquals(QuestionType.SINGLE_CHOICE, builtQuestions.get(0).getQuestionType());
         assertEquals(List.of(10, 11), builtQuestions.get(0).getSelectedOptionIds());
-        assertEquals(List.of(10), builtQuestions.get(0).getCorrectOptionIds());
+        assertEquals(List.of(10, 12), builtQuestions.get(0).getCorrectOptionIds());
+        assertEquals(3, builtQuestions.get(0).getOptions().size());
+        assertEquals("JVM language", builtQuestions.get(0).getOptions().get(0).getText());
+        assertTrue(builtQuestions.get(0).getOptions().get(0).isSelected());
+        assertTrue(builtQuestions.get(0).getOptions().get(0).isCorrect());
+        assertEquals("Database", builtQuestions.get(0).getOptions().get(1).getText());
+        assertTrue(builtQuestions.get(0).getOptions().get(1).isSelected());
+        assertFalse(builtQuestions.get(0).getOptions().get(1).isCorrect());
+        assertEquals("Programming language", builtQuestions.get(0).getOptions().get(2).getText());
+        assertFalse(builtQuestions.get(0).getOptions().get(2).isSelected());
+        assertTrue(builtQuestions.get(0).getOptions().get(2).isCorrect());
     }
 
     // --- TESTE PENTRU getTestAttempts ---
@@ -201,6 +227,23 @@ class TestResultServiceTest {
 
         assertNotNull(results);
         assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void getLessonAttempts_returnsListOfAttemptStatusDTO() {
+        UUID lessonId = UUID.randomUUID();
+        TestResult testResult = new TestResult();
+        AttemptStatusDTO attemptStatusDTO = mock(AttemptStatusDTO.class);
+
+        when(testResultRepository.findByStudentIdAndLessonIdOrderByAttemptStartedAtDesc(studentId, lessonId))
+                .thenReturn(List.of(testResult));
+        when(attemptReportMapper.toAttemptStatusDTO(testResult)).thenReturn(attemptStatusDTO);
+
+        List<AttemptStatusDTO> results = testResultService.getLessonAttempts(lessonId, studentId);
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals(attemptStatusDTO, results.get(0));
     }
 
     // --- TESTE PENTRU getBestTestAttempt ---

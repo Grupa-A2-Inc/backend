@@ -896,6 +896,25 @@ class AccessServiceCoverageTest {
     }
 
     @Test
+    void lessonAttemptPermissions_requireStudentAndCourseAccess() {
+        UUID lessonId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+        Lesson lesson = lesson(lessonId, courseId);
+        User studentUser = user(RoleName.STUDENT, UUID.randomUUID());
+        Authentication student = authenticationFor(studentUser);
+        Authentication teacher = authenticationFor(user(RoleName.TEACHER, UUID.randomUUID()));
+
+        when(lessonRepository.findById(lessonId)).thenReturn(Optional.of(lesson));
+        stubAccessibleCourse(courseId);
+        stubEnrolledStudent(courseId, studentUser.getId());
+
+        assertThat(accessService.canViewMyLessonAttempts(null, lessonId)).isFalse();
+        assertThat(accessService.canViewMyLessonAttempts(student, null)).isFalse();
+        assertThat(accessService.canViewMyLessonAttempts(teacher, lessonId)).isFalse();
+        assertThat(accessService.canViewMyLessonAttempts(student, lessonId)).isTrue();
+    }
+
+    @Test
     void markViewedPermission_requiresAuthenticationAndEnrolledStudent() {
         UUID lessonId = UUID.randomUUID();
         UUID courseId = UUID.randomUUID();

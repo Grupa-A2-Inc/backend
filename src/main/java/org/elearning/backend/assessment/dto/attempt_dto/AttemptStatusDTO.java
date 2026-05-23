@@ -14,6 +14,9 @@ import java.util.UUID;
 @Builder
 public class AttemptStatusDTO {
     private UUID attemptID;
+    private UUID testId;
+    private String testTitle;
+    private Integer testVersion;
     private int attemptNumber;
     private BigDecimal score;
     private BigDecimal scorePercent;

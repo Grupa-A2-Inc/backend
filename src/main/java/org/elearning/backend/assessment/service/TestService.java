@@ -7,6 +7,8 @@ import org.elearning.backend.assessment.dto.assigment_dto.TestEntityDto;
 import org.elearning.backend.assessment.exception.*;
 import org.elearning.backend.assessment.mapper.QuestionOptionMapper;
 import org.elearning.backend.assessment.mapper.TestMapper;
+import org.elearning.backend.assessment.model.Question;
+import org.elearning.backend.assessment.model.QuestionOption;
 import org.elearning.backend.assessment.model.Test;
 import org.elearning.backend.assessment.model.TestStatus;
 import org.elearning.backend.assessment.repository.QuestionOptionRepository;
@@ -31,6 +33,7 @@ public class TestService {
     private static final String LESSON_DOES_NOT_EXIST = "Lesson does not exist";
     private static final String TEST_DOES_NOT_EXIST = "Test does not exist";
     private static final String TEST_MUST_BE_DRAFT = "Test must be a draft for this operation";
+    private static final String ONLY_PUBLISHED_TESTS_CAN_BE_CLONED = "Only published tests can be converted to an editable draft";
 
 
 
@@ -58,13 +61,15 @@ public class TestService {
             throw new DoesNotExistException(LESSON_DOES_NOT_EXIST);
         }
 
-        if(testRepository.lessonHasTest(lessonId)!=0){
+        if(testRepository.existsByLessonId(lessonId)){
             throw new LessonAlreadyHasTestException("Lesson already has a test");
         }
 
         Test newTest = testMapper.toEntity(modifiableTestData);
         newTest.setLessonId(lessonId);
         newTest.setCreatedBy(professorId);
+        newTest.setVersion(1);
+        newTest.setPreviousVersionId(null);
         newTest.setStatus(TestStatus.DRAFT);
 
         return testMapper.toEntityDto(testRepository.save(newTest));
@@ -80,24 +85,49 @@ public class TestService {
             throw new TestCannotBePublished("The test has no questions and cannot be published");
         }
 
-        if(entity.getStatus()==TestStatus.PUBLISHED){
-            throw new AlreadyPublishedException("The test was already published");
+        if(entity.getStatus() != TestStatus.DRAFT){
+            if(entity.getStatus() == TestStatus.PUBLISHED){
+                throw new AlreadyPublishedException("The test was already published");
+            }
+            throw new TestMustBeDraftException(TEST_MUST_BE_DRAFT);
         }
 
+        Test currentPublished = testRepository.findTopByLessonIdAndStatusOrderByVersionDesc(entity.getLessonId(), TestStatus.PUBLISHED)
+                .orElse(null);
+        if (currentPublished != null) {
+            currentPublished.setStatus(TestStatus.SUPERSEDED);
+            testRepository.saveAndFlush(currentPublished);
+        }
 
-        testRepository.updateTestStatus(TestStatus.PUBLISHED, testId);
-        testRepository.flush();
+        entity.setStatus(TestStatus.PUBLISHED);
+        testRepository.saveAndFlush(entity);
 
-        return testMapper.toEntityDto(testRepository.findById(testId).orElse(null));
+        return testMapper.toEntityDto(entity);
 
     }
 
     public TestEntityDto getTestFromLesson(UUID lessonId){
+        return getTestFromLesson(lessonId, RoleName.TEACHER);
+    }
+
+    public TestEntityDto getTestFromLesson(UUID lessonId, RoleName roleName){
         if(!lessonRepository.existsById(lessonId)){
             throw new DoesNotExistException(LESSON_DOES_NOT_EXIST);
         }
-        return testMapper.toEntityDto(testRepository.findByLessonId(lessonId)
-                .orElseThrow(() -> new DoesNotExistException(TEST_DOES_NOT_EXIST)));
+
+        Test selectedTest;
+
+        if (roleName == RoleName.TEACHER) {
+            selectedTest = testRepository.findTopByLessonIdAndStatusOrderByVersionDesc(lessonId, TestStatus.DRAFT)
+                    .or(() -> testRepository.findTopByLessonIdAndStatusOrderByVersionDesc(lessonId, TestStatus.PUBLISHED))
+                    .or(() -> testRepository.findTopByLessonIdOrderByVersionDesc(lessonId))
+                    .orElseThrow(() -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
+        } else {
+            selectedTest = testRepository.findTopByLessonIdAndStatusOrderByVersionDesc(lessonId, TestStatus.PUBLISHED)
+                    .orElseThrow(() -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
+        }
+
+        return testMapper.toEntityDto(selectedTest);
     }
 
 
@@ -141,6 +171,29 @@ public class TestService {
         return testMapper.toEntityDto(testRepository.save(test));
     }
 
+    @Transactional
+    public TestEntityDto ensureEditableDraft(UUID testId) {
+        Test source = testRepository.findById(testId)
+                .orElseThrow(() -> new DoesNotExistException(TEST_DOES_NOT_EXIST));
+
+        if (source.getStatus() == TestStatus.DRAFT) {
+            return testMapper.toEntityDto(source);
+        }
+
+        Test existingDraft = testRepository.findTopByLessonIdAndStatusOrderByVersionDesc(source.getLessonId(), TestStatus.DRAFT)
+                .orElse(null);
+        if (existingDraft != null) {
+            return testMapper.toEntityDto(existingDraft);
+        }
+
+        if (source.getStatus() != TestStatus.PUBLISHED) {
+            throw new TestVersionConflictException(ONLY_PUBLISHED_TESTS_CAN_BE_CLONED);
+        }
+
+        Test draft = cloneTestAsDraft(source);
+        return testMapper.toEntityDto(draft);
+    }
+
     /**
      * Deletes the test with the given id only if it is in draft status.
      *
@@ -159,6 +212,65 @@ public class TestService {
 
         testRepository.deleteTest(testId);
 
+    }
+
+    private Test cloneTestAsDraft(Test source) {
+        Test draft = new Test();
+        draft.setLessonId(source.getLessonId());
+        draft.setCreatedBy(source.getCreatedBy());
+        Integer maxVersion = testRepository.findMaxVersionByLessonId(source.getLessonId());
+        draft.setVersion((maxVersion == null ? 0 : maxVersion) + 1);
+        draft.setPreviousVersionId(source.getId());
+        draft.setTitle(source.getTitle());
+        draft.setDescription(source.getDescription());
+        draft.setTimeLimitSec(source.getTimeLimitSec());
+        draft.setAiEnabled(source.getAiEnabled());
+        draft.setStatus(TestStatus.DRAFT);
+
+        Test savedDraft = testRepository.save(draft);
+        cloneQuestions(source, savedDraft);
+        return savedDraft;
+    }
+
+    private void cloneQuestions(Test source, Test draft) {
+        List<Question> sourceQuestions = questionRepository.findByTestIdWithOptions(source.getId());
+        if (sourceQuestions.isEmpty()) {
+            return;
+        }
+
+        List<Question> clonedQuestions = sourceQuestions.stream()
+                .map(sourceQuestion -> cloneQuestion(sourceQuestion, draft))
+                .toList();
+
+        questionRepository.saveAll(clonedQuestions);
+    }
+
+    private Question cloneQuestion(Question sourceQuestion, Test draft) {
+        Question clonedQuestion = new Question();
+        clonedQuestion.setTest(draft);
+        clonedQuestion.setSubjectId(sourceQuestion.getSubjectId());
+        clonedQuestion.setTopicId(sourceQuestion.getTopicId());
+        clonedQuestion.setQuestionType(sourceQuestion.getQuestionType());
+        clonedQuestion.setContent(sourceQuestion.getContent());
+        clonedQuestion.setDifficulty(sourceQuestion.getDifficulty());
+        clonedQuestion.setIsActive(sourceQuestion.getIsActive());
+        clonedQuestion.setSource(sourceQuestion.getSource());
+
+        List<QuestionOption> clonedOptions = sourceQuestion.getOptions().stream()
+                .map(sourceOption -> cloneOption(sourceOption, clonedQuestion))
+                .toList();
+        clonedQuestion.setOptions(clonedOptions);
+
+        return clonedQuestion;
+    }
+
+    private QuestionOption cloneOption(QuestionOption sourceOption, Question clonedQuestion) {
+        QuestionOption clonedOption = new QuestionOption();
+        clonedOption.setQuestion(clonedQuestion);
+        clonedOption.setText(sourceOption.getText());
+        clonedOption.setDisplayOrder(sourceOption.getDisplayOrder());
+        clonedOption.setIsCorrect(sourceOption.getIsCorrect());
+        return clonedOption;
     }
 
     /**

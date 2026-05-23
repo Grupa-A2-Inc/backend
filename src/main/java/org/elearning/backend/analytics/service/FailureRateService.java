@@ -10,6 +10,7 @@ import org.elearning.backend.analytics.model.AnalyticsAlert;
 import org.elearning.backend.analytics.repository.AnalyticsAlertRepository;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.elearning.backend.assessment.model.Test;
+import org.elearning.backend.assessment.model.TestStatus;
 import org.elearning.backend.assessment.model.TestResult;
 import org.elearning.backend.assessment.repository.TestRepository;
 import org.elearning.backend.assessment.repository.TestResultRepository;
@@ -81,7 +82,7 @@ public class FailureRateService {
      * @throws WithoutAccessException if the professorId does not match the test's creator
      */
     public FailureRateDTO getLessonFailureRate(UUID lessonId, UUID professorId) throws DoesNotExistException, WithoutAccessException {
-        Test test = testRepository.findByLessonId(lessonId)
+        Test test = testRepository.findTopByLessonIdAndStatusOrderByVersionDesc(lessonId, TestStatus.PUBLISHED)
                 .orElseThrow(() -> new DoesNotExistException("No test found for lesson with id " + lessonId));
         if (!test.getCreatedBy().equals(professorId)) {
             throw new WithoutAccessException(professorId);
@@ -157,7 +158,7 @@ public class FailureRateService {
         List<UUID> lessonIds = lessonRepository.findAllLessonIdsByCourseId(courseId);
         List<TestFailureRateChartDTO> chartList = new ArrayList<>();
         for (UUID lessonId : lessonIds) {
-            Optional<Test> testOptional = testRepository.findByLessonId(lessonId);
+            Optional<Test> testOptional = testRepository.findTopByLessonIdAndStatusOrderByVersionDesc(lessonId, TestStatus.PUBLISHED);
             if (testOptional.isPresent()) {
                 Test test = testOptional.get();
                 List<Object[]> pointResults = analyticsAlertRepository.getDailyFailureRatesForTest(test.getId());

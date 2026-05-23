@@ -238,6 +238,49 @@ class AdaptiveSessionServiceTest {
     }
 
     @Test
+    void getAdaptiveJobStatus_shouldNotCreateAnotherSessionWhenRemoteDoneAlreadyHasSessionId() {
+        UUID studentId = UUID.randomUUID();
+        UUID jobId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+
+        AdaptiveExerciseJob job = AdaptiveExerciseJob.builder()
+                .id(jobId)
+                .studentId(studentId)
+                .subjectId(1)
+                .topicId(2)
+                .questionCount(3)
+                .aiJobId("adaptive-job-existing-session")
+                .status(AiRequestStatus.RUNNING)
+                .sessionId(sessionId)
+                .errorMessage("old error")
+                .build();
+
+        AiAdaptiveJobStatusResponse remoteStatus = new AiAdaptiveJobStatusResponse();
+        remoteStatus.setJobId("adaptive-job-existing-session");
+        remoteStatus.setStatus(AiRequestStatus.DONE);
+
+        when(adaptiveExerciseJobRepository.findByIdAndStudentId(jobId, studentId)).thenReturn(Optional.of(job));
+        when(adaptiveExerciseJobRepository.save(any(AdaptiveExerciseJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(aiApiClient.getAdaptiveJobStatus("adaptive-job-existing-session")).thenReturn(remoteStatus);
+        when(adaptiveSessionRepository.findById(sessionId)).thenReturn(Optional.of(
+                AdaptiveSession.builder()
+                        .id(sessionId)
+                        .studentId(studentId)
+                        .subjectId(1)
+                        .topicId(2)
+                        .expiresAt(LocalDateTime.now().plusMinutes(30))
+                        .build()
+        ));
+        when(exerciseRepository.findAllBySessionId(sessionId)).thenReturn(List.of());
+
+        AdaptiveJobStatusDto status = adaptiveSessionService.getAdaptiveJobStatus(jobId, studentId);
+
+        assertThat(status.getStatus()).isEqualTo(AiRequestStatus.DONE);
+        assertThat(status.getSession()).isNotNull();
+        verify(adaptiveSessionRepository, never()).save(any(AdaptiveSession.class));
+    }
+
+    @Test
     void getAdaptiveJobStatus_shouldNotSyncWhenStatusIsFailed() {
         UUID studentId = UUID.randomUUID();
         UUID jobId = UUID.randomUUID();

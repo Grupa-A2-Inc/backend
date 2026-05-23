@@ -56,12 +56,14 @@ class TestResultControllerTest {
 
     private final UUID attemptId = UUID.randomUUID();
     private final UUID testId = UUID.randomUUID();
+    private final UUID lessonId = UUID.randomUUID();
     private final UUID studentId = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @BeforeEach
     void setUpAccessService() {
         when(accessService.canViewAttemptResult(any(), any())).thenReturn(true);
         when(accessService.canViewMyTestAttempts(any(), any())).thenReturn(true);
+        when(accessService.canViewMyLessonAttempts(any(), any())).thenReturn(true);
         when(accessService.canViewMyBestTestResult(any(), any())).thenReturn(true);
     }
 
@@ -145,6 +147,49 @@ class TestResultControllerTest {
                 .andExpect(jsonPath("$.passed").value(true));
 
         verify(testResultService).getBestTestAttempt(testId, studentId);
+    }
+
+    @Test
+    void getLessonAttempts_shouldReturnAttemptsAcrossVersions() throws Exception {
+        AttemptStatusDTO versionOneAttempt = AttemptStatusDTO.builder()
+                .attemptID(UUID.randomUUID())
+                .testId(UUID.randomUUID())
+                .testTitle("Test v1")
+                .testVersion(1)
+                .attemptNumber(1)
+                .score(BigDecimal.valueOf(90.0))
+                .scorePercent(BigDecimal.valueOf(90.0))
+                .passed(true)
+                .startedAt(LocalDateTime.now())
+                .status(AttemptStatus.DONE)
+                .build();
+
+        AttemptStatusDTO versionTwoAttempt = AttemptStatusDTO.builder()
+                .attemptID(UUID.randomUUID())
+                .testId(UUID.randomUUID())
+                .testTitle("Test v2")
+                .testVersion(2)
+                .attemptNumber(1)
+                .score(BigDecimal.valueOf(75.0))
+                .scorePercent(BigDecimal.valueOf(75.0))
+                .passed(false)
+                .startedAt(LocalDateTime.now())
+                .status(AttemptStatus.DONE)
+                .build();
+
+        when(testResultService.getLessonAttempts(lessonId, studentId))
+                .thenReturn(List.of(versionTwoAttempt, versionOneAttempt));
+
+        mockMvc.perform(get("/api/v1/lessons/{lessonId}/my-attempts", lessonId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].testTitle").value("Test v2"))
+                .andExpect(jsonPath("$[0].testVersion").value(2))
+                .andExpect(jsonPath("$[1].testTitle").value("Test v1"))
+                .andExpect(jsonPath("$[1].testVersion").value(1));
+
+        verify(testResultService).getLessonAttempts(lessonId, studentId);
     }
 
     // Additional tests for edge cases with no completed attempts

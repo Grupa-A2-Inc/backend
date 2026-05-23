@@ -121,8 +121,8 @@ class AttemptControllerSprint3Test {
         );
 
         jdbcTemplate.update(
-                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS test_status))",
+                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status, version) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS test_status), ?)",
                 testId,
                 lessonId,
                 UUID.randomUUID(),
@@ -130,7 +130,8 @@ class AttemptControllerSprint3Test {
                 "Integration test",
                 timeLimitSec,
                 aiEnabled,
-                status
+                status,
+                1
         );
 
         Integer questionId = jdbcTemplate.queryForObject(

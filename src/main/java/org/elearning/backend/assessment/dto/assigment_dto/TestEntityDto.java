@@ -12,6 +12,8 @@ public class TestEntityDto{
     private UUID id;
     private UUID lessonId;
     private UUID createdBy;
+    private Integer version;
+    private UUID previousVersionId;
     private String title;
     private String description;
     private Integer timeLimitSec;

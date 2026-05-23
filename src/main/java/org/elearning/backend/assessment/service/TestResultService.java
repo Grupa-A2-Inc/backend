@@ -16,7 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.Comparator;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -56,7 +57,7 @@ public class TestResultService {
      *
      * @param attemptId the UUID of the test attempt
      * @return a list of QuestionForAttemptReportDTO objects, each containing the question id, question type,
-     *         question content, the option ids selected in the attempt, and the correct option ids for that question
+     *         question content, selected/correct option ids, and the full option list with text and review flags
      */
     private List<QuestionForAttemptReportDTO> buildQuestionResults(UUID attemptId) {
         List<AttemptAnswer> answers = answerRepository.findByAttemptId(attemptId);
@@ -64,21 +65,37 @@ public class TestResultService {
         return answers.stream()
                 .map(answer -> {
                     int questionId = answer.getQuestion().getId();
+                    List<Integer> selectedOptionIds = answer.getSelectedOptionIds();
+                    Set<Integer> selectedOptionIdSet = Set.copyOf(selectedOptionIds);
 
-                    // Get correct option IDs for this question (where isCorrect = true)
-                    List<Integer> correctOptionIds = optionRepository
-                            .findByQuestionIdAndIsCorrectTrue(questionId)
-                            .stream()
+                    List<QuestionOption> options = optionRepository.findByQuestionId(questionId).stream()
+                            .sorted(Comparator
+                                    .comparing(QuestionOption::getDisplayOrder, Comparator.nullsLast(Integer::compareTo))
+                                    .thenComparing(QuestionOption::getId))
+                            .toList();
+                    List<Integer> correctOptionIds = options.stream()
+                            .filter(option -> Boolean.TRUE.equals(option.getIsCorrect()))
                             .map(QuestionOption::getId)
                             .toList();
+                    Set<Integer> correctOptionIdSet = Set.copyOf(correctOptionIds);
 
-                    // Build the DTO
+                    List<QuestionForAttemptReportDTO.OptionForAttemptReportDTO> optionDtos = options.stream()
+                            .map(option -> QuestionForAttemptReportDTO.OptionForAttemptReportDTO.builder()
+                                    .optionId(option.getId())
+                                    .text(option.getText())
+                                    .displayOrder(option.getDisplayOrder())
+                                    .selected(selectedOptionIdSet.contains(option.getId()))
+                                    .correct(correctOptionIdSet.contains(option.getId()))
+                                    .build())
+                            .toList();
+
                     return QuestionForAttemptReportDTO.builder()
                             .questionId(questionId)
                             .questionType(answer.getQuestion().getQuestionType())
                             .content(answer.getQuestion().getContent())
-                            .selectedOptionIds(answer.getSelectedOptionIds())  // Already a List<Long>
+                            .selectedOptionIds(selectedOptionIds)
                             .correctOptionIds(correctOptionIds)
+                            .options(optionDtos)
                             .build();
                 })
                 .toList();
@@ -94,6 +111,12 @@ public class TestResultService {
     @Transactional
     public List<AttemptStatusDTO> getTestAttempts(UUID testId, UUID studentId) {
         List<TestResult> results = testResultRepository.findByStudentIdAndTestIdOrderByAttemptStartedAtDesc(studentId, testId);
+        return results.stream().map(attemptReportMapper::toAttemptStatusDTO).toList();
+    }
+
+    @Transactional
+    public List<AttemptStatusDTO> getLessonAttempts(UUID lessonId, UUID studentId) {
+        List<TestResult> results = testResultRepository.findByStudentIdAndLessonIdOrderByAttemptStartedAtDesc(studentId, lessonId);
         return results.stream().map(attemptReportMapper::toAttemptStatusDTO).toList();
     }
 

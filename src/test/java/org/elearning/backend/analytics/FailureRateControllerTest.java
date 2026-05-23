@@ -110,8 +110,8 @@ class FailureRateControllerTest {
     private UUID insertTest(UUID lessonId, UUID creatorId) {
         UUID testId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status) VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? as test_status))",
-                testId, lessonId, creatorId, "Analytics Test", "Test details", 600, false, "PUBLISHED"
+                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status, version) VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? as test_status), ?)",
+                testId, lessonId, creatorId, "Analytics Test", "Test details", 600, false, "PUBLISHED", 1
         );
         return testId;
     }

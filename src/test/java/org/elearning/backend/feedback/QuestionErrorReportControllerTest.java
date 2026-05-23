@@ -97,9 +97,9 @@ class QuestionErrorReportControllerTest {
 
         UUID testId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS test_status))",
-                testId, lessonId, creatorId, "Test", "Desc", 600, false, "PUBLISHED"
+                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status, version) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS test_status), ?)",
+                testId, lessonId, creatorId, "Test", "Desc", 600, false, "PUBLISHED", 1
         );
 
         Integer questionId = jdbcTemplate.queryForObject(

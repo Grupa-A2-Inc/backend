@@ -82,6 +82,7 @@ class ProgressCalculatorServiceTest {
         test.setTitle("Test pentru lectie");
         test.setStatus(TestStatus.PUBLISHED);
         test.setTimeLimitSec(300);
+        test.setVersion(1);
         testRepository.save(test);
 
         enrollment = new CourseEnrollment();

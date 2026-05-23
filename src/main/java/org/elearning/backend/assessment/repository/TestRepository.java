@@ -7,9 +7,9 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import java.util.List;
 import java.util.Collection;
 import java.util.Optional;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,9 +22,13 @@ public interface TestRepository extends JpaRepository<Test, UUID> {
      * @return a test associated with the given lesson id or null if there's no such test
      */
 
-    Optional<Test> findByLessonId(UUID lessonId);
+    Optional<Test> findTopByLessonIdOrderByVersionDesc(UUID lessonId);
+    Optional<Test> findTopByLessonIdAndStatusOrderByVersionDesc(UUID lessonId, TestStatus status);
+    Optional<Test> findByLessonIdAndStatus(UUID lessonId, TestStatus status);
     List<Test> findByLessonIdIn(Collection<UUID> lessonIds);
     List<Test> findByCreatedByIn(Collection<UUID> createdBy);
+    boolean existsByLessonId(UUID lessonId);
+    boolean existsByLessonIdAndStatus(UUID lessonId, TestStatus status);
 
     /**
      * Verifies if a lesson has an assigned test or not
@@ -33,8 +37,8 @@ public interface TestRepository extends JpaRepository<Test, UUID> {
      * @return 0 - if there's no test associated with the lesson, 1 otherwise.
      */
 
-    @Query("SELECT COUNT(*) FROM Test t WHERE t.lessonId = :lessonId")
-    Integer lessonHasTest(@Param("lessonId") UUID lessonId);
+    @Query("SELECT COALESCE(MAX(t.version), 0) FROM Test t WHERE t.lessonId = :lessonId")
+    Integer findMaxVersionByLessonId(@Param("lessonId") UUID lessonId);
 
     boolean existsByIdAndCreatedBy(UUID id, UUID createdBy);
 
@@ -74,7 +78,7 @@ public interface TestRepository extends JpaRepository<Test, UUID> {
      * @param lessonIds the lesson UUIDs to filter tests by
      * @return a list of rows where each element is an Object[] containing two values: the lessonId (UUID) at index 0 and the testId (UUID) at index 1
      */
-    @Query("SELECT t.lessonId, t.id FROM Test t WHERE t.lessonId IN :lessonIds")
-    List<Object[]> findTestIdsByLessonIds(@Param("lessonIds") List<UUID> lessonIds);
+    @Query("SELECT t.lessonId, t.id FROM Test t WHERE t.lessonId IN :lessonIds AND t.status = 'PUBLISHED'")
+    List<Object[]> findPublishedTestIdsByLessonIds(@Param("lessonIds") List<UUID> lessonIds);
 
 }

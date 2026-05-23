@@ -22,4 +22,6 @@ public interface TestAttemptRepository extends JpaRepository<TestAttempt, UUID> 
     /** Verifică dacă există attempt IN_PROGRESS pentru elev pe test */
     boolean existsByTestIdAndStudentIdAndStatus(
             UUID testId, UUID studentId, AttemptStatus status);
+
+    boolean existsByTestId(UUID testId);
 }

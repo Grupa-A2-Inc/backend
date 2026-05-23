@@ -147,9 +147,9 @@ class AiControllerTest {
     private UUID insertTest(UUID lessonId, UUID createdBy) {
         UUID testId = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO tests (id, lesson_id, created_by, title, time_limit_sec, status, ai_enabled) " +
-                        "VALUES (?, ?, ?, ?, ?, CAST(? AS test_status), ?)",
-                testId, lessonId, createdBy, "Existing Test", 1800, "DRAFT", true
+                "INSERT INTO tests (id, lesson_id, created_by, title, time_limit_sec, status, ai_enabled, version) " +
+                        "VALUES (?, ?, ?, ?, ?, CAST(? AS test_status), ?, ?)",
+                testId, lessonId, createdBy, "Existing Test", 1800, "DRAFT", true, 1
         );
         return testId;
     }

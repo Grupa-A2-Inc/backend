@@ -69,6 +69,11 @@ public class AssessmentExceptionHandler extends GlobalExceptionHandler {
         return buildErrorResponse(exception, HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(TestVersionConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleVersionConflict(TestVersionConflictException exception) {
+        return buildErrorResponse(exception, HttpStatus.CONFLICT);
+    }
+
     /**
      * Handles a timer-expired condition for an attempt and maps it to an HTTP 410 Gone response.
      *

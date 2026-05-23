@@ -27,6 +27,9 @@ public interface AttemptReportMapper {
     AttemptReportDTO toAttemptReportDTO(TestResultDto resultDTO, List<QuestionForAttemptReportDTO> questions);
 
     @Mapping(target = "attemptID", source = "result.attemptId")
+    @Mapping(target = "testId", source = "result.test.id")
+    @Mapping(target = "testTitle", source = "result.test.title")
+    @Mapping(target = "testVersion", source = "result.test.version")
     @Mapping(target = "score", source = "result.score")
     @Mapping(target = "scorePercent", source = "result.scorePercent")
     @Mapping(target = "passed", source = "result.passed")
