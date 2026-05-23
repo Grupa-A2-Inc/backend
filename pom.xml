@@ -32,7 +32,7 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <stripe.version>31.0.0</stripe.version>
 
-        <postgresql.version>42.7.7</postgresql.version>
+        <postgresql.version>42.7.11</postgresql.version>
         <minio.version>8.5.12</minio.version>
         <commons-compress.version>1.26.2</commons-compress.version>
         <testcontainers.version>1.19.8</testcontainers.version>
