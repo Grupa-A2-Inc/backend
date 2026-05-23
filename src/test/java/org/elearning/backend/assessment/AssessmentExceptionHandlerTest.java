@@ -3,6 +3,7 @@ package org.elearning.backend.assessment;
 import jakarta.validation.ValidationException;
 import org.elearning.backend.assessment.exception.AssessmentExceptionHandler;
 import org.elearning.backend.assessment.exception.InvalidAttemptUserException;
+import org.elearning.backend.assessment.exception.TestVersionConflictException;
 import org.elearning.backend.assessment.exception.UserHasNoPermissionException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -35,5 +36,13 @@ class AssessmentExceptionHandlerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).containsEntry("message", "invalid");
+    }
+
+    @Test
+    void handlesVersionConflict() {
+        var response = handler.handleVersionConflict(new TestVersionConflictException("conflict"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).containsEntry("message", "conflict");
     }
 }

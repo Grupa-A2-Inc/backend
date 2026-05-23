@@ -5,6 +5,7 @@ import org.elearning.backend.analytics.exception.WithoutAccessException;
 import org.elearning.backend.analytics.repository.AnalyticsAlertRepository;
 import org.elearning.backend.analytics.service.FailureRateService;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
+import org.elearning.backend.assessment.model.TestStatus;
 import org.elearning.backend.assessment.repository.TestRepository;
 import org.elearning.backend.assessment.repository.TestResultRepository;
 import org.elearning.backend.content.model.Course;
@@ -90,7 +91,8 @@ class FailureRateServiceTest {
 
     @Test
     void getLessonFailureRateThrowsWhenProfessorDoesNotOwnLessonTest() {
-        when(testRepository.findByLessonId(lessonId)).thenReturn(Optional.of(testOwnedBy(otherProfessorId)));
+        when(testRepository.findTopByLessonIdAndStatusOrderByVersionDesc(lessonId, TestStatus.PUBLISHED))
+                .thenReturn(Optional.of(testOwnedBy(otherProfessorId)));
 
         assertThatThrownBy(() -> service.getLessonFailureRate(lessonId, professorId))
                 .isInstanceOf(WithoutAccessException.class)

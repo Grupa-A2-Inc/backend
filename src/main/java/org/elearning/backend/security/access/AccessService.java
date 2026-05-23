@@ -459,6 +459,21 @@ public class AccessService {
         return canViewMyBestTestResult(authentication, testId);
     }
 
+    @Description("Defines who can view their attempts for a lesson. Returns true if the user is a student and has access to the course")
+    public boolean canViewMyLessonAttempts(Authentication authentication, UUID lessonId) {
+        CustomUserDetails currentUser = extractCurrentUser(authentication);
+
+        if (currentUser == null || lessonId == null) {
+            return false;
+        }
+
+        if (currentUser.getRoleName() != RoleName.STUDENT) {
+            return false;
+        }
+
+        return canAccessLessonCourse(authentication, lessonId);
+    }
+
     @Description("Defines who can view a specific attempt result. Returns true if the attempt belongs to the user")
     public boolean canViewAttemptResult(Authentication authentication, UUID attemptId) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);

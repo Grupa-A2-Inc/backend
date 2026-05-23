@@ -16,4 +16,16 @@ public class QuestionForAttemptReportDTO {
     private String content;
     private List<Integer> selectedOptionIds;
     private List<Integer> correctOptionIds;
+    private List<OptionForAttemptReportDTO> options;
+
+    @Setter
+    @Getter
+    @Builder
+    public static class OptionForAttemptReportDTO {
+        private int optionId;
+        private String text;
+        private Integer displayOrder;
+        private boolean selected;
+        private boolean correct;
+    }
 }

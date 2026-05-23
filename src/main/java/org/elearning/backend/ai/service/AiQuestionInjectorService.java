@@ -73,17 +73,32 @@ public class AiQuestionInjectorService {
         boolean isTestCreated = false;
 
         if(testIdOpt == null){
-            test = new Test();
-            test.setLessonId(lesson.getId());
-            test.setTitle("Test AI - " + lesson.getTitle());
-            test.setCreatedBy(professorId);
-            test.setTimeLimitSec(1800);
-            test.setStatus(TestStatus.DRAFT);
-            test = testRepository.save(test);
-            isTestCreated = true;
+            Test existingDraft = testRepository.findTopByLessonIdAndStatusOrderByVersionDesc(lesson.getId(), TestStatus.DRAFT)
+                    .orElse(null);
+            if (existingDraft != null) {
+                test = existingDraft;
+            } else {
+                if (testRepository.existsByLessonId(lesson.getId())) {
+                    throw new ResourceConflictException("A published test already exists for this lesson. Create or reuse an editable draft first.");
+                }
+
+                Test createdDraft = new Test();
+                createdDraft.setLessonId(lesson.getId());
+                createdDraft.setTitle("Test AI - " + lesson.getTitle());
+                createdDraft.setCreatedBy(professorId);
+                createdDraft.setTimeLimitSec(1800);
+                createdDraft.setVersion(1);
+                createdDraft.setPreviousVersionId(null);
+                createdDraft.setStatus(TestStatus.DRAFT);
+                test = testRepository.save(createdDraft);
+                isTestCreated = true;
+            }
         } else {
             test = testRepository.findById(testIdOpt)
                     .orElseThrow(() -> new DoesNotExistException("Test not found"));
+            if (test.getStatus() != TestStatus.DRAFT) {
+                throw new ResourceConflictException("Questions can be injected only into a draft test.");
+            }
         }
 
         List<AiQuestionDto> aiQuestions;

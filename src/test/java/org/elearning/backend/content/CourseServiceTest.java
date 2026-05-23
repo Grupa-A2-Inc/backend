@@ -143,7 +143,7 @@ class CourseServiceTest {
         assertThat(result).isSameAs(dto);
         verify(chapterRepository).findChaptersWithLessonsByCourseId(courseId);
         verify(lessonRepository).findLessonsWithResourcesByCourseId(courseId);
-        verify(testRepository, never()).findTestIdsByLessonIds(any());
+        verify(testRepository, never()).findPublishedTestIdsByLessonIds(any());
 
         ArgumentCaptor<Map<UUID, UUID>> mapCaptor = ArgumentCaptor.forClass(Map.class);
         verify(courseFullViewMapper).toCourseFullViewDTO(eq(course), mapCaptor.capture());
@@ -164,7 +164,7 @@ class CourseServiceTest {
         ResponseCourseFullViewDto dto = new ResponseCourseFullViewDto();
 
         when(courseRepository.findCourseWithChapters(courseId)).thenReturn(Optional.of(course));
-        when(testRepository.findTestIdsByLessonIds(List.of(lessonId)))
+        when(testRepository.findPublishedTestIdsByLessonIds(List.of(lessonId)))
                 .thenReturn(java.util.Collections.singletonList(new Object[]{lessonId, testId}));
         when(courseFullViewMapper.toCourseFullViewDTO(eq(course), any())).thenReturn(dto);
 

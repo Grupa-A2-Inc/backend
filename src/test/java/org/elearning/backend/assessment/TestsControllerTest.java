@@ -77,8 +77,12 @@ class TestsControllerTest {
     void tearDown() {
         restTemplate.getRestTemplate().setInterceptors(List.of());
         jdbcTemplate.execute("DELETE FROM course_enrollments");
+        jdbcTemplate.execute("DELETE FROM test_results");
+        jdbcTemplate.execute("DELETE FROM attempt_answers");
+        jdbcTemplate.execute("DELETE FROM test_attempts");
         jdbcTemplate.execute("DELETE FROM question_options");
         jdbcTemplate.execute("DELETE FROM questions");
+        jdbcTemplate.execute("DELETE FROM tests");
         jdbcTemplate.execute("DELETE FROM lesson_resources");
         jdbcTemplate.execute("DELETE FROM lessons");
         jdbcTemplate.execute("DELETE FROM chapters");
@@ -112,12 +116,17 @@ class TestsControllerTest {
     }
 
     private UUID insertTest(String title, String description, Integer timeLimitSec, Boolean aiEnabled, String status) {
+        return insertTest(title, description, timeLimitSec, aiEnabled, status, 1, null);
+    }
+
+    private UUID insertTest(String title, String description, Integer timeLimitSec, Boolean aiEnabled, String status,
+                            Integer version, UUID previousVersionId) {
         UUID testID = UUID.randomUUID();
 
         jdbcTemplate.update(
-                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status)" +
-                        " VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? as test_status))",
-                testID, lessonId, authenticatedUserId, title, description, timeLimitSec, aiEnabled, status
+                "INSERT INTO tests (id, lesson_id, created_by, version, previous_version_id, title, description, time_limit_sec, ai_enabled, status)" +
+                        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? as test_status))",
+                testID, lessonId, authenticatedUserId, version, previousVersionId, title, description, timeLimitSec, aiEnabled, status
         );
 
         return testID;
@@ -453,13 +462,77 @@ class TestsControllerTest {
     }
 
     @Test
+    void shouldCreateEditableDraftFromPublishedTest() {
+        UUID publishedTestId = insertTest("Published", "Testing tests", 600, false, "PUBLISHED");
+        insertQuestion(publishedTestId);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                REQUEST_MAPPING + TESTS + publishedTestId + "/edit-draft",
+                new HttpEntity<>(jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Integer draftCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM tests WHERE lesson_id = ? AND status = CAST(? AS test_status)",
+                Integer.class,
+                lessonId,
+                "DRAFT"
+        );
+        assertThat(draftCount).isEqualTo(1);
+    }
+
+    @Test
+    void shouldReturnExistingEditableDraftForPublishedTest() {
+        UUID publishedTestId = insertTest("Published", "Testing tests", 600, false, "PUBLISHED", 1, null);
+        UUID existingDraftId = insertTest("Draft", "Editable", 600, false, "DRAFT", 2, publishedTestId);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                REQUEST_MAPPING + TESTS + publishedTestId + "/edit-draft",
+                new HttpEntity<>(jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains(existingDraftId.toString());
+    }
+
+    @Test
+    void shouldSupersedePublishedWhenPublishingDraftVersion() {
+        UUID publishedTestId = insertTest("Published", "Testing tests", 600, false, "PUBLISHED", 1, null);
+        UUID draftTestId = insertTest("Draft", "Editable", 600, false, "DRAFT", 2, publishedTestId);
+        insertQuestion(draftTestId);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                REQUEST_MAPPING + TESTS + draftTestId + "/publish",
+                HttpMethod.PATCH,
+                new HttpEntity<>(jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String previousStatus = jdbcTemplate.queryForObject(
+                "SELECT status::text FROM tests WHERE id = ?",
+                String.class,
+                publishedTestId
+        );
+        String newStatus = jdbcTemplate.queryForObject(
+                "SELECT status::text FROM tests WHERE id = ?",
+                String.class,
+                draftTestId
+        );
+        assertThat(previousStatus).isEqualTo("SUPERSEDED");
+        assertThat(newStatus).isEqualTo("PUBLISHED");
+    }
+
+    @Test
     void shouldGetQuestionsIfAuthor(){
         UUID testId = UUID.randomUUID();
 
         jdbcTemplate.update(
-                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status)" +
-                        " VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? as test_status))",
-                testId, lessonId, authenticatedUserId, "Test1", "description", 600, true, "DRAFT"
+                "INSERT INTO tests (id, lesson_id, created_by, title, description, time_limit_sec, ai_enabled, status, version)" +
+                        " VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? as test_status), ?)",
+                testId, lessonId, authenticatedUserId, "Test1", "description", 600, true, "DRAFT", 1
         );
 
         insertQuestion(testId);

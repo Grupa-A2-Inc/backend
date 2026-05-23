@@ -30,9 +30,8 @@ public class Test {
     /**
      * The ID of the lesson to which this test belongs.
      * This is stored as a UUID and is not nullable, as every test must be associated with a lesson.
-     * It is also unique, as each lesson can have at most one test associated with it.
      */
-    @Column(name = "lesson_id", nullable = false, unique = true)
+    @Column(name = "lesson_id", nullable = false)
     private UUID lessonId;
 
     /**
@@ -41,6 +40,12 @@ public class Test {
      */
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
+
+    @Column(name = "version", nullable = false)
+    private Integer version;
+
+    @Column(name = "previous_version_id")
+    private UUID previousVersionId;
 
     /**
      * The title of the test, which will be displayed to students when they take the test.

@@ -75,8 +75,10 @@ public class TestsController extends GlobalHttpStatusCodes {
     @ApiResponse(responseCode = NOT_FOUND, description = "Lesson or test does not exist")
     @GetMapping("/lessons/{lessonId}/test")
     @PreAuthorize("@accessService.canViewLessonTest(authentication,#id)")
-    public ResponseEntity<TestEntityDto> getTestFromLesson(@P("id") @PathVariable UUID lessonId){
-        return ResponseEntity.ok(testService.getTestFromLesson(lessonId));
+    public ResponseEntity<TestEntityDto> getTestFromLesson(
+            @P("id") @PathVariable UUID lessonId,
+            @AuthenticationPrincipal CustomUserDetails currentUser){
+        return ResponseEntity.ok(testService.getTestFromLesson(lessonId, currentUser.getRoleName()));
     }
 
     /**
@@ -133,6 +135,32 @@ public class TestsController extends GlobalHttpStatusCodes {
     @PatchMapping("/tests/{testId}/publish")
     public ResponseEntity<TestEntityDto> publishTest(@P("id") @PathVariable UUID testId){
         return ResponseEntity.ok(testService.publishTest(testId));
+    }
+
+    @Operation(
+            summary = "Get or create an editable draft for a test",
+            description = """
+                    Ensures that the caller receives a draft version that can be edited.
+
+                    Behavior:
+                    - if the provided test is already a draft, that same draft is returned
+                    - if the provided test is published and a draft already exists for the same lesson, that draft is returned
+                    - if the provided test is published and no draft exists yet, the backend creates a cloned DRAFT version and returns it
+
+                    The response body is always a TestEntityDto representing the editable draft that should be used by
+                    subsequent update/question-management calls.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = OK, description = "Editable draft returned successfully"),
+            @ApiResponse(responseCode = NOT_FOUND, description = "Test not found"),
+            @ApiResponse(responseCode = CONFLICT, description = "The selected test version cannot be turned into an editable draft")
+
+    })
+    @PreAuthorize("@accessService.canPublishTest(authentication,#id)")
+    @PostMapping("/tests/{testId}/edit-draft")
+    public ResponseEntity<TestEntityDto> ensureEditableDraft(@P("id") @PathVariable UUID testId){
+        return ResponseEntity.ok(testService.ensureEditableDraft(testId));
     }
 
 
