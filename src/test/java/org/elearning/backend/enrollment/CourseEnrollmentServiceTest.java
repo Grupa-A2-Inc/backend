@@ -1,8 +1,11 @@
 package org.elearning.backend.enrollment;
 
+import org.elearning.backend.classroom.entity.MembershipType;
+import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.enrollment.dto.EnrolledCourseDto;
+import org.elearning.backend.enrollment.exception.StudentAccessForbiddenException;
 import org.elearning.backend.enrollment.mapper.EnrollmentMapper;
 import org.elearning.backend.enrollment.model.CourseEnrollment;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
@@ -25,6 +28,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +40,8 @@ class CourseEnrollmentServiceTest {
     private CourseRepository courseRepository;
     @Mock
     private CourseEnrollmentRepository courseEnrollmentRepository;
+    @Mock
+    private ClassroomCourseRepository classroomCourseRepository;
     @Mock
     private EnrollmentMapper enrollmentMapper;
     @Mock
@@ -147,5 +154,48 @@ class CourseEnrollmentServiceTest {
 
         assertThat(result.getContent()).isEmpty();
         verify(courseEnrollmentRepository).findAllByStudentIdAndCourseStatus(studentId, CourseStatus.PUBLISHED, pageable);
+    }
+
+    @Test
+    void unenrollStudentFromCourseDeletesEnrollmentWhenCourseIsNotAssignedThroughClassroom() {
+        CourseEnrollment enrollment = new CourseEnrollment();
+        enrollment.setCourseId(courseId);
+        enrollment.setStudentId(studentId);
+
+        when(courseEnrollmentRepository.findByStudentIdAndCourseId(studentId, courseId))
+                .thenReturn(java.util.Optional.of(enrollment));
+        when(classroomCourseRepository.existsCourseAssignedToUserThroughAnyClassroom(
+                studentId,
+                MembershipType.STUDENT,
+                courseId
+        )).thenReturn(false);
+
+        service.unenrollStudentFromCourse(studentId, courseId);
+
+        verify(courseEnrollmentRepository).delete(enrollment);
+    }
+
+    @Test
+    void unenrollStudentFromCourseThrowsWhenCourseIsAssignedThroughClassroom() {
+        CourseEnrollment enrollment = new CourseEnrollment();
+        enrollment.setCourseId(courseId);
+        enrollment.setStudentId(studentId);
+
+        when(courseEnrollmentRepository.findByStudentIdAndCourseId(studentId, courseId))
+                .thenReturn(java.util.Optional.of(enrollment));
+        when(classroomCourseRepository.existsCourseAssignedToUserThroughAnyClassroom(
+                studentId,
+                MembershipType.STUDENT,
+                courseId
+        )).thenReturn(true);
+
+        StudentAccessForbiddenException exception = assertThrows(
+                StudentAccessForbiddenException.class,
+                () -> service.unenrollStudentFromCourse(studentId, courseId)
+        );
+
+        assertThat(exception.getMessage())
+                .isEqualTo("Students cannot unenroll themselves from courses assigned through a classroom");
+        verify(courseEnrollmentRepository, never()).delete(enrollment);
     }
 }
