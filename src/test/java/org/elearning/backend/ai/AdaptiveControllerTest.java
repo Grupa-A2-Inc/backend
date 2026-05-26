@@ -311,7 +311,7 @@ class AdaptiveControllerTest {
         doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
-        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTIPLE_CHOICE",
+        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTI_CHOICE",
                 "[\"A\", \"B\", \"C\"]", "[\"A\", \"B\"]");
 
         // Studentul selectează doar A (subset corect) → 0.5
@@ -329,7 +329,7 @@ class AdaptiveControllerTest {
         doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
-        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTIPLE_CHOICE",
+        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTI_CHOICE",
                 "[\"A\", \"B\", \"C\"]", "[\"A\", \"B\"]");
 
         AdaptiveSubmitRequestDto request = buildRequest(ex.mlExerciseId(), List.of("A", "B"));
@@ -508,7 +508,7 @@ class AdaptiveControllerTest {
     void submitSession_shouldReturn200_andScore0_whenMultipleChoiceHasWrongAnswer() throws Exception {
         doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
-        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTIPLE_CHOICE",
+        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTI_CHOICE",
                 "[\"A\", \"B\", \"C\"]", "[\"A\", \"B\"]");
 
         // The user selects one correct answer (A) but also one incorrect answer (C) → total score should be 0.0
@@ -577,7 +577,7 @@ class AdaptiveControllerTest {
     void submitSession_shouldReturn200_andScore0_whenMultipleChoiceHasNoCorrectAnswers() throws Exception {
         doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
-        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTIPLE_CHOICE", "[\"A\", \"B\", \"C\"]", "[\"A\", \"B\"]");
+        ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTI_CHOICE", "[\"A\", \"B\", \"C\"]", "[\"A\", \"B\"]");
 
         AdaptiveSubmitRequestDto request = buildRequest(ex.mlExerciseId(), List.of("C"));
 

@@ -18,7 +18,8 @@ class QuestionTypeTest {
     }
 
     @Test
-    void toValueReturnsEnumName() {
+    void toValueKeepsCanonicalMultipleChoiceLabel() {
         assertThat(QuestionType.TRUE_FALSE.toValue()).isEqualTo("TRUE_FALSE");
+        assertThat(QuestionType.MULTI_CHOICE.toValue()).isEqualTo("MULTIPLE_CHOICE");
     }
 }
