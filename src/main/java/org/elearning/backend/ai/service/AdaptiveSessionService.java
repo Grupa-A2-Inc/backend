@@ -20,6 +20,7 @@ import org.elearning.backend.ai.repository.AdaptiveExerciseJobRepository;
 import org.elearning.backend.ai.repository.AdaptiveSessionAnswerRepository;
 import org.elearning.backend.ai.repository.AdaptiveSessionExerciseRepository;
 import org.elearning.backend.ai.repository.AdaptiveSessionRepository;
+import org.elearning.backend.assessment.model.QuestionType;
 import org.elearning.backend.assessment.exception.DoesNotExistException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -201,7 +202,7 @@ public class AdaptiveSessionService {
             return new ClientExerciseDto(
                     exercise.getMlExerciseId(),
                     exercise.getExerciseText(),
-                    Enum.valueOf(org.elearning.backend.assessment.model.QuestionType.class, exercise.getExerciseType()),
+                    QuestionType.fromValue(exercise.getExerciseType()),
                     answers
             );
         } catch (Exception exception) {
@@ -316,29 +317,33 @@ public class AdaptiveSessionService {
             return 0.0;
         }
 
-        if ("SINGLE_CHOICE".equals(type) || "TRUE_FALSE".equals(type)) {
-            return given.get(0).equals(correct.get(0)) ? 1.0 : 0.0;
-        }
-
-        if ("MULTIPLE_CHOICE".equals(type)) {
-            Set<String> givenSet = new HashSet<>(given);
-            Set<String> correctSet = new HashSet<>(correct);
-
-            if (givenSet.equals(correctSet)) {
-                return 1.0;
-            }
-
-            Set<String> intersection = new HashSet<>(givenSet);
-            intersection.retainAll(correctSet);
-
-            if (!intersection.isEmpty() && givenSet.size() == intersection.size()) {
-                return 0.5;
-            }
-
+        QuestionType questionType;
+        try {
+            questionType = QuestionType.fromValue(type);
+        } catch (IllegalArgumentException exception) {
             return 0.0;
         }
 
-        return 0.0;
+        return switch (questionType) {
+            case SINGLE_CHOICE, TRUE_FALSE -> given.get(0).equals(correct.get(0)) ? 1.0 : 0.0;
+            case MULTI_CHOICE -> {
+                Set<String> givenSet = new HashSet<>(given);
+                Set<String> correctSet = new HashSet<>(correct);
+
+                if (givenSet.equals(correctSet)) {
+                    yield 1.0;
+                }
+
+                Set<String> intersection = new HashSet<>(givenSet);
+                intersection.retainAll(correctSet);
+
+                if (!intersection.isEmpty() && givenSet.size() == intersection.size()) {
+                    yield 0.5;
+                }
+
+                yield 0.0;
+            }
+        };
     }
 
     private String convertToJson(Object object) {
