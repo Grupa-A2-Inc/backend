@@ -24,6 +24,10 @@ public enum QuestionType {
 
     @JsonValue
     public String toValue() {
+        if (this == MULTI_CHOICE) {
+            return "MULTIPLE_CHOICE";
+        }
+
         return name();
     }
 }

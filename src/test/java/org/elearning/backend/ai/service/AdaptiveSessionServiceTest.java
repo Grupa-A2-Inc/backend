@@ -692,7 +692,7 @@ class AdaptiveSessionServiceTest {
                 .id(exerciseId)
                 .sessionId(sessionId)
                 .mlExerciseId("ex-1")
-                .exerciseType("MULTIPLE_CHOICE")
+                .exerciseType("MULTI_CHOICE")
                 .correctAnswersRaw("[\"A\",\"B\"]")
                 .build();
 
