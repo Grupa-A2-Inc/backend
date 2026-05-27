@@ -51,3 +51,32 @@ ai:
 stripe:
   secret-key: ${STRIPE_SECRET_KEY}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+
+crypto:
+  rpc-url: ${WEB3_RPC_URL}
+  private-key: ${PLATFORM_PRIVATE_KEY}
+  chain-id: ${WEB3_CHAIN_ID:11155111}
+
+  tai-coin-address: ${TAI_COIN_ADDRESS:0xb2981064099c348F4Dc79686836Bb45ec4CccdFD}
+  tai-engine-address: ${TAI_ENGINE_ADDRESS:0x6cCF7d4197F93Ecd2431653657e9c105f30A8a74}
+  eurc-address: ${EURC_ADDRESS}
+
+  gas-price-wei: 20000000000
+  gas-limit: 7000000
+
+stablecoin:
+  provider: ${STABLECOIN_PROVIDER:circle}
+  enabled: ${STABLECOIN_ENABLED:false}
+  sepolia-mock-payments-enabled: ${SEPOLIA_MOCK_PAYMENTS_ENABLED:true}
+  sepolia-realistic-funding-enabled: ${SEPOLIA_REALISTIC_FUNDING_ENABLED:false}
+  sepolia-fallback-to-mock-enabled: ${SEPOLIA_FALLBACK_TO_MOCK_ENABLED:true}
+  sepolia-funding-wait-attempts: ${SEPOLIA_FUNDING_WAIT_ATTEMPTS:6}
+  sepolia-funding-wait-ms: ${SEPOLIA_FUNDING_WAIT_MS:5000}
+  circle:
+    api-base-url: ${CIRCLE_API_BASE_URL:https://api.circle.com}
+    api-key: ${CIRCLE_API_KEY:}
+    source-wallet-id: ${CIRCLE_SOURCE_WALLET_ID:}
+    eurc-token-id: ${CIRCLE_EURC_TOKEN_ID:}
+    platform-wallet-address: ${PLATFORM_WALLET_ADDRESS:}
+    faucet-enabled: ${CIRCLE_FAUCET_ENABLED:false}
+    faucet-blockchain: ${CIRCLE_FAUCET_BLOCKCHAIN:ETH-SEPOLIA}
