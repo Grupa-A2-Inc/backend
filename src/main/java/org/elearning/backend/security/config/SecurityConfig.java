@@ -12,7 +12,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
@@ -32,6 +31,10 @@ public class SecurityConfig {
 
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
+    private CrossSiteCookieCsrfTokenRepository csrfTokenRepository() {
+        return new CrossSiteCookieCsrfTokenRepository();
+    }
+
     @Bean
     @SuppressWarnings("java:S4502")
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -41,7 +44,7 @@ public class SecurityConfig {
                 // All other protected routes use explicit Bearer tokens with a stateless policy,
                 // while form login and HTTP Basic are disabled.
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokenRepository())
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
                         .requireCsrfProtectionMatcher(new OrRequestMatcher(
                                 new AntPathRequestMatcher("/api/v1/auth/refresh", "POST"),
