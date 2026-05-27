@@ -278,5 +278,5 @@ class CertificateGeneratorServiceTest {
         }
     }
 
-    private static final String PATH_SITE_LOGO = "/images/crap_logo.png";
+    private static final String PATH_SITE_LOGO = "/images/adaptive_tutor_logo.png";
 }
