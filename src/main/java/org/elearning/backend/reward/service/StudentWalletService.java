@@ -5,6 +5,7 @@ import org.elearning.backend.reward.dto.StudentWalletRequest;
 import org.elearning.backend.reward.dto.StudentWalletResponse;
 import org.elearning.backend.reward.entity.StudentWallet;
 import org.elearning.backend.reward.exception.RewardBadRequestException;
+import org.elearning.backend.reward.exception.RewardNotFoundException;
 import org.elearning.backend.reward.repository.StudentWalletRepository;
 import org.elearning.backend.student.repository.StudentRepository;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,13 @@ public class StudentWalletService {
 
     private final StudentWalletRepository studentWalletRepository;
     private final StudentRepository studentRepository;
+
+    @Transactional(readOnly = true)
+    public StudentWalletResponse getWallet(UUID studentId) {
+        StudentWallet wallet = studentWalletRepository.findByStudentId(studentId)
+                .orElseThrow(() -> new RewardNotFoundException("Wallet not found for student: " + studentId));
+        return toResponse(wallet);
+    }
 
     @Transactional
     public StudentWalletResponse upsertWallet(UUID studentId, StudentWalletRequest request) {

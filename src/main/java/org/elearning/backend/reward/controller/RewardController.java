@@ -67,6 +67,14 @@ public class RewardController {
         return ResponseEntity.ok(studentWalletService.upsertWallet(userDetails.getUserId(), request));
     }
 
+    @GetMapping("/students/me/wallet")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentWalletResponse> getMyWallet(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(studentWalletService.getWallet(userDetails.getUserId()));
+    }
+
     @PostMapping("/cycles/{organizationId}/calculate")
     @PreAuthorize("@accessService.canEditOrganization(authentication, #organizationId)")
     public ResponseEntity<RewardCycleResponse> calculateCycle(
