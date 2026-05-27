@@ -4,6 +4,7 @@ import com.testifyai.crypto.contracts.TAIEngine;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
@@ -26,8 +27,8 @@ public class CryptoConfig {
         return Credentials.create(cryptoProperties.getPrivateKey());
     }
 
-    @Bean
-    public TransactionManager transactionManager(
+    @Bean("web3jTransactionManager")
+    public TransactionManager web3jTransactionManager(
             Web3j web3j,
             Credentials platformCredentials,
             CryptoProperties cryptoProperties
@@ -50,7 +51,7 @@ public class CryptoConfig {
     @Bean
     public TAIEngine taiEngine(
             Web3j web3j,
-            TransactionManager transactionManager,
+            @Qualifier("web3jTransactionManager") TransactionManager transactionManager,
             ContractGasProvider contractGasProvider,
             CryptoProperties cryptoProperties
     ) {

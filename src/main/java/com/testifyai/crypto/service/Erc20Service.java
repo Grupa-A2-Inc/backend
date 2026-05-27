@@ -2,6 +2,7 @@ package com.testifyai.crypto.service;
 
 import com.testifyai.crypto.config.CryptoProperties;
 import com.testifyai.crypto.util.TokenAmountConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.web3j.abi.FunctionReturnDecoder;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
@@ -37,7 +38,7 @@ public class Erc20Service {
     public Erc20Service(
             Web3j web3j,
             CryptoProperties cryptoProperties,
-            TransactionManager transactionManager,
+            @Qualifier("web3jTransactionManager") TransactionManager transactionManager,
             ContractGasProvider gasProvider
     ) {
         this.web3j = web3j;
