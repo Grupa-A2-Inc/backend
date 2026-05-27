@@ -34,7 +34,7 @@ final class CrossSiteCookieCsrfTokenRepository implements CsrfTokenRepository {
 
         ResponseCookie cookie = ResponseCookie.from(DEFAULT_CSRF_COOKIE_NAME, tokenValue)
                 .httpOnly(false)
-                .secure(request.isSecure())
+                .secure(true)
                 .sameSite("None")
                 .path("/")
                 .maxAge(token != null ? -1 : 0)
