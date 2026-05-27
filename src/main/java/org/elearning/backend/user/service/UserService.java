@@ -207,6 +207,10 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(USER_NO_EXIST + userId));
 
+        if (request.getStatus() == UserStatus.ACTIVE && !hasUsablePassword(user)) {
+            throw new UserBadRequestException("Cannot activate a user who has not set a password yet");
+        }
+
         user.setStatus(request.getStatus());
         user.setUpdatedAt(LocalDateTime.now());
 
@@ -278,6 +282,11 @@ public class UserService {
                 .orElse("Validation failed");
 
         throw new UserBadRequestException(message);
+    }
+
+    private boolean hasUsablePassword(User user) {
+        String passwordHash = user.getPasswordHash();
+        return passwordHash != null && !passwordHash.isBlank();
     }
 
     private UserResponse toResponse(User user) {

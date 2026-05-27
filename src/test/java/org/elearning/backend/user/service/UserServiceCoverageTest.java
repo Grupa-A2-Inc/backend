@@ -415,6 +415,26 @@ class UserServiceCoverageTest {
     }
 
     @Test
+    void updateUserStatus_rejectsActivationWhenPasswordWasNotSet() {
+        UUID userId = UUID.randomUUID();
+        User user = user(userId, RoleName.STUDENT, null);
+        user.setStatus(UserStatus.PENDING);
+        user.setPasswordHash(null);
+
+        UpdateUserStatusRequest request = UpdateUserStatusRequest.builder()
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.updateUserStatus(userId, request))
+                .isInstanceOf(UserBadRequestException.class)
+                .hasMessage("Cannot activate a user who has not set a password yet");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void deleteUser_deletesExistingAndHandlesMissing() {
         UUID userId = UUID.randomUUID();
         User student = user(userId, RoleName.STUDENT, null);
