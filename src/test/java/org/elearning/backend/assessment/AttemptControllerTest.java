@@ -548,6 +548,35 @@ class AttemptControllerTest {
     }
 
     @Test
+    void submitAttempt_shouldReturn200_whenTimeLimitIsZeroAndAttemptStartedLongAgo() throws Exception {
+        TestContext context = insertTestWithQuestion("PUBLISHED", 0);
+        UUID attemptId = insertAttempt(
+                context.testId(),
+                studentId,
+                1,
+                "IN_PROGRESS",
+                "NOW() - INTERVAL '5 minutes'"
+        );
+
+        mockMvc.perform(authorized(post("/api/v1/attempts/{attemptId}/submit", attemptId))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                submitRequestForAnswer(context.questionId(), context.correctOptionId())
+                        )))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attemptId").value(attemptId.toString()))
+                .andExpect(jsonPath("$.scorePercent").value(100.0));
+
+        String attemptStatus = jdbcTemplate.queryForObject(
+                "SELECT status::text FROM test_attempts WHERE id = ?",
+                String.class,
+                attemptId
+        );
+        assertEquals("DONE", attemptStatus);
+    }
+
+    @Test
     void submitAttempt_shouldReturnPartialScore_whenSomeQuestionsAreUnanswered() throws Exception {
         TestContext firstQuestion = insertTestWithQuestion("PUBLISHED", 1800);
         insertAdditionalQuestion(firstQuestion.testId(), "Second question");
