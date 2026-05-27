@@ -1,5 +1,7 @@
 package org.elearning.backend.user.service;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.service.AiStudentRegistrationService;
 import org.elearning.backend.auth.service.ActivationTokenService;
@@ -28,6 +30,7 @@ import org.elearning.backend.user.exception.UserRoleNotFoundException;
 import org.elearning.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -38,6 +41,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,6 +51,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -82,8 +87,16 @@ class UserServiceCoverageTest {
     @Mock
     private OrganizationDeletionService organizationDeletionService;
 
+    @Mock
+    private Validator validator;
+
     @InjectMocks
     private UserService userService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        lenient().when(validator.validate(ArgumentMatchers.any(CreateUserRequest.class))).thenReturn(Set.of());
+    }
 
     @Test
     void createUser_duplicateEmail_throwsException() {
@@ -95,6 +108,23 @@ class UserServiceCoverageTest {
                 .hasMessage("Email already exists: ana@example.com");
 
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createUser_invalidEmail_throwsBadRequestBeforePersisting() {
+        CreateUserRequest request = createUserRequest(RoleName.STUDENT, null);
+        @SuppressWarnings("unchecked")
+        ConstraintViolation<CreateUserRequest> violation = (ConstraintViolation<CreateUserRequest>) org.mockito.Mockito.mock(ConstraintViolation.class);
+        when(violation.getMessage()).thenReturn("Email must be valid");
+        when(validator.validate(request)).thenReturn(Set.of(violation));
+
+        assertThatThrownBy(() -> userService.createUser(request))
+                .isInstanceOf(UserBadRequestException.class)
+                .hasMessage("Email must be valid");
+
+        verify(userRepository, never()).existsByEmail(any());
+        verify(userRepository, never()).saveAndFlush(any());
+        verify(emailService, never()).sendActivationEmail(any(), any(), any());
     }
 
     @Test
