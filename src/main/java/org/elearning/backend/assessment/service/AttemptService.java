@@ -122,13 +122,16 @@ public class AttemptService {
 
         Test test = attempt.getTest();
 
-        LocalDateTime expireTime = attempt.getStartedAt().plusSeconds(test.getTimeLimitSec());
-        if (LocalDateTime.now().isAfter(expireTime)) {
-            attempt.setStatus(AttemptStatus.EXPIRED);
-            attempt.setEndedAt(LocalDateTime.now());
-            attemptRepository.saveAndFlush(attempt);
+        Integer timeLimitSec = test.getTimeLimitSec();
+        if (timeLimitSec != null && timeLimitSec > 0) {
+            LocalDateTime expireTime = attempt.getStartedAt().plusSeconds(timeLimitSec);
+            if (LocalDateTime.now().isAfter(expireTime)) {
+                attempt.setStatus(AttemptStatus.EXPIRED);
+                attempt.setEndedAt(LocalDateTime.now());
+                attemptRepository.saveAndFlush(attempt);
 
-            throw new TimerExpiredException("The time limit for this attempt has expired");
+                throw new TimerExpiredException("The time limit for this attempt has expired");
+            }
         }
 
         List<TestResultDto.TestResultQuestionDto> resultQuestions = new ArrayList<>();
