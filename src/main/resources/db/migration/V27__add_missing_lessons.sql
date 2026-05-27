@@ -1,4 +1,4 @@
-﻿-- =============================================================
+-- =============================================================
 -- SEED PATCH: Missing lessons only
 -- Adds 141 lessons for existing courses and chapters.
 -- Assumes courses and chapters already exist.
@@ -119,7 +119,6 @@ A useful study task is to build a one-page analysis of heat engines & entropy: i
 3. Explain how this lesson changes the way you would solve a problem from Thermodynamics.',
  2),
 
-,
 
 -- Physics: Electricity & Magnetism
 
@@ -234,7 +233,6 @@ A useful study task is to build a one-page analysis of magnetic fields & inducti
 3. Explain how this lesson changes the way you would solve a problem from Electricity & Magnetism.',
  2),
 
-,
 
 -- Physics: Optics & Modern Physics
 
@@ -349,7 +347,6 @@ A useful study task is to build a one-page analysis of quantum ideas & nuclear p
 3. Explain how this lesson changes the way you would solve a problem from Optics & Modern Physics.',
  2),
 
-,
 
 -- Chemistry: Atomic Structure & Periodic Table
 
@@ -464,7 +461,6 @@ A useful study task is to build a one-page analysis of isotopes, ions & quantita
 3. Explain how this lesson changes the way you would solve a problem from Atomic Structure & Periodic Table.',
  2),
 
-,
 
 -- Chemistry: Chemical Bonding & Reactions
 
@@ -579,7 +575,6 @@ A useful study task is to build a one-page analysis of acids, bases & equilibriu
 3. Explain how this lesson changes the way you would solve a problem from Chemical Bonding & Reactions.',
  2),
 
-,
 
 -- Chemistry: Organic Chemistry
 
@@ -694,7 +689,6 @@ A useful study task is to build a one-page analysis of reaction mechanisms & bio
 3. Explain how this lesson changes the way you would solve a problem from Organic Chemistry.',
  2),
 
-,
 
 -- Chemistry: Electrochemistry & Applied Chemistry
 
@@ -809,7 +803,6 @@ A useful study task is to build a one-page analysis of industrial chemistry & ma
 3. Explain how this lesson changes the way you would solve a problem from Electrochemistry & Applied Chemistry.',
  2),
 
-,
 
 -- Biology: Cell Biology
 
@@ -924,7 +917,6 @@ A useful study task is to build a one-page analysis of cell division & cellular 
 3. Explain how this lesson changes the way you would solve a problem from Cell Biology.',
  2),
 
-,
 
 -- Biology: Genetics & Heredity
 
@@ -1039,7 +1031,6 @@ A useful study task is to build a one-page analysis of mutations, biotechnology 
 3. Explain how this lesson changes the way you would solve a problem from Genetics & Heredity.',
  2),
 
-,
 
 -- Biology: Human Physiology
 
@@ -1154,7 +1145,6 @@ A useful study task is to build a one-page analysis of digestion, excretion & re
 3. Explain how this lesson changes the way you would solve a problem from Human Physiology.',
  2),
 
-,
 
 -- Biology: Ecology & Evolution
 
@@ -1269,7 +1259,6 @@ A useful study task is to build a one-page analysis of natural selection, specia
 3. Explain how this lesson changes the way you would solve a problem from Ecology & Evolution.',
  2),
 
-,
 
 -- History: Ancient Civilizations
 
@@ -1384,7 +1373,6 @@ A useful study task is to build a one-page analysis of roman republic, empire & 
 3. Explain how this lesson changes the way you would solve a problem from Ancient Civilizations.',
  2),
 
-,
 
 -- History: Medieval & Renaissance World
 
@@ -1499,7 +1487,6 @@ A useful study task is to build a one-page analysis of renaissance, humanism & e
 3. Explain how this lesson changes the way you would solve a problem from Medieval & Renaissance World.',
  2),
 
-,
 
 -- History: Modern Revolutions & Nation States
 
@@ -1614,7 +1601,6 @@ A useful study task is to build a one-page analysis of nationalism, liberalism &
 3. Explain how this lesson changes the way you would solve a problem from Modern Revolutions & Nation States.',
  2),
 
-,
 
 -- History: 20th Century: Wars & Globalization
 
@@ -1729,7 +1715,6 @@ A useful study task is to build a one-page analysis of cold war, decolonization 
 3. Explain how this lesson changes the way you would solve a problem from 20th Century: Wars & Globalization.',
  2),
 
-,
 
 -- Geography: Physical Geography
 
@@ -1844,7 +1829,6 @@ A useful study task is to build a one-page analysis of soils, biomes & natural h
 3. Explain how this lesson changes the way you would solve a problem from Physical Geography.',
  2),
 
-,
 
 -- Geography: Climatology & Hydrology
 
@@ -1959,7 +1943,6 @@ A useful study task is to build a one-page analysis of climate change and water 
 3. Explain how this lesson changes the way you would solve a problem from Climatology & Hydrology.',
  2),
 
-,
 
 -- Geography: Human & Economic Geography
 
@@ -2074,7 +2057,6 @@ A useful study task is to build a one-page analysis of globalization, trade & de
 3. Explain how this lesson changes the way you would solve a problem from Human & Economic Geography.',
  2),
 
-,
 
 -- Geography: Geopolitics & World Regions
 
@@ -2189,7 +2171,6 @@ A useful study task is to build a one-page analysis of africa, middle east and g
 3. Explain how this lesson changes the way you would solve a problem from Geopolitics & World Regions.',
  2),
 
-,
 
 -- Philosophy: Logic & Critical Thinking
 
@@ -2304,7 +2285,6 @@ A useful study task is to build a one-page analysis of fallacies, definitions & 
 3. Explain how this lesson changes the way you would solve a problem from Logic & Critical Thinking.',
  2),
 
-,
 
 -- Philosophy: Epistemology: Theory of Knowledge
 
@@ -2419,7 +2399,6 @@ A useful study task is to build a one-page analysis of science, evidence and the
 3. Explain how this lesson changes the way you would solve a problem from Epistemology: Theory of Knowledge.',
  2),
 
-,
 
 -- Philosophy: Ethics & Moral Philosophy
 
@@ -2534,7 +2513,6 @@ A useful study task is to build a one-page analysis of virtue ethics and applied
 3. Explain how this lesson changes the way you would solve a problem from Ethics & Moral Philosophy.',
  2),
 
-,
 
 -- Philosophy: Metaphysics & Philosophy of Mind
 
@@ -2649,7 +2627,6 @@ A useful study task is to build a one-page analysis of mind, body and consciousn
 3. Explain how this lesson changes the way you would solve a problem from Metaphysics & Philosophy of Mind.',
  2),
 
-,
 
 -- Psychology: Neuroscience & Biological Bases of Behavior
 
@@ -2764,7 +2741,6 @@ A useful study task is to build a one-page analysis of hormones, genetics and be
 3. Explain how this lesson changes the way you would solve a problem from Neuroscience & Biological Bases of Behavior.',
  2),
 
-,
 
 -- Psychology: Perception, Memory & Cognition
 
@@ -2879,7 +2855,6 @@ A useful study task is to build a one-page analysis of thinking, language and pr
 3. Explain how this lesson changes the way you would solve a problem from Perception, Memory & Cognition.',
  2),
 
-,
 
 -- Psychology: Emotion, Motivation & Personality
 
@@ -2994,7 +2969,6 @@ A useful study task is to build a one-page analysis of personality theories and 
 3. Explain how this lesson changes the way you would solve a problem from Emotion, Motivation & Personality.',
  2),
 
-,
 
 -- Psychology: Social Psychology & Mental Health
 
@@ -3109,7 +3083,6 @@ A useful study task is to build a one-page analysis of therapy, prevention and m
 3. Explain how this lesson changes the way you would solve a problem from Social Psychology & Mental Health.',
  2),
 
-,
 
 -- Computer Science & IT: Programming Fundamentals
 
@@ -3224,7 +3197,6 @@ A useful study task is to build a one-page analysis of files, exceptions and bas
 3. Explain how this lesson changes the way you would solve a problem from Programming Fundamentals.',
  2),
 
-,
 
 -- Computer Science & IT: Data Structures
 
@@ -3339,7 +3311,6 @@ A useful study task is to build a one-page analysis of trees, graphs and practic
 3. Explain how this lesson changes the way you would solve a problem from Data Structures.',
  2),
 
-,
 
 -- Computer Science & IT: Networking & Internet
 
@@ -3454,7 +3425,6 @@ A useful study task is to build a one-page analysis of security, encryption and 
 3. Explain how this lesson changes the way you would solve a problem from Networking & Internet.',
  2),
 
-,
 
 -- Computer Science & IT: Databases & SQL
 
@@ -3569,7 +3539,6 @@ A useful study task is to build a one-page analysis of indexes, transactions and
 3. Explain how this lesson changes the way you would solve a problem from Databases & SQL.',
  2),
 
-,
 
 -- Human Anatomy: Musculoskeletal System
 
@@ -3684,7 +3653,6 @@ A useful study task is to build a one-page analysis of clinical anatomy of limbs
 3. Explain how this lesson changes the way you would solve a problem from Musculoskeletal System.',
  2),
 
-,
 
 -- Human Anatomy: Nervous System
 
@@ -3799,7 +3767,6 @@ A useful study task is to build a one-page analysis of autonomic nervous system 
 3. Explain how this lesson changes the way you would solve a problem from Nervous System.',
  2),
 
-,
 
 -- Human Anatomy: Cardiovascular & Respiratory Systems
 
@@ -3914,7 +3881,6 @@ A useful study task is to build a one-page analysis of lungs, ventilation and ga
 3. Explain how this lesson changes the way you would solve a problem from Cardiovascular & Respiratory Systems.',
  2),
 
-,
 
 -- Human Anatomy: Digestive, Urinary & Reproductive Systems
 
@@ -4029,7 +3995,6 @@ A useful study task is to build a one-page analysis of reproductive anatomy and 
 3. Explain how this lesson changes the way you would solve a problem from Digestive, Urinary & Reproductive Systems.',
  2),
 
-,
 
 -- Civil Law: Legal Persons & Rights
 
@@ -4144,7 +4109,6 @@ A useful study task is to build a one-page analysis of subjective rights, duties
 3. Explain how this lesson changes the way you would solve a problem from Legal Persons & Rights.',
  2),
 
-,
 
 -- Civil Law: Property & Real Rights
 
@@ -4259,7 +4223,6 @@ A useful study task is to build a one-page analysis of acquisition, protection a
 3. Explain how this lesson changes the way you would solve a problem from Property & Real Rights.',
  2),
 
-,
 
 -- Civil Law: Contracts & Obligations
 
@@ -4374,7 +4337,6 @@ A useful study task is to build a one-page analysis of breach, remedies and spec
 3. Explain how this lesson changes the way you would solve a problem from Contracts & Obligations.',
  2),
 
-,
 
 -- Civil Law: Family Law & Inheritance
 
@@ -4489,7 +4451,6 @@ A useful study task is to build a one-page analysis of succession, wills and res
 3. Explain how this lesson changes the way you would solve a problem from Family Law & Inheritance.',
  2),
 
-,
 
 -- Macroeconomics: National Income & GDP
 
@@ -4604,7 +4565,6 @@ A useful study task is to build a one-page analysis of income distribution and l
 3. Explain how this lesson changes the way you would solve a problem from National Income & GDP.',
  2),
 
-,
 
 -- Macroeconomics: Aggregate Demand & Supply
 
@@ -4719,7 +4679,6 @@ A useful study task is to build a one-page analysis of business cycles, shocks a
 3. Explain how this lesson changes the way you would solve a problem from Aggregate Demand & Supply.',
  2),
 
-,
 
 -- Macroeconomics: Fiscal & Monetary Policy
 
@@ -4834,7 +4793,6 @@ A useful study task is to build a one-page analysis of policy trade-offs, inflat
 3. Explain how this lesson changes the way you would solve a problem from Fiscal & Monetary Policy.',
  2),
 
-,
 
 -- Macroeconomics: Growth Models & International Trade
 
@@ -4949,7 +4907,6 @@ A useful study task is to build a one-page analysis of comparative advantage, ex
 3. Explain how this lesson changes the way you would solve a problem from Growth Models & International Trade.',
  2),
 
-,
 
 -- Architectural Design Studio: Design Process & Methods
 
@@ -5064,7 +5021,6 @@ A useful study task is to build a one-page analysis of iterative studio critique
 3. Explain how this lesson changes the way you would solve a problem from Design Process & Methods.',
  2),
 
-,
 
 -- Architectural Design Studio: Structural Systems & Materials
 
@@ -5179,7 +5135,6 @@ A useful study task is to build a one-page analysis of envelope systems, details
 3. Explain how this lesson changes the way you would solve a problem from Structural Systems & Materials.',
  2),
 
-,
 
 -- Architectural Design Studio: Environmental Design & Sustainability
 
@@ -5294,7 +5249,6 @@ A useful study task is to build a one-page analysis of life-cycle thinking and s
 3. Explain how this lesson changes the way you would solve a problem from Environmental Design & Sustainability.',
  2),
 
-,
 
 -- Architectural Design Studio: Urban Scale & Presentation
 
