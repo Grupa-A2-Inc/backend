@@ -5361,6 +5361,6 @@ A useful study task is to build a one-page analysis of portfolio, models and fin
 1. Define the main concept in your own words.
 2. Give one example and one counterexample.
 3. Explain how this lesson changes the way you would solve a problem from Urban Scale & Presentation.',
- 2),
+ 2)
 ON CONFLICT (id) DO NOTHING;
 
