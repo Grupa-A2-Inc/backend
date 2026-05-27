@@ -1,5 +1,7 @@
 package org.elearning.backend.user.service;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.AllArgsConstructor;
 import org.elearning.backend.ai.service.AiStudentRegistrationService;
 import org.elearning.backend.auth.service.ActivationTokenService;
@@ -44,6 +46,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -61,6 +64,7 @@ public class UserService {
     private final AiStudentRegistrationService aiStudentRegistrationService;
     private final EntitlementService entitlementService;
     private final OrganizationDeletionService organizationDeletionService;
+    private final Validator validator;
 
     private static final String USER_NO_EXIST = "User does not exist: ";
     private static final String DELIMITER = ",";
@@ -88,6 +92,8 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
+        validateCreateUserRequest(request);
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already exists: " + request.getEmail());
         }
@@ -257,6 +263,21 @@ public class UserService {
         }
 
         emailService.sendActivationEmail(user.getEmail(), user.getFirstName(), rawToken);
+    }
+
+    private void validateCreateUserRequest(CreateUserRequest request) {
+        Set<ConstraintViolation<CreateUserRequest>> violations = validator.validate(request);
+        if (violations.isEmpty()) {
+            return;
+        }
+
+        String message = violations.stream()
+                .map(ConstraintViolation::getMessage)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse("Validation failed");
+
+        throw new UserBadRequestException(message);
     }
 
     private UserResponse toResponse(User user) {

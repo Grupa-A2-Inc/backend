@@ -78,6 +78,26 @@ class UserImportServiceTest {
     }
 
     @Test
+    void tryCreateSingleUser_invalidEmail_returnsFailedResult() {
+        CreateUserRequest request = CreateUserRequest.builder()
+                .email("a b c@gmail.com")
+                .firstName("Ion")
+                .lastName("Pop")
+                .roleName(RoleName.STUDENT)
+                .build();
+
+        when(userService.createUser(request))
+                .thenThrow(new RuntimeException("Email must be valid"));
+
+        UserImportResult result = userImportService.tryCreateSingleUser(request);
+
+        assertFalse(result.isSuccess());
+        assertEquals("a b c@gmail.com", result.getEmail());
+        assertNull(result.getUser());
+        assertEquals("Email must be valid", result.getErrorMessage());
+    }
+
+    @Test
     void importUsers_allSuccess_returnsFullSuccessReport() {
         CreateUserRequest req1 = CreateUserRequest.builder()
                 .email("ion@scoala.ro")

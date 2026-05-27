@@ -1,5 +1,6 @@
 package org.elearning.backend.user.service;
 
+import jakarta.validation.Validator;
 import org.elearning.backend.ai.service.AiStudentRegistrationService;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.auth.service.ActivationTokenService;
@@ -27,6 +28,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,6 +48,7 @@ class UserServiceQuotaTest {
     @Mock private AiStudentRegistrationService aiStudentRegistrationService;
     @Mock private EntitlementService entitlementService;
     @Mock private OrganizationDeletionService organizationDeletionService;
+    @Mock private Validator validator;
 
     private UserService userService;
     private UserImportService userImportService;
@@ -65,8 +68,11 @@ class UserServiceQuotaTest {
                 passwordEncoder,
                 aiStudentRegistrationService,
                 entitlementService,
-                organizationDeletionService
+                organizationDeletionService,
+                validator
         );
+
+        when(validator.validate(any(CreateUserRequest.class))).thenReturn(Set.of());
 
         userImportService = new UserImportService(userService);
 
