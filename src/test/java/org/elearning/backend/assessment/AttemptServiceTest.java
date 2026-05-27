@@ -217,6 +217,55 @@ class AttemptServiceTest {
     }
 
     @Test
+    void submitAttempt_shouldIgnoreExpirationWhenTimeLimitIsNull() {
+        UUID attemptId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        UUID testId = UUID.randomUUID();
+
+        org.elearning.backend.assessment.model.Test test = new org.elearning.backend.assessment.model.Test();
+        test.setId(testId);
+        test.setStatus(TestStatus.PUBLISHED);
+        test.setTimeLimitSec(null);
+        test.setAiEnabled(false);
+
+        TestAttempt attempt = new TestAttempt();
+        attempt.setId(attemptId);
+        attempt.setStatus(AttemptStatus.IN_PROGRESS);
+        attempt.setStudentId(studentId);
+        attempt.setStartedAt(LocalDateTime.now().minusHours(2));
+        attempt.setTest(test);
+
+        Question question = new Question();
+        question.setId(11);
+        question.setContent("Q");
+        question.setQuestionType(QuestionType.MULTI_CHOICE);
+
+        SubmitRequestDto request = new SubmitRequestDto();
+        SubmitAnswerDto answer = new SubmitAnswerDto();
+        answer.setQuestionId(11);
+        answer.setSelectedOptionIds(java.util.List.of(101));
+        answer.setTimeSpent(BigDecimal.ONE);
+        request.setAnswers(java.util.List.of(answer));
+
+        org.elearning.backend.assessment.model.QuestionOption correctOption =
+                new org.elearning.backend.assessment.model.QuestionOption();
+        correctOption.setId(101);
+
+        org.elearning.backend.assessment.dto.assigment_dto.TestResultDto mappedDto =
+                new org.elearning.backend.assessment.dto.assigment_dto.TestResultDto();
+
+        when(attemptRepository.findById(attemptId)).thenReturn(Optional.of(attempt));
+        when(questionRepository.findByTestIdAndIsActiveTrue(testId)).thenReturn(java.util.List.of(question));
+        when(questionRepository.findById(11)).thenReturn(Optional.of(question));
+        when(optionRepository.findByQuestionIdAndIsCorrectTrue(11)).thenReturn(java.util.List.of(correctOption));
+        when(attemptMapper.toTestResultDTO(any(TestResult.class))).thenReturn(mappedDto);
+
+        assertSame(mappedDto, attemptService.submitAttempt(attemptId, studentId, request));
+        verify(attemptRepository, never()).saveAndFlush(attempt);
+        verify(resultRepository).save(any(TestResult.class));
+    }
+
+    @Test
     void markLessonAndCheckCourseCompletion_shouldStopWhenCourseIdIsMissing() throws Exception {
         UUID studentId = UUID.randomUUID();
         UUID lessonId = UUID.randomUUID();
