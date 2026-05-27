@@ -127,11 +127,17 @@ public class RewardFundingService {
         }
 
         String platformWalletAddress = erc20Service.getPlatformWalletAddress();
-        circleFaucetClient.requestSepoliaEurc(platformWalletAddress);
-        waitForEurcBalance(erc20Service, rewardPoolAmount);
+        BigDecimal currentBalance = erc20Service.getPlatformEurcBalance();
+        if (currentBalance.compareTo(rewardPoolAmount) < 0) {
+            circleFaucetClient.requestSepoliaEurc(platformWalletAddress);
+            waitForEurcBalance(erc20Service, rewardPoolAmount);
+        }
 
         String depositTxHash = blockchainService.depositBacking(rewardPoolAmount).getTransactionHash();
-        return new StablecoinFundingResult(rewardPoolAmount, "circle-sepolia-faucet", depositTxHash);
+        String provider = currentBalance.compareTo(rewardPoolAmount) >= 0
+                ? "sepolia-existing-eurc"
+                : "circle-sepolia-faucet";
+        return new StablecoinFundingResult(rewardPoolAmount, provider, depositTxHash);
     }
 
     private void waitForEurcBalance(Erc20Service erc20Service, BigDecimal requiredAmount) {

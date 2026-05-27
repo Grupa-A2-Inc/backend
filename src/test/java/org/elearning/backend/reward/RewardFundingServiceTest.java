@@ -148,7 +148,9 @@ class RewardFundingServiceTest {
         when(erc20ServiceProvider.getIfAvailable()).thenReturn(erc20Service);
         when(taiRewardBlockchainServiceProvider.getIfAvailable()).thenReturn(taiRewardBlockchainService);
         when(erc20Service.getPlatformWalletAddress()).thenReturn("0x1111111111111111111111111111111111111111");
-        when(erc20Service.getPlatformEurcBalance()).thenReturn(new BigDecimal("10.000000"));
+        when(erc20Service.getPlatformEurcBalance())
+                .thenReturn(BigDecimal.ZERO)
+                .thenReturn(new BigDecimal("10.000000"));
         when(taiRewardBlockchainService.depositBacking(new BigDecimal("10.000000"))).thenReturn(receipt);
         when(organizationRepository.existsById(organizationId)).thenReturn(true);
         when(organizationSubscriptionRepository.findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(eq(organizationId), any()))
@@ -166,6 +168,41 @@ class RewardFundingServiceTest {
         verify(circleFaucetClient).requestSepoliaEurc("0x1111111111111111111111111111111111111111");
         verify(taiRewardBlockchainService).depositBacking(new BigDecimal("10.000000"));
         assertThat(response.getProvider()).isEqualTo("circle-sepolia-faucet");
+        assertThat(response.getTransactionHash()).isEqualTo("0xdeposit");
+    }
+
+    @Test
+    void mockSepoliaPaymentWithExistingEurcDepositsWithoutFaucet() {
+        stablecoinProviderProperties.setSepoliaRealisticFundingEnabled(true);
+        UUID organizationId = UUID.randomUUID();
+        StablecoinPaymentRequest request = new StablecoinPaymentRequest();
+        request.setAmount(new BigDecimal("100.00"));
+        TransactionReceipt receipt = new TransactionReceipt();
+        receipt.setTransactionHash("0xdeposit");
+
+        when(rewardDistributionService.calculateRewardPoolAmount(new BigDecimal("100.00")))
+                .thenReturn(new BigDecimal("10.000000"));
+        when(erc20ServiceProvider.getIfAvailable()).thenReturn(erc20Service);
+        when(taiRewardBlockchainServiceProvider.getIfAvailable()).thenReturn(taiRewardBlockchainService);
+        when(erc20Service.getPlatformWalletAddress()).thenReturn("0x1111111111111111111111111111111111111111");
+        when(erc20Service.getPlatformEurcBalance()).thenReturn(new BigDecimal("20.000000"));
+        when(taiRewardBlockchainService.depositBacking(new BigDecimal("10.000000"))).thenReturn(receipt);
+        when(organizationRepository.existsById(organizationId)).thenReturn(true);
+        when(organizationSubscriptionRepository.findFirstByOrganizationIdAndStatusInOrderByCurrentPeriodEndDesc(eq(organizationId), any()))
+                .thenReturn(Optional.of(activeSubscription()));
+        when(rewardCycleRepository.findByOrganizationIdAndPeriodStartAndPeriodEnd(eq(organizationId), any(), any()))
+                .thenReturn(Optional.empty());
+        when(rewardCycleRepository.save(any(RewardCycle.class))).thenAnswer(invocation -> {
+            RewardCycle cycle = invocation.getArgument(0);
+            cycle.setId(UUID.randomUUID());
+            return cycle;
+        });
+
+        StablecoinFundingResponse response = service.mockSepoliaPayment(organizationId, request);
+
+        verify(circleFaucetClient, org.mockito.Mockito.never()).requestSepoliaEurc(org.mockito.Mockito.anyString());
+        verify(taiRewardBlockchainService).depositBacking(new BigDecimal("10.000000"));
+        assertThat(response.getProvider()).isEqualTo("sepolia-existing-eurc");
         assertThat(response.getTransactionHash()).isEqualTo("0xdeposit");
     }
 
