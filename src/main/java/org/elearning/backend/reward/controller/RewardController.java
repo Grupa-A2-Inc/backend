@@ -103,8 +103,8 @@ public class RewardController {
     }
 
     @PostMapping("/cycles/{cycleId}/mint")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RewardCycleResponse> mintCycle(@PathVariable UUID cycleId) {
+    @PreAuthorize("@accessService.canEditRewardCycle(authentication, #cycleId)")
+    public ResponseEntity<RewardCycleResponse> mintCycle(@P("cycleId") @PathVariable UUID cycleId) {
         return ResponseEntity.ok(rewardDistributionService.mintCycle(cycleId));
     }
 

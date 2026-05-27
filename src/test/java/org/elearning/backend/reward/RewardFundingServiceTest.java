@@ -13,6 +13,7 @@ import org.elearning.backend.reward.funding.CircleFaucetClient;
 import org.elearning.backend.reward.funding.StablecoinProvider;
 import org.elearning.backend.reward.funding.StablecoinProviderProperties;
 import org.elearning.backend.reward.repository.RewardCycleRepository;
+import org.elearning.backend.reward.repository.StudentRewardRepository;
 import org.elearning.backend.reward.service.RewardDistributionService;
 import org.elearning.backend.reward.service.RewardFundingService;
 import org.elearning.backend.subscription.entity.OrganizationSubscription;
@@ -52,6 +53,9 @@ class RewardFundingServiceTest {
     private RewardCycleRepository rewardCycleRepository;
 
     @Mock
+    private StudentRewardRepository studentRewardRepository;
+
+    @Mock
     private RewardDistributionService rewardDistributionService;
 
     @Mock
@@ -85,6 +89,7 @@ class RewardFundingServiceTest {
                 organizationRepository,
                 organizationSubscriptionRepository,
                 rewardCycleRepository,
+                studentRewardRepository,
                 rewardDistributionService,
                 stablecoinProvider,
                 circleFaucetClient,

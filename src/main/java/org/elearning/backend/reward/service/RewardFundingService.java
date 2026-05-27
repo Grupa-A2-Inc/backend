@@ -17,6 +17,7 @@ import org.elearning.backend.reward.funding.StablecoinProvider;
 import org.elearning.backend.reward.funding.StablecoinProviderProperties;
 import org.elearning.backend.reward.funding.CircleFaucetClient;
 import org.elearning.backend.reward.repository.RewardCycleRepository;
+import org.elearning.backend.reward.repository.StudentRewardRepository;
 import org.elearning.backend.subscription.entity.OrganizationSubscription;
 import org.elearning.backend.subscription.entity.OrganizationSubscriptionStatus;
 import org.elearning.backend.subscription.repository.OrganizationSubscriptionRepository;
@@ -45,6 +46,7 @@ public class RewardFundingService {
     private final OrganizationRepository organizationRepository;
     private final OrganizationSubscriptionRepository organizationSubscriptionRepository;
     private final RewardCycleRepository rewardCycleRepository;
+    private final StudentRewardRepository studentRewardRepository;
     private final RewardDistributionService rewardDistributionService;
     private final StablecoinProvider stablecoinProvider;
     private final CircleFaucetClient circleFaucetClient;
@@ -189,8 +191,8 @@ public class RewardFundingService {
         if (RewardCycleStatus.MINTED.equals(cycle.getStatus())) {
             throw new RewardConflictException("Reward cycle was already minted");
         }
-        if (RewardCycleStatus.CALCULATED.equals(cycle.getStatus())) {
-            throw new RewardConflictException("Reward cycle was already calculated; recalculate after funding if needed");
+        if (cycle.getId() != null) {
+            studentRewardRepository.deleteAllByRewardCycleId(cycle.getId());
         }
 
         cycle.setOrganizationId(organizationId);

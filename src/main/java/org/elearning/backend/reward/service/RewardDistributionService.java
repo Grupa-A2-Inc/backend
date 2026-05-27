@@ -91,7 +91,7 @@ public class RewardDistributionService {
                 ? request.getEurcDepositedAmount().setScale(6, RoundingMode.DOWN)
                 : cycle.getEurcDepositedAmount() != null
                 ? cycle.getEurcDepositedAmount().setScale(6, RoundingMode.DOWN)
-                : rewardPoolAmount;
+                : BigDecimal.ZERO.setScale(6, RoundingMode.DOWN);
 
         if (cycle.getId() != null && RewardCycleStatus.MINTED.equals(cycle.getStatus())) {
             throw new RewardConflictException("Reward cycle was already minted");

@@ -25,6 +25,8 @@ import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
 import org.elearning.backend.organization.repository.OrganizationRepository;
 import org.elearning.backend.parent.entity.Parent;
 import org.elearning.backend.parent.repository.ParentRepository;
+import org.elearning.backend.reward.entity.RewardCycle;
+import org.elearning.backend.reward.repository.RewardCycleRepository;
 import org.elearning.backend.role.entity.RoleName;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.elearning.backend.student.entity.Student;
@@ -56,6 +58,7 @@ public class AccessService {
     private final StudentRepository studentRepository;
     private final ClassroomRepository classroomRepository;
     private final ClassroomMembershipRepository classroomMembershipRepository;
+    private final RewardCycleRepository rewardCycleRepository;
 
     public boolean canCreateUser(Authentication authentication, CreateUserRequest request) {
         CustomUserDetails currentUser = extractCurrentUser(authentication);
@@ -141,6 +144,14 @@ public class AccessService {
 
     public boolean canEditOrganization(Authentication authentication, UUID organizationId) {
         return canViewOrganization(authentication, organizationId);
+    }
+
+    public boolean canEditRewardCycle(Authentication authentication, UUID cycleId) {
+        if (cycleId == null) {
+            return false;
+        }
+        RewardCycle cycle = rewardCycleRepository.findById(cycleId).orElse(null);
+        return cycle != null && canEditOrganization(authentication, cycle.getOrganizationId());
     }
 
     public boolean canDeleteUser(Authentication authentication, UUID targetUserId) {
