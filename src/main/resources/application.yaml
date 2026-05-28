@@ -61,8 +61,8 @@ crypto:
   tai-engine-address: ${TAI_ENGINE_ADDRESS:0x6cCF7d4197F93Ecd2431653657e9c105f30A8a74}
   eurc-address: ${EURC_ADDRESS}
 
-  gas-price-wei: 20000000000
-  gas-limit: 7000000
+  gas-price-wei: ${WEB3_GAS_PRICE_WEI:5000000000}
+  gas-limit: ${WEB3_GAS_LIMIT:1500000}
 
 stablecoin:
   provider: ${STABLECOIN_PROVIDER:circle}
