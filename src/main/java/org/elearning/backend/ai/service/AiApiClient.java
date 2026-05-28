@@ -324,19 +324,27 @@ public class AiApiClient {
     // FLUX 2: Feedback Adaptive
     // ==========================================
 
-    public boolean sendAdaptiveFeedback(Object payload) {
+    public boolean sendAdaptiveFeedback(AiFeedbackPayloadDto payload) {
+        String requestBody;
+        try {
+            requestBody = objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to serialize adaptive feedback payload.", exception);
+            return false;
+        }
+
         try {
             feedbackRestClient.post()
                     .uri(ADAPTIVE_FEEDBACK_URI)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(API_KEY_HEADER, apiKey)
-                    .body(payload)
+                    .body(requestBody)
                     .retrieve()
                     .toBodilessEntity();
             return true;
         } catch (Exception e) {
-            log.warn("A esuat feedback-ul adaptiv la ML. Eroare: {}", e.getMessage());
+            log.warn("A esuat feedback-ul adaptiv la ML. Payload={} Eroare: {}", requestBody, e.getMessage());
             return false;
         }
     }

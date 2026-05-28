@@ -9,8 +9,10 @@ import org.elearning.backend.ai.dto.AiAdaptiveJobStatusResponse;
 import org.elearning.backend.ai.dto.AiGenerateJobResponse;
 import org.elearning.backend.ai.dto.AiGenerateJobStatusResponse;
 import org.elearning.backend.ai.dto.AiStudentRegistrationResponse;
+import org.elearning.backend.ai.dto.AiFeedbackPayloadDto;
 import org.elearning.backend.ai.dto.CurriculumCatalogRequestDto;
 import org.elearning.backend.ai.dto.CurriculumCatalogResponseDto;
+import org.elearning.backend.ai.dto.FeedbackResultDto;
 import org.elearning.backend.ai.exception.AiApiException;
 import org.elearning.backend.ai.exception.JsonSerializingException;
 import org.elearning.backend.ai.model.AiRequestStatus;
@@ -33,13 +35,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -579,7 +580,7 @@ class AiApiClientTest {
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
-        assertThat(client.sendAdaptiveFeedback(Map.of("foo", "bar"))).isFalse();
+        assertThat(client.sendAdaptiveFeedback(feedbackPayload())).isFalse();
     }
 
     @Test
@@ -587,8 +588,11 @@ class AiApiClientTest {
         AtomicReference<String> requestBody = new AtomicReference<>();
         startServer(204, "text/plain", "", capture -> requestBody.set(capture.body()));
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
-        assertThat(client.sendAdaptiveFeedback(Map.of("foo", "bar"))).isTrue();
-        assertThat(requestBody.get()).contains("foo");
+        assertThat(client.sendAdaptiveFeedback(feedbackPayload())).isTrue();
+        assertThat(requestBody.get()).contains("\"studentId\"");
+        assertThat(requestBody.get()).contains("\"subjectId\":3");
+        assertThat(requestBody.get()).contains("\"topicId\":1215");
+        assertThat(requestBody.get()).contains("\"results\"");
     }
 
     @Test
@@ -752,6 +756,15 @@ class AiApiClientTest {
             return "http://localhost:1";
         }
         return "http://localhost:" + server.getAddress().getPort();
+    }
+
+    private AiFeedbackPayloadDto feedbackPayload() {
+        return new AiFeedbackPayloadDto(
+                UUID.fromString("3e4c7df2-7024-4fa8-9266-430d4d67a0c4"),
+                3,
+                1215,
+                List.of(new FeedbackResultDto("ai-1215035", 0.0, 1))
+        );
     }
 
     private void startServer(int statusCode, String contentType, String responseBody, Consumer<RequestCapture> requestAssertion) throws IOException {
