@@ -621,6 +621,7 @@ class AdaptiveSessionServiceTest {
         when(objectMapper.readValue(anyString(), org.mockito.ArgumentMatchers.<com.fasterxml.jackson.core.type.TypeReference<List<String>>>any()))
                 .thenReturn(List.of("A"));
         when(objectMapper.writeValueAsString(any())).thenReturn("[\"A\"]");
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
 
         AdaptiveResultDto result = adaptiveSessionService.submitSession(sessionId, studentId, request);
 
@@ -708,7 +709,7 @@ class AdaptiveSessionServiceTest {
         when(objectMapper.readValue(anyString(), org.mockito.ArgumentMatchers.<com.fasterxml.jackson.core.type.TypeReference<List<String>>>any()))
                 .thenReturn(List.of("A", "B"));
         when(objectMapper.writeValueAsString(any())).thenReturn("[\"A\"]");
-        doThrow(new RuntimeException("feedback failed")).when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(false);
 
         AdaptiveResultDto result = adaptiveSessionService.submitSession(sessionId, studentId, request);
 

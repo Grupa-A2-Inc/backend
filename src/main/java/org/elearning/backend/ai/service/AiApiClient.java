@@ -324,7 +324,7 @@ public class AiApiClient {
     // FLUX 2: Feedback Adaptive
     // ==========================================
 
-    public void sendAdaptiveFeedback(Object payload) {
+    public boolean sendAdaptiveFeedback(Object payload) {
         try {
             feedbackRestClient.post()
                     .uri(ADAPTIVE_FEEDBACK_URI)
@@ -334,8 +334,10 @@ public class AiApiClient {
                     .body(payload)
                     .retrieve()
                     .toBodilessEntity();
+            return true;
         } catch (Exception e) {
             log.warn("A esuat feedback-ul adaptiv la ML. Eroare: {}", e.getMessage());
+            return false;
         }
     }
 

@@ -256,7 +256,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_whenValidAndCorrectAnswer() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
@@ -275,7 +275,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_whenAnswerIsWrong() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
@@ -293,7 +293,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_whenNoAnswerSubmittedForExercise() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
@@ -308,7 +308,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_withPartialScoreForMultipleChoice() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTI_CHOICE",
@@ -326,7 +326,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_whenMultipleChoiceFullyCorrect() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTI_CHOICE",
@@ -343,7 +343,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_andFeedbackSentTrue_whenAiSucceeds() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
@@ -363,7 +363,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_andFeedbackSentFalse_whenAiFails() throws Exception {
-        doThrow(new RuntimeException("AI unavailable")).when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(false);
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         insertExercise(sessionId, "ex-1", "SINGLE_CHOICE",
@@ -377,7 +377,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldMarkSessionAsCompleted_afterSubmit() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
 
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
 
@@ -476,7 +476,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_andScore0_whenGivenAnswersIsEmptyList() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "SINGLE_CHOICE", "[\"A\", \"B\"]", "[\"A\"]");
 
@@ -491,7 +491,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_andScore0_whenGivenAnswersIsNull() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "SINGLE_CHOICE", "[\"A\", \"B\"]", "[\"A\"]");
 
@@ -506,7 +506,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_andScore0_whenMultipleChoiceHasWrongAnswer() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTI_CHOICE",
                 "[\"A\", \"B\", \"C\"]", "[\"A\", \"B\"]");
@@ -545,7 +545,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_andScore0_whenCorrectAnswersIsEmpty() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "SINGLE_CHOICE", "[\"A\", \"B\"]", "[]");
@@ -560,7 +560,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_whenTypeIsTrueFalse() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "TRUE_FALSE", "[\"True\", \"False\"]", "[\"False\"]");
@@ -575,7 +575,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_andScore0_whenMultipleChoiceHasNoCorrectAnswers() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "MULTI_CHOICE", "[\"A\", \"B\", \"C\"]", "[\"A\", \"B\"]");
 
@@ -589,7 +589,7 @@ class AdaptiveControllerTest {
 
     @Test
     void submitSession_shouldReturn200_andScore0_whenExerciseTypeIsUnknown() throws Exception {
-        doNothing().when(aiApiClient).sendAdaptiveFeedback(any());
+        when(aiApiClient.sendAdaptiveFeedback(any())).thenReturn(true);
         UUID sessionId = insertSession(studentId, "ACTIVE", LocalDateTime.now().plusHours(1));
         
         ExerciseContext ex = insertExercise(sessionId, "ex-1", "UNKNOWN_FORMAT", "[\"A\", \"B\"]", "[\"A\"]");

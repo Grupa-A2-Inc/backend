@@ -574,12 +574,12 @@ class AiApiClientTest {
     }
 
     @Test
-    void sendAdaptiveFeedback_shouldSwallowApiErrors() throws Exception {
+    void sendAdaptiveFeedback_shouldReturnFalseOnApiErrors() throws Exception {
         startServer(500, "text/plain", "AI error", capture -> { });
 
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
 
-        assertThatCode(() -> client.sendAdaptiveFeedback(Map.of("foo", "bar"))).doesNotThrowAnyException();
+        assertThat(client.sendAdaptiveFeedback(Map.of("foo", "bar"))).isFalse();
     }
 
     @Test
@@ -587,7 +587,7 @@ class AiApiClientTest {
         AtomicReference<String> requestBody = new AtomicReference<>();
         startServer(204, "text/plain", "", capture -> requestBody.set(capture.body()));
         AiApiClient client = newClient("secret", 2000, 2000, 2000, 2000);
-        assertThatCode(() -> client.sendAdaptiveFeedback(Map.of("foo", "bar"))).doesNotThrowAnyException();
+        assertThat(client.sendAdaptiveFeedback(Map.of("foo", "bar"))).isTrue();
         assertThat(requestBody.get()).contains("foo");
     }
 
