@@ -6,6 +6,9 @@ import org.elearning.backend.reward.dto.CalculateRewardCycleRequest;
 import org.elearning.backend.reward.dto.RewardConfigRequest;
 import org.elearning.backend.reward.dto.RewardConfigResponse;
 import org.elearning.backend.reward.dto.RewardCycleResponse;
+import org.elearning.backend.reward.dto.StudentRedeemQuoteResponse;
+import org.elearning.backend.reward.dto.StudentRedeemRequest;
+import org.elearning.backend.reward.dto.StudentRedeemResponse;
 import org.elearning.backend.reward.dto.StudentRewardResponse;
 import org.elearning.backend.reward.dto.StudentWalletRequest;
 import org.elearning.backend.reward.dto.StudentWalletResponse;
@@ -14,6 +17,7 @@ import org.elearning.backend.reward.dto.funding.StablecoinPaymentRequest;
 import org.elearning.backend.reward.service.RewardConfigService;
 import org.elearning.backend.reward.service.RewardDistributionService;
 import org.elearning.backend.reward.service.RewardFundingService;
+import org.elearning.backend.reward.service.StudentRewardRedeemService;
 import org.elearning.backend.reward.service.StudentWalletService;
 import org.elearning.backend.security.auth.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +44,7 @@ public class RewardController {
     private final RewardDistributionService rewardDistributionService;
     private final RewardFundingService rewardFundingService;
     private final StudentWalletService studentWalletService;
+    private final StudentRewardRedeemService studentRewardRedeemService;
 
     @PutMapping("/organizations/{organizationId}/config")
     @PreAuthorize("@accessService.canEditOrganization(authentication, #organizationId)")
@@ -73,6 +78,23 @@ public class RewardController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.ok(studentWalletService.getWallet(userDetails.getUserId()));
+    }
+
+    @GetMapping("/students/me/redeem-quote")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentRedeemQuoteResponse> createMyRedeemQuote(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(studentRewardRedeemService.createRedeemAllQuote(userDetails.getUserId()));
+    }
+
+    @PostMapping("/students/me/redeem-all")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentRedeemResponse> redeemMyRewards(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody StudentRedeemRequest request
+    ) {
+        return ResponseEntity.ok(studentRewardRedeemService.redeemAll(userDetails.getUserId(), request));
     }
 
     @PostMapping("/cycles/{organizationId}/calculate")

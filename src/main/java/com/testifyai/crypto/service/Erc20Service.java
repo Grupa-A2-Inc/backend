@@ -92,6 +92,14 @@ public class Erc20Service {
     }
 
     public BigDecimal getEurcBalance(String walletAddress) {
+        return getTokenBalance(cryptoProperties.getEurcAddress(), walletAddress, "EURC");
+    }
+
+    public BigDecimal getTaiBalance(String walletAddress) {
+        return getTokenBalance(cryptoProperties.getTaiCoinAddress(), walletAddress, "TAI");
+    }
+
+    private BigDecimal getTokenBalance(String tokenAddress, String walletAddress, String tokenSymbol) {
         try {
             Function balanceOfFunction = new Function(
                     "balanceOf",
@@ -103,7 +111,7 @@ public class Erc20Service {
             EthCall response = web3j.ethCall(
                     Transaction.createEthCallTransaction(
                             walletAddress,
-                            cryptoProperties.getEurcAddress(),
+                            tokenAddress,
                             encodedFunction
                     ),
                     DefaultBlockParameterName.LATEST
@@ -123,7 +131,7 @@ public class Erc20Service {
             BigInteger balance = (BigInteger) values.get(0).getValue();
             return TokenAmountConverter.fromSmallestUnit(balance);
         } catch (Exception exception) {
-            throw new RuntimeException("Could not read EURC balance", exception);
+            throw new RuntimeException("Could not read " + tokenSymbol + " balance", exception);
         }
     }
 

@@ -99,6 +99,10 @@ public class TaiRewardBlockchainService {
         }
     }
 
+    public BigDecimal getTaiBalance(String walletAddress) {
+        return erc20Service.getTaiBalance(walletAddress);
+    }
+
     public BigInteger getNonce(String userAddress) {
         try {
             return taiEngine.getNonce(userAddress).send();
