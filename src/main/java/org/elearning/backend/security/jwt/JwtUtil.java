@@ -30,7 +30,7 @@ public class JwtUtil {
         return key;
     }
 
-    private static final int ACCESS_TOKEN_VALIDITY_MILLISECONDS = 3*60*1000; //30*60*1000; // 30 min
+    private static final int ACCESS_TOKEN_VALIDITY_MILLISECONDS = 60*60*1000; // 60 min
 
     private static final long REFRESH_TOKEN_VALIDITY_MILLISECONDS = 7*24*60*60*1000L; // 7 days
 
