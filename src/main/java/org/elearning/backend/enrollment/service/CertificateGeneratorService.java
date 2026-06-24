@@ -4,6 +4,7 @@ import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -76,7 +77,7 @@ public class CertificateGeneratorService {
     // GENERAL CERTIFICATE CONTENT CONSTANTS
 
     private static final float CONTENT_HEIGHT_UNIT = HEIGHT/60;
-    private static final float CONTENT_X_CENTERED_IMAGE_POSITION = 7*WIDTH/17;
+    private static final float CONTENT_X_CENTERED_IMAGE_POSITION = 13*WIDTH/34;
     private static final float CONTENT_IMAGE_WIDTH = 150;
     private static final float CONTENT_IMAGE_HEIGHT = 150;
     private static final float CONTENT_X_CENTERED_TEXT_POSITION = WIDTH/2;
@@ -86,13 +87,13 @@ public class CertificateGeneratorService {
     private static final float TITLE_FONT_SIZE = 36;
     private static final float APPLICATION_NAME_FONT_SIZE = 24;
     private static final float CERTIFICATION_FONT_SIZE = 16;
-    private static final float SIGNATURE_FONT_SIZE = 48;
+    private static final float SIGNATURE_FONT_SIZE = 24;
 
 
-    private static final String PATH_SITE_LOGO = "/images/crap_logo.png";
+    private static final String PATH_SITE_LOGO = "/images/adaptive_tutor_logo.png";
     private static final String CERTIFICATE_OF = "Certificate of";
     private static final String COMPLETION = "Completion";
-    private static final String APPLICATION_NAME = "E-Learning";
+    private static final String APPLICATION_NAME = "Adaptive Tutor";
     private static final String CERTIFYING  = "That is to certify that";
     private static final String SUCCESS_MESSAGE = "Has successfully completed";
 
@@ -123,16 +124,16 @@ public class CertificateGeneratorService {
             byte[] jastykaBytes = jastykaFont.readAllBytes();
 
             if (titleFont == null) {
-                titleFont = BaseFont.createFont(PATH_QUADRILLION_FONT, BaseFont.WINANSI, BaseFont.EMBEDDED, false, quadrillionBytes, null);
+                titleFont = BaseFont.createFont(PATH_QUADRILLION_FONT, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, false, quadrillionBytes, null);
             }
             if (certificationFont == null) {
                 certificationFont = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.EMBEDDED);
             }
             if (signatureFont == null) {
-                signatureFont = BaseFont.createFont(PATH_JASTYKA_FONT, BaseFont.WINANSI, BaseFont.EMBEDDED, false, jastykaBytes, null);
+                signatureFont = BaseFont.createFont(PATH_JASTYKA_FONT, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, false, jastykaBytes, null);
             }
             if (applicationNameFont == null) {
-                applicationNameFont = BaseFont.createFont(PATH_QUADRILLION_FONT, BaseFont.WINANSI, BaseFont.EMBEDDED, false, quadrillionBytes, null);
+                applicationNameFont = BaseFont.createFont(PATH_QUADRILLION_FONT, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, false, quadrillionBytes, null);
             }
         }
     }
@@ -281,10 +282,15 @@ public class CertificateGeneratorService {
         canvas.stroke();
     }
 
+    private String convertDiacritics(String text) {
+        return Normalizer.normalize(text, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+    }
+
     private void generateContent(PdfContentByte canvas, String studentName, String courseTitle) throws IOException {
         float currentPosition = 45 * CONTENT_HEIGHT_UNIT;
 
-        generateImage(canvas, currentPosition);
+        generateImage(canvas, currentPosition + CONTENT_HEIGHT_UNIT / 2);
         currentPosition -= 3*CONTENT_HEIGHT_UNIT/2;
         generateTitle(canvas, currentPosition);
         currentPosition -= 4*CONTENT_HEIGHT_UNIT;
@@ -355,7 +361,10 @@ public class CertificateGeneratorService {
         String studentFullName = student.getFirstName() + " " + student.getLastName();
 
 
-        return generatePdf(enrollmentId, studentFullName , course.getTitle(), courseEnrollment.getCompletedAt());
+        return generatePdf(enrollmentId,
+                            convertDiacritics(studentFullName),
+                            convertDiacritics(course.getTitle()),
+                            courseEnrollment.getCompletedAt());
     }
 
 

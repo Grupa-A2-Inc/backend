@@ -1,6 +1,8 @@
 package org.elearning.backend.enrollment.service;
 
 import lombok.RequiredArgsConstructor;
+import org.elearning.backend.classroom.entity.MembershipType;
+import org.elearning.backend.classroom.repository.ClassroomCourseRepository;
 import org.elearning.backend.content.model.Course;
 import org.elearning.backend.content.model.CourseStatus;
 import org.elearning.backend.content.model.CourseVisibility;
@@ -11,6 +13,7 @@ import org.elearning.backend.enrollment.exception.CourseEnrollmentNotFoundExcept
 import org.elearning.backend.enrollment.exception.CourseIsPrivateException;
 import org.elearning.backend.enrollment.exception.CourseNotFoundException;
 import org.elearning.backend.enrollment.exception.StudentAlreadyEnrolledInCourseException;
+import org.elearning.backend.enrollment.exception.StudentAccessForbiddenException;
 import org.elearning.backend.enrollment.mapper.EnrollmentMapper;
 import org.elearning.backend.enrollment.model.CourseEnrollment;
 import org.elearning.backend.enrollment.repository.CourseEnrollmentRepository;
@@ -30,6 +33,7 @@ public class CourseEnrollmentService {
 
     private final CourseRepository courseRepository;
     private final CourseEnrollmentRepository courseEnrollmentRepository;
+    private final ClassroomCourseRepository classroomCourseRepository;
     private final EnrollmentMapper enrollmentMapper;
 
     private final ProgressCalculatorService progressCalculatorService;
@@ -83,6 +87,16 @@ public class CourseEnrollmentService {
     public void unenrollStudentFromCourse(UUID studentId, UUID courseId) {
         CourseEnrollment enrollment = courseEnrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)
                 .orElseThrow(() -> new CourseEnrollmentNotFoundException(courseId));
+
+        if (classroomCourseRepository.existsCourseAssignedToUserThroughAnyClassroom(
+                studentId,
+                MembershipType.STUDENT,
+                courseId
+        )) {
+            throw new StudentAccessForbiddenException(
+                    "Students cannot unenroll themselves from courses assigned through a classroom"
+            );
+        }
 
         courseEnrollmentRepository.delete(enrollment);
     }

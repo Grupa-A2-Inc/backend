@@ -44,6 +44,7 @@ class CourseEnrollmentControllerTest {
     private UUID courseId;
     private UUID coursePrivateId;
     private UUID courseDraftId;
+    private UUID ownerId;
     private String accessToken;
 
     private static final String REQUEST_MAPPING = "/api/v1";
@@ -55,8 +56,10 @@ class CourseEnrollmentControllerTest {
         courseId = UUID.randomUUID();
         coursePrivateId = UUID.randomUUID();
         courseDraftId = UUID.randomUUID();
+        ownerId = UUID.randomUUID();
 
         insertStudent(studentId);
+        insertStudent(ownerId);
         accessToken = jwtUtil.generateAccessToken(studentId, RoleName.STUDENT);
 
         insertCourse(courseId, "Public Course", "Public Course Description",
@@ -75,6 +78,7 @@ class CourseEnrollmentControllerTest {
                 studentId, courseId, coursePrivateId, courseDraftId);
         jdbcTemplate.update("DELETE FROM courses WHERE id IN (?, ?, ?)", courseId, coursePrivateId, courseDraftId);
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", studentId);
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", ownerId);
     }
 
     private void insertStudent(UUID userId) {
@@ -204,6 +208,68 @@ class CourseEnrollmentControllerTest {
 
     @Test
     @Order(9)
+    @DisplayName("2.3 — DELETE /api/v1/courses/{courseId}/unenroll for classroom-assigned course → 403 Forbidden")
+    void unenrollFromCourse_ClassroomAssigned_Returns403Forbidden() throws Exception {
+        UUID organizationId = UUID.randomUUID();
+        UUID classroomId = UUID.randomUUID();
+        UUID enrollmentId = UUID.randomUUID();
+
+        try {
+            jdbcTemplate.update(
+                    "INSERT INTO organizations (id, name, country, city, organization_type, owner_id) VALUES (?, ?, ?, ?, ?, ?)",
+                    organizationId,
+                    "Test Org",
+                    "Romania",
+                    "Bucharest",
+                    "SCHOOL",
+                    ownerId
+            );
+            jdbcTemplate.update(
+                    "INSERT INTO classrooms (id, organization_id, name) VALUES (?, ?, ?)",
+                    classroomId,
+                    organizationId,
+                    "Class A"
+            );
+            jdbcTemplate.update(
+                    "INSERT INTO classroom_memberships (id, classroom_id, user_id, membership_type) VALUES (?, ?, ?, CAST(? AS membership_type))",
+                    UUID.randomUUID(),
+                    classroomId,
+                    studentId,
+                    "STUDENT"
+            );
+            jdbcTemplate.update(
+                    "INSERT INTO classroom_courses (id, classroom_id, course_id) VALUES (?, ?, ?)",
+                    UUID.randomUUID(),
+                    classroomId,
+                    courseId
+            );
+            jdbcTemplate.update(
+                    "INSERT INTO course_enrollments (id, course_id, student_id) VALUES (?, ?, ?)",
+                    enrollmentId,
+                    courseId,
+                    studentId
+            );
+
+            mockMvc.perform(authorized(delete(REQUEST_MAPPING + "/courses/{courseId}/unenroll", courseId)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.message",
+                            is("Students cannot unenroll themselves from courses assigned through a classroom")));
+
+            Long enrollmentCount = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM course_enrollments WHERE id = ?",
+                    Long.class,
+                    enrollmentId
+            );
+            assert enrollmentCount != null && enrollmentCount == 1 : "Enrollment should remain for classroom-assigned course";
+        } finally {
+            jdbcTemplate.update("DELETE FROM course_enrollments WHERE id = ?", enrollmentId);
+            jdbcTemplate.update("DELETE FROM classrooms WHERE id = ?", classroomId);
+            jdbcTemplate.update("DELETE FROM organizations WHERE id = ?", organizationId);
+        }
+    }
+
+    @Test
+    @Order(10)
     @DisplayName("2.3 — DELETE /api/v1/courses/{courseId}/unenroll without auth → 401 Unauthorized")
     void unenrollFromCourse_Unauthorized_Returns401() throws Exception {
         mockMvc.perform(delete(REQUEST_MAPPING + "/courses/{courseId}/unenroll", courseId))
@@ -215,7 +281,7 @@ class CourseEnrollmentControllerTest {
     // ================================================================
 
     @Test
-    @Order(10)
+    @Order(11)
     @DisplayName("3.1 — GET /api/v1/students/me/courses — student not enrolled in any → 200 EmptyPage")
     void getEnrolledCourses_NoEnrollments_Returns200EmptyPage() throws Exception {
         mockMvc.perform(authorized(get(REQUEST_MAPPING + "/students/me/courses")))
@@ -225,7 +291,7 @@ class CourseEnrollmentControllerTest {
     }
 
     @Test
-    @Order(11)
+    @Order(12)
     @DisplayName("3.2 — GET /api/v1/students/me/courses — student enrolled in 1 course → 200 WithPage")
     void getEnrolledCourses_SingleCourse_Returns200WithPage() throws Exception {
         mockMvc.perform(authorized(post(REQUEST_MAPPING + "/courses/{courseId}/enroll", courseId)))
@@ -243,7 +309,7 @@ class CourseEnrollmentControllerTest {
     }
 
     @Test
-    @Order(12)
+    @Order(13)
     @DisplayName("3.3 — GET /api/v1/students/me/courses — student enrolled in multiple courses → 200 WithPage")
     void getEnrolledCourses_MultipleCourses_Returns200WithPage() throws Exception {
         UUID courseId2 = UUID.randomUUID();
@@ -270,7 +336,7 @@ class CourseEnrollmentControllerTest {
     }
 
     @Test
-    @Order(13)
+    @Order(14)
     @DisplayName("3.4 — GET /api/v1/students/me/courses without auth → 401 Unauthorized")
     void getEnrolledCourses_Unauthorized_Returns401() throws Exception {
         mockMvc.perform(get(REQUEST_MAPPING + "/students/me/courses"))

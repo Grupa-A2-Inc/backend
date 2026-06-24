@@ -300,11 +300,11 @@ public class AdaptiveSessionService {
         boolean feedbackSent = false;
         try {
             AiFeedbackPayloadDto payload = new AiFeedbackPayloadDto(studentId, subjectId, topicId, mlFeedbackResults);
-            aiApiClient.sendAdaptiveFeedback(payload);
-
-            session.setAiFeedbackSent(true);
-            adaptiveSessionRepository.save(session);
-            feedbackSent = true;
+            feedbackSent = aiApiClient.sendAdaptiveFeedback(payload);
+            if (feedbackSent) {
+                session.setAiFeedbackSent(true);
+                adaptiveSessionRepository.save(session);
+            }
         } catch (Exception exception) {
             log.warn("Error sending AI feedback for session {}: {}", sessionId, exception.getMessage());
         }

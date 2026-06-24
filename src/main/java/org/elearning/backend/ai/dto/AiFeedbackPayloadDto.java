@@ -14,5 +14,5 @@ public class AiFeedbackPayloadDto {
     private UUID studentId;
     private Integer subjectId;
     private Integer topicId;
-    private List<FeedbackResultDto> mlFeedbackResults;
+    private List<FeedbackResultDto> results;
 }

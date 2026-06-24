@@ -136,6 +136,19 @@ class SecurityConfigTest {
     }
 
     @Test
+    void csrfEndpoint_setsCrossSiteCompatibleCookieAttributes() throws Exception {
+        try (AnnotationConfigWebApplicationContext context = createContext()) {
+            MockMvc mockMvc = buildMockMvc(context);
+
+            mockMvc.perform(get("/api/v1/auth/csrf").secure(true))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Set-Cookie", containsString("XSRF-TOKEN=")))
+                    .andExpect(header().string("Set-Cookie", containsString("SameSite=None")))
+                    .andExpect(header().string("Set-Cookie", containsString("Secure")));
+        }
+    }
+
+    @Test
     void corsConfigurationSource_allowsConfiguredOriginsMethodsAndHeaders() {
         SecurityConfig securityConfig = new SecurityConfig(
                 new JwtAuthenticationFilter(
@@ -154,7 +167,8 @@ class SecurityConfigTest {
                 "http://localhost:3000",
                 "https://frontend-teal-five-57.vercel.app",
                 "https://frontend-z1g5f.vercel.app",
-                "https://vibesvibesonlyvibes.vercel.app"
+                "https://vibesvibesonlyvibes.vercel.app",
+                "https://adaptiveelearning.online"
         );
         assertThat(configuration.getAllowedMethods()).containsExactly("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS");
         assertThat(configuration.getAllowedHeaders()).containsExactly(
